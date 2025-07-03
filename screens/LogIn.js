@@ -2,7 +2,7 @@ import React from "react";
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import GradientBackground from "../components/gradientbackground";
-import { Alert } from 'react-native';
+import Popup from '../components/Popup'; 
 
 
 //firebase
@@ -47,7 +47,10 @@ const Login = () => {
     const navigation = useNavigation();
     const [hidePassword,setHidePassword] = useState(true);
 
-    
+    const [popupVisible, setPopupVisible] = useState(false);
+    const [popupMessage, setPopupMessage] = useState('');
+
+
    const handleLogin = async (values) => {
     try {
         const userCredential = await signInWithEmailAndPassword(
@@ -64,19 +67,41 @@ const Login = () => {
         if (userDoc.exists()) {
             const userData = userDoc.data();
             console.log("User Firestore data:", userData);
-            Alert.alert("Welcome", `Hello ${userData.username || "User"}!`);
         } else {
             console.log("No Firestore data found for this user.");
             Alert.alert("Note", "Logged in, but user data not found.");
         }
 
 
-        navigation.navigate("LandingPage"); 
+        navigation.navigate("LandingPage"); //keep as it is
 
 
-    } catch (error) {
+        } catch (error) {
         console.log("Login error:", error);
-        Alert.alert("Login Error", error.message);
+
+         let message = '';
+
+            switch (error.code) {
+                case 'auth/user-not-found':
+                message = 'No user found with that email.';
+                break;
+                case 'auth/wrong-password':
+                message = 'Incorrect password.';
+                break;
+                case 'auth/invalid-email':
+                message = 'Please enter a valid email address.';
+                break;
+                case 'auth/network-request-failed':
+                message = 'Network error. Please check your connection.';
+                break;
+                case 'auth/invalid-credential': 
+                message = 'Invalid email or password.';
+                break;
+                default:
+                message = 'Login failed. Please try again.';
+            }
+            setPopupMessage(message);
+            setPopupVisible(true);
     }
 };
 
@@ -134,6 +159,12 @@ const Login = () => {
                </Formik>
             </InnerContainer>
         </StyledContainer>
+
+         <Popup
+                visible={popupVisible}
+                message={popupMessage}
+                onClose={() => setPopupVisible(false)}/>
+
         </GradientBackground>
     );
 }
