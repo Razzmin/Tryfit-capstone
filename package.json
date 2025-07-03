@@ -9,12 +9,14 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~5.0.4",
     "@react-navigation/native": "^7.1.14",
     "@react-navigation/stack": "^7.4.0",
     "expo": "~53.0.12",
     "expo-constants": "^17.1.6",
     "expo-linear-gradient": "~14.1.5",
     "expo-status-bar": "~2.2.3",
+    "firebase": "^11.10.0",
     "formik": "^2.4.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -24,8 +26,7 @@
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "^4.11.1",
     "react-native-web": "^0.20.0",
-    "styled-components": "^6.1.19",
-    "@expo/metro-runtime": "~5.0.4"
+    "styled-components": "^6.1.19"
   },
   "expo": {
     "doctor": {

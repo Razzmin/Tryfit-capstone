@@ -1,5 +1,4 @@
 import styled from "styled-components/native";
-import { View, Text, Image, TextInput, TouchableOpacity, Dimensions, ScrollView} from "react-native";
 import Constants from "expo-constants";
 
 
@@ -195,6 +194,7 @@ export const SignupFormArea= styled(StyledFormArea)`
 `;
 export const SignUpTextInput = styled(StyledTextInput)`
     padding-left: 30px;
+    color:${black};
 `;
 export const SignUpStyleInputLabel= styled(StyleInputLabel)`
 `;
@@ -212,3 +212,5 @@ export const LogInLinkText = styled(LinkText)`
 `;
 export const LogInPlainText = styled(PlainText)`
 `;
+export const BodyMBackWrapper = styled(BackArrowWrapper)`
+`

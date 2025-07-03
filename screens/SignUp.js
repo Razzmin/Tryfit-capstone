@@ -3,6 +3,14 @@ import { View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import GradientBackground from "../components/gradientbackground";
+import { Alert } from 'react-native';
+
+
+//Firebase
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase/config";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../firebase/config";
 
 //formik for forms
 import { Formik } from "formik";
@@ -40,6 +48,31 @@ const {gray} = Colors;
 const Signup = () => {
     const navigation = useNavigation();
      const [hidePassword,setHidePassword] = useState(true);
+
+     // Firebase Signup Function
+    const handleSignup = async (values) => {
+        try {
+            const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            values.email,
+            values.password
+            );
+            const user = userCredential.user;
+
+            await setDoc(doc(db, "users", user.uid), {
+            username: values.username,  // or values.username depending on your key
+            email: values.email,
+            createdAt: new Date()
+            });
+
+            Alert.alert("Success", "Account created!");
+            navigation.navigate("BodyMeasurement");
+
+            } catch (error) {
+                console.log("Firebase Error:", error);
+                Alert.alert("Signup Error", error.message);
+        }
+    };
   return (
     <GradientBackground>
      <SignupContainer>
@@ -56,25 +89,23 @@ const Signup = () => {
                 <CreateAccountTitle> Create your account </CreateAccountTitle>
                 <PersonalDetailsSubtitle> Personal Details</PersonalDetailsSubtitle>
                 <Formik
-                initialValues={{name: '', email:'', password:''}}
-                onSubmit={(values)=> {
-                console.log(values);
-                }} 
+                initialValues={{username: '', email:'', password:''}}
+                onSubmit={handleSignup}
                 >
                 {({handleChange,handleBlur,handleSubmit, values}) => (
                 <SignupFormArea>
                       <UserTextInput
                         label="Username"
-                         icon="person"
-                        placeholder="ex. Kween LengLeng   "
+                        icon="person"
+                        placeholder="ex. Kween LengLeng"
                         placeholderTextColor={gray}
                         onChangeText={handleChange('username')}
                         onBlur={handleBlur('username')}
-                        value={values.name}
+                        value={values.username}
                         keyboardType="username"
                     />
                      <UserTextInput
-                    label="Email Address"
+                        label="Email Address"
                         icon="mail"
                         placeholder="ex. lenglenggandamoh@vvko.com"
                         placeholderTextColor={gray}
@@ -96,8 +127,9 @@ const Signup = () => {
                         hidePassword={hidePassword}
                         setHidePassword={setHidePassword}
                     />
-                    <SignInButton onPress={handleSubmit}>
-                    <SignInButtonText>SIGN UP</SignInButtonText>
+                    <SignInButton 
+                    onPress={handleSubmit} >
+                    <SignInButtonText>Next</SignInButtonText>
                     </SignInButton>
                     <SignUpBottomTextWrapper>
                         <LogInPlainText>Already have an account?</LogInPlainText>

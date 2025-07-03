@@ -2,6 +2,14 @@ import React from "react";
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import GradientBackground from "../components/gradientbackground";
+import { Alert } from 'react-native';
+
+
+//firebase
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase/config";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase/config";  
 
 //formik for forms
 import { Formik } from "formik";
@@ -38,6 +46,40 @@ const {black} = Colors;
 const Login = () => {
     const navigation = useNavigation();
     const [hidePassword,setHidePassword] = useState(true);
+
+    
+   const handleLogin = async (values) => {
+    try {
+        const userCredential = await signInWithEmailAndPassword(
+            auth,
+            values.email,
+            values.password
+        );
+        const user = userCredential.user;
+
+        
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+            const userData = userDoc.data();
+            console.log("User Firestore data:", userData);
+            Alert.alert("Welcome", `Hello ${userData.username || "User"}!`);
+        } else {
+            console.log("No Firestore data found for this user.");
+            Alert.alert("Note", "Logged in, but user data not found.");
+        }
+
+
+        navigation.navigate("LandingPage"); 
+
+
+    } catch (error) {
+        console.log("Login error:", error);
+        Alert.alert("Login Error", error.message);
+    }
+};
+
     return(
         <GradientBackground>
         <StyledContainer>
@@ -49,9 +91,7 @@ const Login = () => {
 
                <Formik
                 initialValues={{email:'', password:''}}
-                onSubmit={(values)=> {
-                console.log(values);
-                }} 
+                onSubmit={handleLogin}
                 >
                 {({handleChange,handleBlur,handleSubmit, values}) => (
 
