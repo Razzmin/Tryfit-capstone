@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import {useState} from "react";
+
 
 
 // Screens
@@ -11,6 +11,11 @@ import SplashScreen from './screens/splashscreen';
 import BodyMeasurements from './screens/BodyMeasurement';
 import BodyTracking from './screens/BodyTracking';
 import LandingPage from './screens/LandingPage';
+import Profile from './screens/Profile';
+import EditProfile from './screens/EditProfile';
+import Notification from './screens/Notification';
+import ShippingLocation from './screens/ShippingLocation';
+import Password from './screens/Password';             
 
 const Stack = createStackNavigator();
 
@@ -37,6 +42,11 @@ export default function App() {
         <Stack.Screen name="BodyMeasurement" component={BodyMeasurements} />
         <Stack.Screen name="BodyTracking" component={BodyTracking} />
         <Stack.Screen name="LandingPage" component={LandingPage} />
+        <Stack.Screen name="Profile" component={Profile} />
+        <Stack.Screen name="EditProfile" component={EditProfile} />
+        <Stack.Screen name="Notification" component={Notification} />
+        <Stack.Screen name="ShippingLocation" component={ShippingLocation} />
+        <Stack.Screen name="Password" component={Password} />
       </Stack.Navigator> 
       )}
     </NavigationContainer>
