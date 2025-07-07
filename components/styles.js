@@ -83,8 +83,8 @@ export const SubTitle = styled.Text`
 
 export const StyledFormArea = styled.View`
     width: 110%;
-    padding: 0 12px;
-    margin-top: 25px;
+    padding: 0 10px;
+    margin-top: 25pxpx;
 `;
 
 export const StyledTextInput = styled.TextInput`
