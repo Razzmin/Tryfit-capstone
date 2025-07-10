@@ -1,5 +1,4 @@
 import { LinearGradient} from "expo-linear-gradient";
-import { Colors } from "../components/styles";
 
 const GradientBackground = (props) => (
     <LinearGradient

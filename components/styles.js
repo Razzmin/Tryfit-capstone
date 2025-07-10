@@ -213,4 +213,175 @@ export const LogInLinkText = styled(LinkText)`
 export const LogInPlainText = styled(PlainText)`
 `;
 export const BodyMBackWrapper = styled(BackArrowWrapper)`
-`
+`;
+
+
+//image slider styles 
+export const PageScroll = styled.ScrollView`
+    background-color: transparent;
+    flex: 1;
+`;
+export const ImageSlider = styled.ScrollView`
+  width: 100%;
+  height: 320px;
+background-color: transparent;
+`;
+export const SliderIndicatorWrapper = styled.View`
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    marginTop: 10px;
+`;
+export const Dash = styled.View`
+  height: 6px;
+  width: ${(props) => (props.$active ? '20px' : '15px')};
+  background-color: ${(props) => (props.$active ? '#9747FF' : '#ccc')};
+  border-radius: 2px;
+  margin: 0 4px;
+`;
+export const ProductImage = styled.Image`
+  width: 340px;
+  height: 340px;
+  margin-right: 10px;
+  border-radius: 12px;
+  background-color: transparent;
+`;
+//contents part
+export const Content = styled.View`
+  padding: 15px;
+    background-color: transparent;
+`;
+export const ProductName = styled.Text`
+  font-size: 17px;
+  font-weight: bold;
+  margin-bottom: 10px;
+`;
+export const RightHeartIcon = styled(RightIcon)`
+    top: 5px;
+`;
+export const ProductPrice = styled.Text`
+  font-size: 22px;
+  font-weight: bold;
+  color: #9747FF;
+  margin-bottom: 15px;
+`;
+
+//color variation part
+export const ColorRow = styled.View`
+  flex-direction: row;
+  margin-bottom: 0px;
+`;
+
+export const ColorCircle = styled.TouchableOpacity`
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  margin-right: 10px;
+`;
+export const ColorWrapper = styled.View`
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    marginTop: 7px;
+    margin-bottom: 0;
+`;
+ 
+//ratings 
+export const RatingText = styled.Text`
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 16px;
+`;
+
+
+//product desc 
+export const SectionTitle = styled.Text`
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  margin-top: 20px;
+`;
+export const Description = styled.Text`
+  font-size: 13px;
+  line-height: 25px;
+`;
+
+//review sect editing rn huahuahauha
+export const ReviewContainer = styled.View`
+ padding: 15px;
+ background-color: ${primary};
+`;
+
+export const ReviewItems = styled.View`
+    flex-direction: row;
+    margin-bottom: 20px;
+`;
+export const Avatar = styled.View`
+    width: 38px;
+    height: 38px;
+    border-radius: 19px;
+    justify-content: center;
+    align-items: center;
+    margin-right: 10px;
+`;
+export const AvatarText = styled.Text`
+    color: ${black};
+    font-weight: bold;
+`;
+export const ReviewContent = styled.View`
+    flex:1;
+`;
+export const ReviewerName = styled.Text`
+  font-weight: 600;
+  font-size: 14px;
+`;
+export const VariationText = styled.Text`
+    color: ${gray};
+    font-size: 12px;
+    margin-bottom: 2px;
+`;
+export const StarRatings = styled.View`
+    flex-direction: row;
+    margin-bottom: 5px;
+`;
+export const CommentText = styled.Text`
+    font-size: 13px;
+    color: ${gray};
+`;
+
+// nav bar for product details
+export const NavBar = styled.View`
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right:0;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    padding-vertical: 30px;
+    background-color:rgb(242, 242, 242);
+    border-top-left-radius: 40px;
+    border-top-right-radius: 40px;
+    shadow-offset: 0px 4px;
+    shadow-radius: 8px;
+    elevation: 10;
+    height: 110px,
+`;
+
+export const AddCartBtn = styled.TouchableOpacity`
+    background-color: ${secondary};
+    padding-vertical: 17px;
+    padding-horizontal: 30px;
+    border-radius: 15px;
+    margin-bottom: 25px;
+    min-width: 150px;
+    align-items: center;
+`;
+export const AddCartText = styled.Text`
+    color: ${white};
+    font-weight: bold;
+    font-size: 15px;
+
+
+
+`;

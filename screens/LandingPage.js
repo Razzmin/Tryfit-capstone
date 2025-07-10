@@ -27,36 +27,66 @@ export default function LandingPage() {
         name: "Women's Y2K Long Sleeve Tops Shirt",
         price: 'P180',
         image: 'https://placehold.co/150x200?text=Y2K+Top',
+        images: [
+              'https://placehold.co/150x200?text=Y2K+Front',
+              'https://placehold.co/150x200?text=Y2K+Back',
+              'https://placehold.co/150x200?text=Y2K+Side',
+        ],
         rating: 4.8,
         sold: '3.7K',
         delivery: '3-5 Days',
-      },
+        colors: ['#000', '#9747FF', '#E91E63'],
+        description: "Fit: Slim fit\nFabric: Cotton\nNeck: Crew neckline\nSleeve: Long sleeves\nMaterial: Soft cotton blend with stretch\nLength: Waist-length\nCare: Machine washable",
+},
+
       {
         id: '2',
         name: "Men's Black Cotton Top",
         price: 'P100',
         image: 'https://placehold.co/150x200?text=Men+Top',
+        images: [
+              'https://placehold.co/150x200?text=Y2K+Front',
+              'https://placehold.co/150x200?text=Y2K+Back',
+              'https://placehold.co/150x200?text=Y2K+Side',
+        ],
         rating: 4.8,
         sold: '3.7K',
         delivery: '3-5 Days',
+        colors: ['#000', '#9747FF', '#E91E63'],
+        description: "Fit: Slim fit\nFabric: Cotton\nNeck: Crew neckline\nSleeve: Short sleeves\nMaterial: Soft cotton blend with stretch\nLength: Hip-length\nCare: Machine washable"
+
       },
       {
         id: '3',
         name: 'Women Black and White Gingham',
         price: 'P270',
         image: 'https://placehold.co/150x200?text=Gingham',
+        images: [
+              'https://placehold.co/150x200?text=Y2K+Front',
+              'https://placehold.co/150x200?text=Y2K+Back',
+              'https://placehold.co/150x200?text=Y2K+Side',
+        ],
         rating: 4.1,
         sold: '7K',
         delivery: '3-5 Days',
+        colors: ['#000', '#9747FF', '#E91E63'],
+        description: "Fit: Regular fit\nFabric: Woven cotton\nNeck: Square neckline\nSleeve: Puff sleeves\nMaterial: Lightweight cotton\nPattern: Black and white gingham\nLength: Waist-length\nCare: Machine wash cold"
       },
       {
         id: '4',
         name: 'Unisex Oversized Hoodie',
         price: 'P350',
         image: 'https://placehold.co/150x200?text=Oversized+Hoodie',
+        images: [
+              'https://placehold.co/150x200?text=Y2K+Front',
+              'https://placehold.co/150x200?text=Y2K+Back',
+              'https://placehold.co/150x200?text=Y2K+Side',
+        ],
         rating: 4.9,
         sold: '5.2K',
         delivery: '3-5 Days',
+        colors: ['#000', '#9747FF', '#E91E63'],
+        description: "Fit: Oversized fit\nFabric: Fleece-lined cotton\nNeck: Hooded neckline\nSleeve: Long sleeves with ribbed cuffs\nMaterial: Soft cotton-poly blend\nPockets: Kangaroo front pocket\nLength: Below waist\nCare: Machine washable"
       },
     ];
     setProducts(mockData);
@@ -82,6 +112,8 @@ export default function LandingPage() {
               />
             </View>
           </View>
+
+
           {isMenuOpen && (
             <Pressable style={styles.overlay} onPress={() => setIsMenuOpen(false)}>
               <View style={styles.sideMenu}>
@@ -101,28 +133,37 @@ export default function LandingPage() {
               </View>
             </Pressable>
           )}
+
           <Text style={styles.sectionTitle}>New Arrivals</Text>
           <ScrollView horizontal style={styles.newArrivalsRow} showsHorizontalScrollIndicator={false}>
             {[...Array(6)].map((_, i) => (
               <View key={i} style={styles.placeholderRect} />
             ))}
           </ScrollView>
+
+
           <Text style={styles.sectionTitle}>Popular</Text>
           <ScrollView horizontal style={styles.popularRow} showsHorizontalScrollIndicator={false}>
             {products.map(product => (
               <Image key={product.id} source={{ uri: product.image }} style={styles.largeCircle} />
             ))}
           </ScrollView>
+
+
           <Text style={styles.sectionTitle}>Our Picks for You</Text>
           <View style={styles.grid}>
             {products.map(product => (
-              <View key={product.id} style={styles.card}>
+              <TouchableOpacity
+              key={product.id}
+              style={styles.card}
+              onPress={() => navigation.navigate('ProductDetail', { product })}
+              >
                 <Image source={{ uri: product.image }} style={styles.image} />
                 <Text style={styles.name}>{product.name}</Text>
                 <Text style={styles.price}>{product.price}</Text>
                 <Text style={styles.meta}>⭐ {product.rating} • {product.sold} Sold</Text>
                 <Text style={styles.delivery}>🚚 {product.delivery}</Text>
-              </View>
+                </TouchableOpacity>      
             ))}
           </View>
         </ScrollView>  

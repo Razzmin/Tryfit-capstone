@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-
-
+import { NotificationProvider } from './components/notificationcontent';
 
 // Screens
 import Login from './screens/LogIn';
@@ -15,7 +14,11 @@ import Profile from './screens/Profile';
 import EditProfile from './screens/EditProfile';
 import Notification from './screens/Notification';
 import ShippingLocation from './screens/ShippingLocation';
-import Password from './screens/Password';             
+import Password from './screens/Password';
+
+//product details screens
+import ProductDetail from './screens/Products/ProductDetail';
+
 
 const Stack = createStackNavigator();
 
@@ -31,6 +34,7 @@ export default function App() {
 
 
   return (
+    <NotificationProvider>
     <NavigationContainer> 
     {isShowSplash ? (
      <SplashScreen />
@@ -47,8 +51,11 @@ export default function App() {
         <Stack.Screen name="Notification" component={Notification} />
         <Stack.Screen name="ShippingLocation" component={ShippingLocation} />
         <Stack.Screen name="Password" component={Password} />
+        <Stack.Screen name="ProductDetail" component={ProductDetail} />
+
       </Stack.Navigator> 
       )}
     </NavigationContainer>
+    </NotificationProvider>
   );
 }
