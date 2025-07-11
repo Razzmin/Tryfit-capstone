@@ -92,7 +92,7 @@ export default function ShippingLocation() {
       <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="numeric" />
 
       <Text style={styles.label}>House No., Street / Building</Text>
-      <TextInput style={styles.input} value={house} onChangeText={setHouse} placeholder="225, Purok Alpha" />
+      <TextInput style={styles.input} value={house} onChangeText={setHouse} placeholder="e.g.,225, Purok Alpha" />
 
       <Text style={styles.label}>Address</Text>
       <View style={styles.pickerWrapper}>
