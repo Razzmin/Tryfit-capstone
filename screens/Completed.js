@@ -52,12 +52,10 @@ export default function Completed() {
         ))}
       </ScrollView>
 
-      {/* Completed Order Example */}
       <ScrollView>
         <View style={styles.orderCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.orderStatus}>Completed</Text>
-            <Text style={styles.orderDate}>June 15, 2025</Text>
           </View>
 
           <View style={styles.productRow}>
@@ -67,19 +65,24 @@ export default function Completed() {
             />
             <View style={styles.productInfo}>
               <Text style={styles.productName}>Coquette Ruffle Skirt</Text>
-              <Text style={styles.productPrice}>₱250</Text>
+              <Text style={styles.productSize}>small</Text>
               <Text style={styles.productQty}>Qty: 1</Text>
             </View>
           </View>
 
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Payment:</Text>
+            <Text style={[styles.totalLabel, { marginLeft: 175 }]}>Total Payment:</Text>
             <Text style={styles.totalPrice}>₱250</Text>
           </View>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>Leave Review</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={[styles.secondaryButton, { marginLeft: 90}]}>
+              <Text style={styles.secondaryButtonText }>Rate</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>Buy Again</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -119,7 +122,7 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#9747FF',
-    fontWeight: '600',   
+    fontWeight: '600',
     borderBottomColor: '#9747FF',
     borderBottomWidth: 2,
   },
@@ -138,17 +141,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#9747FF',
   },
-  orderDate: {
-    fontSize: 12,
-    color: '#666',
-  },
   productRow: {
     flexDirection: 'row',
     marginBottom: 10,
   },
   productImage: {
-    width: 80,
-    height: 80,
+    width: 90,
+    height: 90,
     borderRadius: 8,
     backgroundColor: '#ccc',
   },
@@ -159,11 +158,15 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: 10
   },
   productPrice: {
     color: '#9747FF',
     fontWeight: '600',
+  },
+  productSize: {
+    fontSize: 12,
+    color: '#666',
   },
   productQty: {
     fontSize: 12,
@@ -182,14 +185,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#9747FF',
   },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
   actionButton: {
     backgroundColor: '#9747FF',
     paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 6,
     alignItems: 'center',
   },
   actionButtonText: {
     color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  secondaryButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#9747FF',
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    color: '#9747FF',
     fontSize: 14,
     fontWeight: '500',
   },

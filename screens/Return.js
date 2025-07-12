@@ -48,7 +48,6 @@ export default function Return() {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* Tab Navigation */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabContainer}>
         {Object.keys(tabRoutes).map((tab) => (
           <TouchableOpacity

@@ -6,14 +6,21 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Feather } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 
 export default function ToShip() {
   const navigation = useNavigation();
+  const orderId = 'ORD-20250712-01';
 
-  // Correct screen mapping
+  const handleCopy = () => {
+    Clipboard.setStringAsync(orderId);
+    Alert.alert('Copied', 'Order ID copied to clipboard');
+  };
+
   const tabRoutes = {
     'To Ship': 'ToShip',
     'To Receive': 'Orders',
@@ -53,8 +60,8 @@ export default function ToShip() {
         <View style={styles.orderCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.orderStatus}>To Ship</Text>
-            <Text style={styles.orderDate}>June 30, 2025</Text>
           </View>
+
           <View style={styles.productRow}>
             <Image
               source={{ uri: 'https://placehold.co/100x100' }}
@@ -62,17 +69,31 @@ export default function ToShip() {
             />
             <View style={styles.productInfo}>
               <Text style={styles.productName}>Unisex Oversized Hoodie</Text>
-              <Text style={styles.productPrice}>₱350</Text>
+              <Text style={styles.productSize}>small</Text>
               <Text style={styles.productQty}>Qty: 1</Text>
+              <View style={styles.totalRow}>
+              <Text style={styles.productTotal}>Total Payment:</Text>
+              <Text style={[styles.totalPrice, { marginLeft: 90 }]}>₱350</Text>
+            </View>
             </View>
           </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Payment:</Text>
-            <Text style={styles.totalPrice}>₱350</Text>
+
+          <View style={styles.shippingRow}>
+            <Text style={styles.waitingMessage}>Waiting for courier to confirm{'\n'} shipment</Text>
+            <TouchableOpacity style={styles.shippingBtn}>
+              <Text style={styles.shippingBtnText}>View Shipping Details</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>Contact Seller</Text>
-          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          {/* Order ID + Copy */}
+          <View style={styles.orderIdRow}>
+            <Text style={styles.orderIdText}>Order ID: {orderId}</Text>
+            <TouchableOpacity onPress={handleCopy}>
+              <Feather name="copy" size={18} color="#9747FF" />
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -120,7 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
     padding: 15,
-    marginBottom: 450,
+    marginBottom: 500,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -130,10 +151,6 @@ const styles = StyleSheet.create({
   orderStatus: {
     fontWeight: 'bold',
     color: '#9747FF',
-  },
-  orderDate: {
-    fontSize: 12,
-    color: '#666',
   },
   productRow: {
     flexDirection: 'row',
@@ -152,38 +169,67 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  productPrice: {
-    color: '#9747FF',
-    fontWeight: '600',
+  productSize: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
+  },
+  totalRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginTop: 5,
+  marginBottom: 10,
+  },
+  productTotal: {
+  fontSize: 14,
+  fontWeight: '500',
+  color: '#333',
+  },
+  totalPrice: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: '#9747FF',
   },
   productQty: {
     fontSize: 12,
     color: '#666',
   },
-  totalRow: {
+  shippingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 5,
-    marginBottom: 10,
+    alignItems: 'center',
+    marginTop: 10,
   },
-  totalLabel: {
+  waitingMessage: {
+    fontSize: 12,
+    color: '#555',
+    fontStyle: 'italic',
+  },
+  shippingBtn: {
+    backgroundColor: '#9747FF',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  shippingBtnText: {
+    color: '#fff',
+    fontSize: 13,
     fontWeight: '500',
   },
-  totalPrice: {
-    fontWeight: '700',
-    color: '#9747FF',
+  divider: {
+    height: 1,
+    backgroundColor: '#ccc',
+    marginVertical: 12,
   },
-  actionButton: {
-    backgroundColor: '#9747FF',
-    paddingVertical: 10,
-    borderRadius: 6,
+  orderIdRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
+  orderIdText: {
+    fontSize: 13,
+    color: '#333',
   },
 });

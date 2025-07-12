@@ -5,14 +5,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image
+  Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 
 export default function Cancelled() {
   const navigation = useNavigation();
-  const activeTab = 'Cancelled';
+  const route = useRoute(); // ✅ Get current route
+  const currentRoute = route.name;
 
   const cancelledItems = [
     {
@@ -25,7 +26,6 @@ export default function Cancelled() {
     },
   ];
 
-  // Map tabs to screen names
   const tabRoutes = {
     'To Ship': 'ToShip',
     'To Receive': 'Orders',
@@ -45,21 +45,23 @@ export default function Cancelled() {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* Tab Navigation */}
+      {/* Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabContainer}>
-        {Object.keys(tabRoutes).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.activeTab]}
-            onPress={() => {
-              if (tab !== activeTab) navigation.replace(tabRoutes[tab]);
-            }}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-              {tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {Object.keys(tabRoutes).map((tab) => {
+          const routeName = tabRoutes[tab];
+          const isActive = routeName === currentRoute;
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, isActive && styles.activeTab]}
+              onPress={() => {
+                if (!isActive) navigation.replace(routeName);
+              }}
+            >
+              <Text style={[styles.tabText, isActive && styles.activeTabText]}>{tab}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* Cancelled Items */}
@@ -75,9 +77,24 @@ export default function Cancelled() {
               <Image source={{ uri: item.image }} style={styles.image} />
               <View style={styles.details}>
                 <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.price}>{item.price}</Text>
+                <Text style={styles.productSize}>small</Text>
+                <Text style={styles.productQty}>Qty: 1</Text>
                 <Text style={styles.reason}>Reason: {item.reason}</Text>
+                <View style={styles.totalRow}>
+                  <Text style={[styles.totalLabel, { marginLeft: 100 }]}>Total Payment:</Text>
+                  <Text style={styles.price}>{item.price}</Text>
+                </View>
               </View>
+            </View>
+
+            {/* Buttons */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={[styles.secondaryButton, { marginLeft: 150 }]}>
+                <Text style={styles.secondaryButtonText}>Cancellation Details</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.primaryButton}>
+                <Text style={styles.primaryButtonText}>Buy Again</Text>
+              </TouchableOpacity>
             </View>
           </View>
         ))}
@@ -127,7 +144,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
     padding: 15,
-    marginBottom: 550,
+    marginBottom: 500,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -144,6 +161,10 @@ const styles = StyleSheet.create({
   },
   productRow: {
     flexDirection: 'row',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    marginTop: 20,
   },
   image: {
     width: 80,
@@ -167,7 +188,45 @@ const styles = StyleSheet.create({
   },
   reason: {
     fontSize: 12,
-    color: '#777',
+    color: '#9747FF',
     marginTop: 2,
+  },
+  productSize: {
+    fontSize: 12,
+    color: '#666',
+  },
+  productQty: {
+    fontSize: 12,
+    color: '#666',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 15,
+    gap: 10,
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: '#9747FF',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 10,
+  },
+  secondaryButtonText: {
+    color: '#9747FF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  primaryButton: {
+    backgroundColor: '#9747FF',
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

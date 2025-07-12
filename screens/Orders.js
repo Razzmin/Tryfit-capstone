@@ -71,7 +71,7 @@ export default function Orders() {
           {/* Expected Delivery */}
           <View style={styles.expectedDelivery}>
             <Text style={styles.expectedText}>Expected Delivery:</Text>
-            <Text style={styles.deliveryDate}>July 5 – July 7, 2025</Text>
+            <Text style={styles.deliveryDate}>July 10-14, 2025</Text>
           </View>
 
           <View style={styles.totalRow}>
@@ -80,11 +80,7 @@ export default function Orders() {
           </View>
 
           <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => {
-              // Will route to TrackOrder screen later
-              console.log('Track Order Pressed');
-            }}
+            style={styles.actionButton} onPress={() => navigation.navigate('TrackOrder')}
           >
             <Text style={styles.actionButtonText}>Track Order</Text>
           </TouchableOpacity>
@@ -193,6 +189,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9747FF',
     fontWeight: '500',
+    letterSpacing: 1,
   },
   totalRow: {
     flexDirection: 'row',
