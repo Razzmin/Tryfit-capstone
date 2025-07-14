@@ -121,14 +121,12 @@ export default function LandingPage() {
                 <View style={styles.menuGroup}>
                   <Text style={styles.menuItem}>Tops</Text>
                   <Text style={styles.subMenuItem}>T-Shirts</Text>
-                  <Text style={styles.subMenuItem}>Polo-Shirt</Text>
-                  <Text style={styles.subMenuItem}>Sleeveless</Text>
+                  <Text style={styles.subMenuItem}>Longleeves</Text>
                 </View>
                 <View style={styles.menuGroup}>
                   <Text style={styles.menuItem}>Bottoms</Text>
+                  <Text style={styles.subMenuItem}>Pants</Text>
                   <Text style={styles.subMenuItem}>Shorts</Text>
-                  <Text style={styles.subMenuItem}>Trouser</Text>
-                  <Text style={styles.subMenuItem}>Jeans</Text>
                 </View>
               </View>
             </Pressable>
@@ -174,8 +172,12 @@ export default function LandingPage() {
         <TouchableOpacity onPress={() => setActiveTab('Cart')}>
           <FontAwesome name="shopping-cart" size={26} color={activeTab === 'Cart' ? '#9747FF' : '#999'} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab('Orders')}>
-          <FontAwesome name="dropbox" size={26} color={activeTab === 'Orders' ? '#9747FF' : '#999'} />
+        <TouchableOpacity 
+        onPress={() => {
+          setActiveTab('Orders');
+          navigation.navigate('Orders');
+        }}>
+        <FontAwesome name="dropbox" size={26} color={activeTab === 'Orders' ? '#9747FF' : '#999'} />
         </TouchableOpacity>
         <TouchableOpacity
         onPress={() => {
@@ -330,7 +332,7 @@ export default function LandingPage() {
       fontSize: 18,
       fontWeight: '600',
       color: '#fff',
-      paddingVertical: 10,
+      paddingVertical: 18,
       paddingHorizontal: 10,
       backgroundColor: 'rgba(255,255,255,0.15)',
       borderRadius: 8,
@@ -340,7 +342,7 @@ export default function LandingPage() {
       fontSize: 16,
       color: '#eee',
       paddingLeft: 20,
-      paddingVertical: 6,
+      paddingVertical: 15,
       marginBottom: 6,
       backgroundColor: 'rgba(255,255,255,0.05)',
       borderRadius: 6,

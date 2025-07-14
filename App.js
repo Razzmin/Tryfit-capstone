@@ -19,6 +19,13 @@ import Password from './screens/Password';
 //product details screens
 import ProductDetail from './screens/Products/ProductDetail';
 
+import Orders from './screens/Orders';
+import ToShip from './screens/ToShip';
+import Completed from './screens/Completed';
+import Return from './screens/Return'; 
+import Cancelled from './screens/Cancelled';
+import TrackOrder from './screens/TrackOrder';     
+              
 
 const Stack = createStackNavigator();
 
@@ -52,7 +59,12 @@ export default function App() {
         <Stack.Screen name="ShippingLocation" component={ShippingLocation} />
         <Stack.Screen name="Password" component={Password} />
         <Stack.Screen name="ProductDetail" component={ProductDetail} />
-
+        <Stack.Screen name="Orders" component={Orders} />
+        <Stack.Screen name="ToShip" component={ToShip} />
+        <Stack.Screen name="Completed" component={Completed} />
+        <Stack.Screen name="Return" component={Return} />
+        <Stack.Screen name="Cancelled" component={Cancelled} />
+        <Stack.Screen name="TrackOrder" component={TrackOrder} />
       </Stack.Navigator> 
       )}
     </NavigationContainer>
