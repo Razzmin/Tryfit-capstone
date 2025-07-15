@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useContext } from 'react';
-import { NotificationContent } from '../components/notificationcontent';
+import { NotificationContent } from '../content/notificationcontent';
 import AntDesign from '@expo/vector-icons/AntDesign';
 
 export default function Notification() {

@@ -1,10 +1,10 @@
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { View, Text } from 'react-native';
-
 import { useContext } from 'react';
-import { NotificationContent } from '../../components/notificationcontent';
+import { NotificationContent } from '../../content/notificationcontent';
+import { CartContext } from '../../content/shoppingcartcontent';
 
 import {
   PageScroll,
@@ -32,12 +32,16 @@ import {
   VariationText,
   StarRatings,
   CommentText,
-  ReviewerName
+  ReviewerName,
+  Header,
+  ProductContainer,
+  BackBtnPro,
+  BackBtn,
 } from '../../components/styles';
 
 //icons 
 import AntDesign from '@expo/vector-icons/AntDesign';
-
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function ProductDetail() {
   const route = useRoute();
@@ -45,6 +49,8 @@ export default function ProductDetail() {
   const [activeImage, setActiveImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0] || '#000');
   const { addNotification } = useContext(NotificationContent);
+  const { addToCart } = useContext(CartContext);
+  const navigation = useNavigation();
 
   
 //reviews 
@@ -116,8 +122,15 @@ export default function ProductDetail() {
   ];
 
   return (
-   <View style={{ flex: 1 , justifyContent: 'space-between' }}>
+    <ProductContainer>
     <PageScroll contentContainerStyle={{ paddingBottom: 150}}>
+    <Header>
+    <BackBtnPro onPress={() => navigation.goBack()}>
+   <FontAwesome name="arrow-left" size={24} color="black" />
+    </BackBtnPro>
+    </Header>
+
+
     <ImageSlider horizontal pagingEnabled showsHorizontalScrollIndicator={false}
       onScroll={(e) => {
 
@@ -216,6 +229,7 @@ export default function ProductDetail() {
   <NavBar>
   <AddCartBtn onPress={() => {
     console.log('Added to Cart');
+    addToCart(product, selectedColor);
     addNotification(product.name);
   }}
   >
@@ -227,7 +241,7 @@ export default function ProductDetail() {
   <AddCartText>Try-on</AddCartText>
   </AddCartBtn>
     </NavBar>
-    </View>
+    </ProductContainer>
    );  
 }  
  

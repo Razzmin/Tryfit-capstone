@@ -21,9 +21,10 @@ export const Colors = {
     "#d6bfff",
     "#e0cfff",
     "#ebdfff"
-  ]
+  ],
+  purple: "#9747FF",
 };
-const {primary, secondary, white, black, gray} = Colors; 
+const {primary, secondary, white, black, gray, purple} = Colors; 
 
 //splashscreen contents
 export const SplashContainer = styled.View`
@@ -111,6 +112,7 @@ export const LeftIcon = styled.View`
     top: 38px;
     position: absolute;
     z-index: 1;
+    
 `;
 export const RightIcon = styled.TouchableOpacity`
     right: 10px;
@@ -120,7 +122,7 @@ export const RightIcon = styled.TouchableOpacity`
 `;
 export const StyledButton = styled.TouchableOpacity`
     padding: 15px;
-    background-color: ${secondary};
+    background-color: ${purple};
     justify-content: center;
     border-radius: 10px;
     margin-vertical: 5px;
@@ -138,6 +140,7 @@ export const BottomTextWrapper = styled.View`
   margin-top: 20px;
 `;
 export const SignUpButton = styled.TouchableOpacity`
+   color: ${purple};
 `;
 export const LinkText = styled.Text`
     color: ${secondary};
@@ -150,11 +153,13 @@ export const PlainText = styled.Text`
 `;
 
 //signup contents
-
-export const SignupContainer = styled(StyledContainer)`
+export const SignupContainer = styled.View`
+   flex:1;
+    background-color: ${white};
+    padding: 30px 20px;
+    position: relative;
+    padding-top: 60px;
     background-color: transparent;
-`;
-export const SignupInnerContainer = styled(InnerContainer)`
 `;
 export const BackArrowWrapper = styled.TouchableOpacity`
     margin-top: 30px;
@@ -175,9 +180,10 @@ export const BackText = styled.Text`
     margin-left: 5px;
 `;
 export const CreateAccountTitle = styled(SubTitle)`
-     font-size: 31px;
+     font-size: 20px;
      margin-top: 20px;
      margin-bottom: 10px;
+     color: ${secondary};
 `;
 export const PersonalDetailsSubtitle = styled(PageTitle)`
     font-size: 18px;
@@ -189,16 +195,23 @@ export const PersonalDetailsSubtitle = styled(PageTitle)`
 `;
 export const SignupFormArea= styled(StyledFormArea)`
     width: 110%;
-    padding: 0 12px;
-    margin-top: 25px;
+    margin-top: 20px;
+    padding-right: 40px;
 `;
 export const SignUpTextInput = styled(StyledTextInput)`
-    padding-left: 30px;
+    padding-left: 50px;
     color:${black};
+    border-color: ${black};
 `;
 export const SignUpStyleInputLabel= styled(StyleInputLabel)`
 `;
 export const SignUpRightIcon = styled(RightIcon)`
+`;
+export const SignUpLeftIcon = styled.View`
+    left: 10px;
+    top: 40px;
+    position: absolute;
+    z-index: 1;
 `;
 export const SignInButton = styled(StyledButton)`
 `;
@@ -212,11 +225,18 @@ export const LogInLinkText = styled(LinkText)`
 `;
 export const LogInPlainText = styled(PlainText)`
 `;
-export const BodyMBackWrapper = styled(BackArrowWrapper)`
+export const BodyMBackWrapper = styled.View`
 `;
 
 
-//image slider styles 
+
+//image slider 
+
+export const ProductContainer = styled.View`
+    padding-top: 60px;
+    background-color: ${white};
+    flex: 1;
+`;
 export const PageScroll = styled.ScrollView`
     background-color: transparent;
     flex: 1;
@@ -262,7 +282,7 @@ export const RightHeartIcon = styled(RightIcon)`
 export const ProductPrice = styled.Text`
   font-size: 22px;
   font-weight: bold;
-  color: #9747FF;
+  color: ${purple};
   margin-bottom: 15px;
 `;
 
@@ -359,17 +379,16 @@ export const NavBar = styled.View`
     justify-content: space-around;
     align-items: center;
     padding-vertical: 30px;
-    background-color:rgb(242, 242, 242);
+    background-color: ${white};
     border-top-left-radius: 40px;
     border-top-right-radius: 40px;
     shadow-offset: 0px 4px;
     shadow-radius: 8px;
     elevation: 10;
-    height: 110px,
 `;
 
 export const AddCartBtn = styled.TouchableOpacity`
-    background-color: ${secondary};
+    background-color: ${purple};
     padding-vertical: 17px;
     padding-horizontal: 30px;
     border-radius: 15px;
@@ -381,7 +400,138 @@ export const AddCartText = styled.Text`
     color: ${white};
     font-weight: bold;
     font-size: 15px;
+`;
 
+//shopping cart 
 
+export const CartContainer = styled.View`
+    flex:1;
+    background-color: transparent;
+    padding: 30px 20px;
+    position: relative;
+    padding-top: 60px;
+`;
+export const Header = styled.View`
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 30px;
+`;
 
+export const ShoppingCartTitle = styled.Text`
+    font-size: 20px;
+    font-weight:bold;
+    text-align: center;
+
+`;
+export const CartItem = styled.View`
+    flex-direction: row;
+    align-items: center;
+    background-color: ${primary};
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 12px;
+    elevation: 2;
+`;
+export const ItemImage = styled.Image`
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    margin-right: 15px;
+`;
+export const ItemInfo = styled.View`
+    flex: 1;
+    margin-left: 10px;
+    justify-content: space-between;
+`;
+export const ItemDetails = styled.View`
+    flex:1;
+`;
+
+export const ItemPrice = styled.Text`
+    font-size: 14px;
+    color: ${purple};
+    margin-top: 4px;
+
+`;
+export const CartEmpty = styled.Text`
+    text-align: center;
+    font-size: 16px;
+    color: ${gray};
+    margin-top: 50px;
+`;
+export const ItemName = styled.Text`
+    font-size: 15px;
+    font-weight: bold;
+    margin-bottom: 15px;
+`;
+export const ItemQty = styled.Text`
+    font-size: 14px;
+    color: ${gray};
+    margin-top: 5px;
+`;
+export const BackBtn = styled.TouchableOpacity`
+    margin-right: 10px;
+`;
+
+export const TotalPrice = styled.Text`
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: ${black};
+    text-align: left;
+    padding-left: 40px;
+`;
+export const ItemFooter = styled.View`
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 5px;
+`;
+export const CartFooter = styled.View`
+    flex-direction: column;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right:0;
+    padding-vertical: 30px;
+    background-color:rgb(242, 242, 242);
+    border-top-left-radius: 40px;
+    border-top-right-radius: 40px;
+    shadow-offset: 0px 4px;
+    shadow-radius: 8px;
+    elevation: 10;
+`;
+export const CheckoutBtn = styled.TouchableOpacity`
+    background-color: ${purple};
+    padding: 18px;
+    border-radius: 10px;
+    align-items: center;
+    margin-bottom: 30px;
+    margin-horizontal: 30px;
+
+`;
+export const CheckoutText = styled.Text`
+    color: ${white};
+    font-weight: bold;
+    font-size: 16px;
+`;
+export const QuantityControl = styled.View`
+    flex-direction: row;
+    align-items: center;
+`;
+export const QtyButton = styled.TouchableOpacity`
+    padding: 0 10px;
+`;
+export const BackBtnPro = styled(BackBtn)`
+    margin-right: 10px;
+    padding-left: 20px;
+`;
+
+//adjustments
+
+export const SignBackBtn = styled(BackBtn)`
+`;
+export const SignHeader = styled(Header)`
+`;
+export const SignTitle = styled(ShoppingCartTitle)`
 `;

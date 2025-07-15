@@ -3,9 +3,8 @@ import { useIsFocused } from '@react-navigation/native';
 import { View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
-import GradientBackground from "../components/gradientbackground";
 import Popup from '../components/Popup'; 
-
+import { LinearGradient } from 'expo-linear-gradient';
 
 
 //Firebase
@@ -18,16 +17,14 @@ import { db } from "../firebase/config";
 import { Formik } from "formik";
 
 //icons
-import {Octicons, Ionicons} from '@expo/vector-icons';
+import {Ionicons} from '@expo/vector-icons';
+import {Octicons} from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 
 //content structure
 import {
     CreateAccountTitle,
     SignupContainer,
-    SignupInnerContainer,
-    BackArrowWrapper,
-    BackArrowtIcon,
-    BackText,
     Colors,
     SignUpStyleInputLabel,
     SignupFormArea,
@@ -35,13 +32,19 @@ import {
     SignInButton,
     SignInButtonText,
     SignUpRightIcon,
-    PersonalDetailsSubtitle,
     SignUpBottomTextWrapper,
     LogInButton,
     LogInLinkText,
     LogInPlainText,
+    SignHeader,
+    SignBackBtn,
+    SignTitle,
+    SignUpLeftIcon,
+
 } from "./../components/styles";
+
 import { useState } from 'react';
+import { Header } from '@react-navigation/stack';
 
 //colors
 const {black} = Colors;
@@ -76,14 +79,12 @@ const Signup = () => {
             const user = userCredential.user;
 
             await setDoc(doc(db, "users", user.uid), {
-            username: values.username,  // or values.username depending on your key
+            username: values.username, 
             email: values.email,
             createdAt: new Date()
             });
-
-        setPopupMessage("Account created successfully!");
-        setPopupVisible(true);
-
+          
+            navigation.navigate("BodyMeasurement");
             } catch (error) {
                 console.log("Firebase Error:", error);
                let message = '';
@@ -109,23 +110,26 @@ const Signup = () => {
     }
     setPopupMessage(message);
     setPopupVisible(true);
+    formikRef.current?.resetForm();
         }
     };
   return (
-    <GradientBackground>
+     <LinearGradient colors={['hsl(266, 100%, 78%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
      <SignupContainer>
             <StatusBar style="dark"/>
-            <SignupInnerContainer>
-            <View style={{ width: '100%', alignItems: 'flex-start' }}>
-                <BackArrowWrapper onPress={() => navigation.navigate('Login')}>
-                <BackArrowtIcon>
-                    <Ionicons name="arrow-back" size={24} color="black" /> 
-                    <BackText>Back</BackText>
-                </BackArrowtIcon>  
-                </BackArrowWrapper> 
-                </View>
-                <CreateAccountTitle> Create your account </CreateAccountTitle>
-                <PersonalDetailsSubtitle> Personal Details</PersonalDetailsSubtitle>
+            <SignHeader>
+              <SignBackBtn onPress={() => navigation.navigate('Login')}>
+                        <FontAwesome name="arrow-left" size={24} color="#000" />
+                      </SignBackBtn>
+                         <View style={{ flex: 1, alignItems: 'center' }}>
+                        <SignTitle> Create your account </SignTitle>
+                        </View>
+              
+                      <View style={{ width: 24 }} />
+                      </SignHeader>
+            
+                <CreateAccountTitle> Personal Details </CreateAccountTitle>
+
                 <Formik
                 innerRef={formikRef}
                 initialValues={{username: '', email:'', password:''}}
@@ -142,6 +146,10 @@ const Signup = () => {
                         onBlur={handleBlur('username')}
                         value={values.username}
                         keyboardType="username"
+                        autoCompleteType="off"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        importantForAutofill="no" 
                     />
                      <UserTextInput
                         label="Email Address"
@@ -175,19 +183,18 @@ const Signup = () => {
                         importantForAutofill="no"  
                     />
                     <SignInButton 
-                    onPress={handleSubmit} >
+                   onPress={() => navigation.navigate('BodyMeasurement')}>
                     <SignInButtonText>Next</SignInButtonText>
                     </SignInButton>
                     <SignUpBottomTextWrapper>
                         <LogInPlainText>Already have an account?</LogInPlainText>
-                        <LogInButton onPress={() => navigation.navigate('Login')}>
+                        <LogInButton onPress={() => navigation.navigate('BodyMeasurement')}>
                         <LogInLinkText> Log In</LogInLinkText>
                         </LogInButton>
                     </SignUpBottomTextWrapper>
                 </SignupFormArea>
                 )}
                  </Formik>
-                </SignupInnerContainer>
     </SignupContainer>
 
                 <Popup
@@ -196,17 +203,19 @@ const Signup = () => {
         onClose={() => {
           setPopupVisible(false);
           if (popupMessage === "Account created successfully!") {
-            navigation.navigate("Login");
+            navigation.navigate("BodyMeasurement");
           }
         }}
       />
-    </GradientBackground>
+    </LinearGradient>
     )
 }
 const UserTextInput = ({label, icon,isPassword, hidePassword, setHidePassword ,...props}) => {
     return(
         <View style={{width: '100%', marginBottom: 20 }}>
-
+        <SignUpLeftIcon>
+            <Octicons name={icon} size={27} color={black} />
+        </SignUpLeftIcon>
         <SignUpStyleInputLabel>{label}</SignUpStyleInputLabel>
         <SignUpTextInput {...props} />
         {isPassword && (

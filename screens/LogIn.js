@@ -1,9 +1,7 @@
 import React from "react";
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
-import GradientBackground from "../components/gradientbackground";
 import Popup from '../components/Popup'; 
-
 
 //firebase
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -39,6 +37,7 @@ import {
     SignUpButton,
 } from "./../components/styles";
 import { useState } from 'react';
+import { LinearGradient } from "expo-linear-gradient";
 
 //colors
 const {black} = Colors;
@@ -107,7 +106,7 @@ const Login = () => {
 };
 
     return(
-        <GradientBackground>
+       <LinearGradient colors={['hsl(266, 100%, 78%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
         <StyledContainer>
         <StatusBar style="dark"/>
             <InnerContainer>
@@ -165,8 +164,7 @@ const Login = () => {
                 visible={popupVisible}
                 message={popupMessage}
                 onClose={() => setPopupVisible(false)}/>
-
-        </GradientBackground>
+</LinearGradient>
     );
 }
 

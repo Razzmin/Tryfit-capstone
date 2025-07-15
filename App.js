@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { NotificationProvider } from './components/notificationcontent';
+import { CartProvider } from './content/shoppingcartcontent';
+import { NotificationProvider } from './content/notificationcontent';
 
 // Screens
 import Login from './screens/LogIn';
@@ -15,6 +16,8 @@ import EditProfile from './screens/EditProfile';
 import Notification from './screens/Notification';
 import ShippingLocation from './screens/ShippingLocation';
 import Password from './screens/Password';
+import Checkout from './screens/Checkout';
+import ShoppingCart from './screens/ShoppingCart';
 
 //product details screens
 import ProductDetail from './screens/Products/ProductDetail';
@@ -24,6 +27,7 @@ import ToShip from './screens/ToShip';
 import Completed from './screens/Completed';
 import Cancelled from './screens/Cancelled';
 import TrackOrder from './screens/TrackOrder';     
+
               
 
 const Stack = createStackNavigator();
@@ -40,6 +44,7 @@ export default function App() {
 
 
   return (
+    <CartProvider>
     <NotificationProvider>
     <NavigationContainer> 
     {isShowSplash ? (
@@ -63,9 +68,12 @@ export default function App() {
         <Stack.Screen name="Completed" component={Completed} />
         <Stack.Screen name="Cancelled" component={Cancelled} />
         <Stack.Screen name="TrackOrder" component={TrackOrder} />
+        <Stack.Screen name="Checkout" component={Checkout} />
+         <Stack.Screen name="ShoppingCart" component={ShoppingCart} />
       </Stack.Navigator> 
       )}
     </NavigationContainer>
     </NotificationProvider>
+    </CartProvider>
   );
 }

@@ -2,6 +2,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
+import { useContext } from 'react';
 
 import {
   Image,
@@ -14,11 +15,16 @@ import {
   View,
 } from 'react-native';
 
+//  for add to cart import
+import { CartContext } from '../content/shoppingcartcontent';
+
+
 export default function LandingPage() {
   const [products, setProducts] = useState([]);
   const [activeTab, setActiveTab] = useState('Home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigation = useNavigation();
+  const { cartItems, addToCart } = useContext(CartContext);
 
   useEffect(() => {
     const mockData = [
@@ -169,8 +175,18 @@ export default function LandingPage() {
         <TouchableOpacity onPress={() => setActiveTab('Home')}>
           <FontAwesome name="home" size={26} color={activeTab === 'Home' ? '#9747FF' : '#999'} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab('Cart')}>
+        <TouchableOpacity onPress={() => {
+        setActiveTab('Cart');
+        navigation.navigate ('ShoppingCart');
+        }}>
+        <View style={{ alignItems: 'center' }}>
           <FontAwesome name="shopping-cart" size={26} color={activeTab === 'Cart' ? '#9747FF' : '#999'} />
+          {cartItems.length > 0 && (
+          <Text style={{ fontSize: 12, color: '#9747FF', fontWeight: 'bold' }}>
+        Cart ({cartItems.length})
+        </Text>
+          )}
+        </View>
         </TouchableOpacity>
         <TouchableOpacity 
         onPress={() => {
