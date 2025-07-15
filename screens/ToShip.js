@@ -21,11 +21,28 @@ export default function ToShip() {
     Alert.alert('Copied', 'Order ID copied to clipboard');
   };
 
+  const handleCancelOrder = () => {
+    Alert.alert(
+      'Confirm Cancellation?',
+      'Are you sure you want to cancel this order?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes',
+          onPress: () => {
+            Alert.alert('Cancelled', 'Your order has been cancelled.');
+            // Optional: Navigate or update state
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
   const tabRoutes = {
     'To Ship': 'ToShip',
     'To Receive': 'Orders',
     'Completed': 'Completed',
-    'Return': 'Return',
     'Cancelled': 'Cancelled',
   };
 
@@ -72,14 +89,14 @@ export default function ToShip() {
               <Text style={styles.productSize}>small</Text>
               <Text style={styles.productQty}>Qty: 1</Text>
               <View style={styles.totalRow}>
-              <Text style={styles.productTotal}>Total Payment:</Text>
-              <Text style={[styles.totalPrice, { marginLeft: 90 }]}>₱350</Text>
-            </View>
+                <Text style={styles.productTotal}>Total Payment:</Text>
+                <Text style={[styles.totalPrice, { marginLeft: 90 }]}>₱350</Text>
+              </View>
             </View>
           </View>
 
           <View style={styles.shippingRow}>
-            <Text style={styles.waitingMessage}>Waiting for courier to confirm{'\n'} shipment</Text>
+            <Text style={styles.waitingMessage}>Waiting for courier to confirm{'\n'}shipment</Text>
             <TouchableOpacity style={styles.shippingBtn}>
               <Text style={styles.shippingBtnText}>View Shipping Details</Text>
             </TouchableOpacity>
@@ -94,6 +111,11 @@ export default function ToShip() {
               <Feather name="copy" size={18} color="#9747FF" />
             </TouchableOpacity>
           </View>
+
+          {/* Cancel Button */}
+          <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelOrder}>
+            <Text style={styles.cancelBtnText}>Cancel Order</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -122,7 +144,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   tab: {
-    marginRight: 20,
+    marginRight: 30,
   },
   tabText: {
     fontSize: 14,
@@ -176,25 +198,25 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 2,
   },
-  totalRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginTop: 5,
-  marginBottom: 10,
-  },
-  productTotal: {
-  fontSize: 14,
-  fontWeight: '500',
-  color: '#333',
-  },
-  totalPrice: {
-  fontSize: 14,
-  fontWeight: '700',
-  color: '#9747FF',
-  },
   productQty: {
     fontSize: 12,
     color: '#666',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 5,
+    marginBottom: 10,
+  },
+  productTotal: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  totalPrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#9747FF',
   },
   shippingRow: {
     flexDirection: 'row',
@@ -231,5 +253,19 @@ const styles = StyleSheet.create({
   orderIdText: {
     fontSize: 13,
     color: '#333',
+  },
+  cancelBtn: {
+    backgroundColor: '#F7F7F7',
+    borderColor: '#9747FF',
+    borderWidth: 1,
+    borderRadius: 2,
+    paddingVertical: 10,
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    color: '#9747FF',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

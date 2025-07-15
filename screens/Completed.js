@@ -18,7 +18,6 @@ export default function Completed() {
     'To Ship': 'ToShip',
     'To Receive': 'Orders',
     'Completed': 'Completed',
-    'Return/Refund': 'Return',
     'Cancelled': 'Cancelled',
   };
 
@@ -111,7 +110,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   tab: {
-    marginRight: 20,
+    marginRight: 30,
     paddingBottom: 6,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
@@ -203,7 +202,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   secondaryButton: {
-    backgroundColor: '#fff',
+    backgroundColor: '#F7F7F7',
     borderWidth: 1,
     borderColor: '#9747FF',
     paddingVertical: 10,

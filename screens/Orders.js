@@ -18,7 +18,6 @@ export default function Orders() {
     'To Ship': 'ToShip',
     'To Receive': 'Orders',
     'Completed': 'Completed',
-    'Return/Refund': 'Return',
     'Cancelled': 'Cancelled',
   };
 
@@ -113,7 +112,7 @@ const styles = StyleSheet.create({
   },
   tabWrap: {
     alignItems: 'center',
-    marginRight: 20,
+    marginRight: 30,
   },
   tabText: {
     fontSize: 14,
@@ -207,14 +206,14 @@ const styles = StyleSheet.create({
   actionButton: {
     backgroundColor: '#F7F7F7',
     paddingVertical: 10,
-    borderRadius: 6,
+    borderRadius: 2,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#9747FF',
     marginTop: 10,
   },
   actionButtonText: {
-    color: '#000',
+    color: '#9747FF',
     fontSize: 14,
     fontWeight: '500',
   },

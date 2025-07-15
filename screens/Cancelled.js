@@ -30,7 +30,6 @@ export default function Cancelled() {
     'To Ship': 'ToShip',
     'To Receive': 'Orders',
     'Completed': 'Completed',
-    'Return/Refund': 'Return',
     'Cancelled': 'Cancelled',
   };
 
@@ -79,9 +78,8 @@ export default function Cancelled() {
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.productSize}>small</Text>
                 <Text style={styles.productQty}>Qty: 1</Text>
-                <Text style={styles.reason}>Reason: {item.reason}</Text>
                 <View style={styles.totalRow}>
-                  <Text style={[styles.totalLabel, { marginLeft: 100 }]}>Total Payment:</Text>
+                  <Text style={[styles.totalLabel, { marginLeft: 95 }]}>Total Payment:</Text>
                   <Text style={styles.price}>{item.price}</Text>
                 </View>
               </View>
@@ -89,9 +87,6 @@ export default function Cancelled() {
 
             {/* Buttons */}
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={[styles.secondaryButton, { marginLeft: 150 }]}>
-                <Text style={styles.secondaryButtonText}>Cancellation Details</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={styles.primaryButton}>
                 <Text style={styles.primaryButtonText}>Buy Again</Text>
               </TouchableOpacity>
@@ -125,7 +120,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   tab: {
-    marginRight: 20,
+    marginRight: 30,
     paddingBottom: 6,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
@@ -186,11 +181,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#9747FF',
   },
-  reason: {
-    fontSize: 12,
-    color: '#9747FF',
-    marginTop: 2,
-  },
   productSize: {
     fontSize: 12,
     color: '#666',
@@ -205,27 +195,16 @@ const styles = StyleSheet.create({
     marginTop: 15,
     gap: 10,
   },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: '#9747FF',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 10,
-  },
-  secondaryButtonText: {
-    color: '#9747FF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
   primaryButton: {
-    backgroundColor: '#9747FF',
-    borderRadius: 6,
-    paddingHorizontal: 14,
+    backgroundColor: '#F7F7F7',
+    borderRadius: 2,
+    paddingHorizontal: 120,
     paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#9747FF'
   },
   primaryButtonText: {
-    color: '#fff',
+    color: '#9747FF',
     fontSize: 14,
     fontWeight: '500',
   },
