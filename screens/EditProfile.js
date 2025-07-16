@@ -73,7 +73,7 @@ export default function EditProfile() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Phone Number</Text>
+          <Text style={styles.label}>Phone Number (Recovery)</Text>
           <TextInput
             style={styles.input}
             value={phone}

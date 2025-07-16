@@ -13,6 +13,7 @@ import BodyTracking from './screens/BodyTracking';
 import LandingPage from './screens/LandingPage';
 import Profile from './screens/Profile';
 import EditProfile from './screens/EditProfile';
+import EditBodyMeasurement from './screens/EditBodyMeasurement';
 import Notification from './screens/Notification';
 import ShippingLocation from './screens/ShippingLocation';
 import Password from './screens/Password';
@@ -59,6 +60,7 @@ export default function App() {
         <Stack.Screen name="LandingPage" component={LandingPage} />
         <Stack.Screen name="Profile" component={Profile} />
         <Stack.Screen name="EditProfile" component={EditProfile} />
+        <Stack.Screen name="EditBodyMeasurement" component={EditBodyMeasurement} />
         <Stack.Screen name="Notification" component={Notification} />
         <Stack.Screen name="ShippingLocation" component={ShippingLocation} />
         <Stack.Screen name="Password" component={Password} />

@@ -5,7 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Modal
+  Modal,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -24,7 +24,7 @@ export default function EditProfile() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.navigate('LandingPage')}>
           <FontAwesome name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Profile</Text>
@@ -39,11 +39,16 @@ export default function EditProfile() {
         <Text style={styles.profileName}>Your Name</Text>
       </View>
 
-      {/* Menu List */}
       <View style={styles.menuList}>
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('EditProfile')}>
-          <FontAwesome name="edit" size={20} color="#9747FF" style={styles.menuIcon} />
+          <FontAwesome name="user" size={20} color="#9747FF" style={styles.menuIcon} />
           <Text style={styles.menuText}>Edit Profile</Text>
+        </TouchableOpacity>
+
+        {/* ✅ Edit Body Measurement */}
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('EditBodyMeasurement')}>
+          <FontAwesome name="edit" size={20} color="#9747FF" style={styles.menuIcon} />
+          <Text style={styles.menuText}>Edit Body Measurement</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Notification')}>
@@ -61,7 +66,6 @@ export default function EditProfile() {
           <Text style={styles.menuText}>Change Password</Text>
         </TouchableOpacity>
 
-        {/* Account Deletion */}
         <TouchableOpacity style={styles.menuItem} onPress={() => setShowModal(true)}>
           <FontAwesome name="trash" size={20} color="#9747FF" style={styles.menuIcon} />
           <Text style={styles.menuText}>Delete Account</Text>
@@ -133,11 +137,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    letterSpacing: 1
+    letterSpacing: 1,
   },
   profileSection: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
   },
   avatar: {
     width: 100,
@@ -151,13 +155,13 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   menuList: {
-    gap: 12,
+    gap: 10,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F3F3F3',
-    paddingVertical: 23,
+    paddingVertical: 18,
     paddingHorizontal: 15,
     borderRadius: 10,
   },
@@ -165,16 +169,16 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   menuText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '400',
     color: '#333',
     letterSpacing: 1,
   },
   modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.4)',
-  justifyContent: 'center',
-  alignItems: 'center',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContent: {
     backgroundColor: '#fff',
@@ -196,10 +200,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   modalItem: {
-  fontSize: 14,
-  color: '#555',
-  marginBottom: 4,
-  marginLeft: 10,
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 4,
+    marginLeft: 10,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -207,8 +211,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   highlight: {
-  color: '#9747FF',
-  fontWeight: '500',
+    color: '#9747FF',
+    fontWeight: '500',
   },
   list: {
     marginBottom: 10,
@@ -235,16 +239,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '500',
   },
-    signOutWrapper: {
-      marginTop: 'auto',
-      paddingVertical: 20,
+  signOutWrapper: {
+    marginTop: 40,
+    paddingVertical: 20,
   },
   signOutButton: {
     backgroundColor: '#9747FF',
     paddingVertical: 14,
     alignItems: 'center',
     borderRadius: 8,
-    marginBottom: 50,
+    marginBottom: 100,
   },
   signOutText: {
     color: '#fff',

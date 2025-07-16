@@ -85,7 +85,7 @@ export default function ShippingLocation() {
         <View style={{ width: 24 }} />
       </View>
 
-      <Text style={styles.label}>Name</Text>
+      <Text style={styles.label}>Name (Receiver)</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} />
 
       <Text style={styles.label}>Phone Number</Text>
