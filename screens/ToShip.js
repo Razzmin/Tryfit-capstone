@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,48 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore';
+
+const db = getFirestore();
+const auth = getAuth();
+
+const randomSizes = ['small', 'medium', 'large', 'xl', 'xxl'];
 
 export default function ToShip() {
   const navigation = useNavigation();
-  const orderId = 'ORD-20250712-01';
+  const user = auth.currentUser;
 
-  const handleCopy = () => {
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    if (!user) {
+      setOrders([]);
+      return;
+    }
+
+    // Query orders where userId matches current user and status is 'To Ship'
+    const q = query(
+      collection(db, 'orders'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'To Ship')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedOrders = [];
+      snapshot.forEach((doc) => {
+        fetchedOrders.push({ id: doc.id, ...doc.data() });
+      });
+      setOrders(fetchedOrders);
+    }, (error) => {
+      console.error('Error fetching orders:', error);
+      setOrders([]);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const handleCopy = (orderId) => {
     Clipboard.setStringAsync(orderId);
     Alert.alert('Copied', 'Order ID copied to clipboard');
   };
@@ -31,7 +67,7 @@ export default function ToShip() {
           text: 'Yes',
           onPress: () => {
             Alert.alert('Cancelled', 'Your order has been cancelled.');
-            // Optional: Navigate or update state
+            // Optional: Navigate or update state or update Firebase here
           },
           style: 'destructive',
         },
@@ -74,49 +110,68 @@ export default function ToShip() {
 
       {/* Content */}
       <ScrollView>
-        <View style={styles.orderCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.orderStatus}>To Ship</Text>
-          </View>
+        {orders.length === 0 ? (
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
+            No orders to ship.
+          </Text>
+        ) : (
+          orders.map((order) => {
+            // Assuming order.items is an array of items purchased in this order
+            // We'll display the first item only for this UI similar to your static example
+            const item = order.items && order.items.length > 0 ? order.items[0] : null;
 
-          <View style={styles.productRow}>
-            <Image
-              source={{ uri: 'https://placehold.co/100x100' }}
-              style={styles.productImage}
-            />
-            <View style={styles.productInfo}>
-              <Text style={styles.productName}>Unisex Oversized Hoodie</Text>
-              <Text style={styles.productSize}>small</Text>
-              <Text style={styles.productQty}>Qty: 1</Text>
-              <View style={styles.totalRow}>
-                <Text style={styles.productTotal}>Total Payment:</Text>
-                <Text style={[styles.totalPrice, { marginLeft: 90 }]}>₱350</Text>
+            // Random size for display
+            const size = randomSizes[Math.floor(Math.random() * randomSizes.length)];
+
+            if (!item) return null;
+
+            return (
+              <View key={order.id} style={styles.orderCard}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.orderStatus}>To Ship</Text>
+                </View>
+
+                <View style={styles.productRow}>
+                  <Image
+                    source={{ uri: item.image || 'https://placehold.co/100x100' }}
+                    style={styles.productImage}
+                  />
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName}>{item.name}</Text>
+                    <Text style={styles.productSize}>{size}</Text>
+                    <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
+                    <View style={styles.totalRow}>
+                      <Text style={styles.productTotal}>Total Payment:</Text>
+                      <Text style={[styles.totalPrice, { marginLeft: 90 }]}>₱{order.total || 'N/A'}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.shippingRow}>
+                  <Text style={styles.waitingMessage}>Waiting for courier to confirm{'\n'}shipment</Text>
+                  <TouchableOpacity style={styles.shippingBtn}>
+                    <Text style={styles.shippingBtnText}>View Shipping Details</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.divider} />
+
+                {/* Order ID + Copy */}
+                <View style={styles.orderIdRow}>
+                  <Text style={styles.orderIdText}>Order ID: {order.id}</Text>
+                  <TouchableOpacity onPress={() => handleCopy(order.id)}>
+                    <Feather name="copy" size={18} color="#9747FF" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Cancel Button */}
+                <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelOrder}>
+                  <Text style={styles.cancelBtnText}>Cancel Order</Text>
+                </TouchableOpacity>
               </View>
-            </View>
-          </View>
-
-          <View style={styles.shippingRow}>
-            <Text style={styles.waitingMessage}>Waiting for courier to confirm{'\n'}shipment</Text>
-            <TouchableOpacity style={styles.shippingBtn}>
-              <Text style={styles.shippingBtnText}>View Shipping Details</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.divider} />
-
-          {/* Order ID + Copy */}
-          <View style={styles.orderIdRow}>
-            <Text style={styles.orderIdText}>Order ID: {orderId}</Text>
-            <TouchableOpacity onPress={handleCopy}>
-              <Feather name="copy" size={18} color="#9747FF" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Cancel Button */}
-          <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelOrder}>
-            <Text style={styles.cancelBtnText}>Cancel Order</Text>
-          </TouchableOpacity>
-        </View>
+            );
+          })
+        )}
       </ScrollView>
     </View>
   );
@@ -163,7 +218,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
     padding: 15,
-    marginBottom: 500,
+    marginBottom: 30,
   },
   cardHeader: {
     flexDirection: 'row',

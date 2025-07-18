@@ -19,9 +19,10 @@ import ShippingLocation from './screens/ShippingLocation';
 import Password from './screens/Password';
 import Checkout from './screens/Checkout';
 import ShoppingCart from './screens/ShoppingCart';
-
-//product details screens
+import CategoryProductsScreen from './screens/CategoryProductsScreen'; 
 import ProductDetail from './screens/Products/ProductDetail';
+import ChatSupportScreen from './screens/ChatSupportScreen';
+import SearchResults from './screens/SearchResults';
 
 import Orders from './screens/Orders';
 import ToShip from './screens/ToShip';
@@ -71,7 +72,11 @@ export default function App() {
         <Stack.Screen name="Cancelled" component={Cancelled} />
         <Stack.Screen name="TrackOrder" component={TrackOrder} />
         <Stack.Screen name="Checkout" component={Checkout} />
-         <Stack.Screen name="ShoppingCart" component={ShoppingCart} />
+        <Stack.Screen name="ShoppingCart" component={ShoppingCart} />
+        <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
+        <Stack.Screen name="ChatSupport" component={ChatSupportScreen} />
+        <Stack.Screen name="SearchResults" component={SearchResults} />
+
       </Stack.Navigator> 
       )}
     </NavigationContainer>

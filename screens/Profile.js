@@ -9,20 +9,83 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { auth } from '../firebase/config';
+import { signOut, deleteUser } from 'firebase/auth';
+import {
+  doc,
+  deleteDoc,
+  getFirestore,
+  collection,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+} from 'firebase/firestore';
 
 export default function EditProfile() {
   const navigation = useNavigation();
   const [showModal, setShowModal] = useState(false);
 
-  const handleDeleteAccount = () => {
-    // ⚠️ Place your deletion logic here (e.g. Firebase Auth deletion)
-    setShowModal(false);
-    alert('Your account has been deleted.');
+  const handleDeleteAccount = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const db = getFirestore();
+
+      // Delete user profile
+      await deleteDoc(doc(db, 'users', user.uid));
+
+      // Anonymize chatMessages and productReviews
+      const collectionsToAnonymize = ['chatMessages', 'productReviews'];
+      for (const collectionName of collectionsToAnonymize) {
+        const q = query(collection(db, collectionName), where('userId', '==', user.uid));
+        const querySnapshot = await getDocs(q);
+        for (const docSnap of querySnapshot.docs) {
+          await updateDoc(docSnap.ref, {
+            userId: null,
+            username: 'Anonymous',
+          });
+        }
+      }
+
+      // Handle orders: delete only "pending" ones, anonymize the rest
+      const ordersRef = collection(db, 'orders');
+      const ordersQuery = query(ordersRef, where('userId', '==', user.uid));
+      const ordersSnapshot = await getDocs(ordersQuery);
+      for (const docSnap of ordersSnapshot.docs) {
+        const data = docSnap.data();
+        if (data.status === 'pending') {
+          await deleteDoc(docSnap.ref); // Delete pending order
+        } else {
+          await updateDoc(docSnap.ref, {
+            userId: null,
+            username: 'Anonymous',
+          });
+        }
+      }
+
+      // Delete Auth user
+      await deleteUser(user);
+
+      setShowModal(false);
+      navigation.replace('Login');
+    } catch (error) {
+      alert('Error deleting account: ' + error.message);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      navigation.replace('Login');
+    } catch (error) {
+      alert('Error signing out: ' + error.message);
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.navigate('LandingPage')}>
           <FontAwesome name="arrow-left" size={24} color="#000" />
@@ -45,7 +108,6 @@ export default function EditProfile() {
           <Text style={styles.menuText}>Edit Profile</Text>
         </TouchableOpacity>
 
-        {/* ✅ Edit Body Measurement */}
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('EditBodyMeasurement')}>
           <FontAwesome name="edit" size={20} color="#9747FF" style={styles.menuIcon} />
           <Text style={styles.menuText}>Edit Body Measurement</Text>
@@ -72,14 +134,12 @@ export default function EditProfile() {
         </TouchableOpacity>
       </View>
 
-      {/* Sign Out */}
       <View style={styles.signOutWrapper}>
-        <TouchableOpacity style={styles.signOutButton}>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Modal for Account Deletion */}
       <Modal
         visible={showModal}
         animationType="fade"

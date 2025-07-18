@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,50 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore';
+
+const db = getFirestore();
+const auth = getAuth();
+
+const randomSizes = ['small', 'medium', 'large', 'xl', 'xxl'];
 
 export default function Orders() {
   const navigation = useNavigation();
+  const user = auth.currentUser;
   const activeTab = 'To Receive';
+
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    if (!user) {
+      setOrders([]);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'orders'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'To Receive')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const fetchedOrders = [];
+        snapshot.forEach((doc) => {
+          fetchedOrders.push({ id: doc.id, ...doc.data() });
+        });
+        setOrders(fetchedOrders);
+      },
+      (error) => {
+        console.error('Error fetching orders:', error);
+        setOrders([]);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user]);
 
   const tabRoutes = {
     'To Ship': 'ToShip',
@@ -34,7 +73,11 @@ export default function Orders() {
       </View>
 
       {/* Nav Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabContainer}
+      >
         {Object.keys(tabRoutes).map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -43,7 +86,9 @@ export default function Orders() {
             }}
             style={styles.tabWrap}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
+            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+              {tab}
+            </Text>
             <View style={[styles.underline, activeTab === tab && styles.activeUnderline]} />
           </TouchableOpacity>
         ))}
@@ -51,40 +96,59 @@ export default function Orders() {
 
       {/* To Receive Content */}
       <ScrollView>
-        <View style={styles.orderCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.orderStatus}>To Receive</Text>
-          </View>
+        {orders.length === 0 ? (
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
+            No orders to receive.
+          </Text>
+        ) : (
+          orders.map((order) => {
+            // Display first item like your UI
+            const item = order.items && order.items.length > 0 ? order.items[0] : null;
+            if (!item) return null;
 
-          <View style={styles.productRow}>
-            <Image
-              source={{ uri: 'https://placehold.co/100x100' }}
-              style={styles.productImage}
-            />
-            <View style={styles.productInfo}>
-              <Text style={styles.productName}>Y2K Long Sleeve Top</Text>
-              <Text style={styles.productSize}>small</Text>
-              <Text style={styles.productQty}>Qty: 1</Text>
-            </View>
-          </View>
+            const size = randomSizes[Math.floor(Math.random() * randomSizes.length)];
 
-          {/* Expected Delivery */}
-          <View style={styles.expectedDelivery}>
-            <Text style={styles.expectedText}>Expected Delivery:</Text>
-            <Text style={styles.deliveryDate}>July 10-14, 2025</Text>
-          </View>
+            return (
+              <View key={order.id} style={styles.orderCard}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.orderStatus}>To Receive</Text>
+                </View>
 
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Payment:</Text>
-            <Text style={styles.totalPrice}>₱180</Text>
-          </View>
+                <View style={styles.productRow}>
+                  <Image
+                    source={{ uri: item.image || 'https://placehold.co/100x100' }}
+                    style={styles.productImage}
+                  />
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName}>{item.name}</Text>
+                    <Text style={styles.productSize}>{size}</Text>
+                    <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
+                  </View>
+                </View>
 
-          <TouchableOpacity
-            style={styles.actionButton} onPress={() => navigation.navigate('TrackOrder')}
-          >
-            <Text style={styles.actionButtonText}>Track Order</Text>
-          </TouchableOpacity>
-        </View>
+                {/* Expected Delivery */}
+                <View style={styles.expectedDelivery}>
+                  <Text style={styles.expectedText}>Expected Delivery:</Text>
+                  <Text style={styles.deliveryDate}>
+                    {order.expectedDelivery || 'N/A'}
+                  </Text>
+                </View>
+
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Total Payment:</Text>
+                  <Text style={styles.totalPrice}>₱{order.total || 'N/A'}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('TrackOrder', { orderId: order.id })}
+                >
+                  <Text style={styles.actionButtonText}>Track Order</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        )}
       </ScrollView>
     </View>
   );
@@ -136,7 +200,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
     padding: 15,
-    marginBottom: 450,
+    marginBottom: 30,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -169,7 +233,7 @@ const styles = StyleSheet.create({
   productSize: {
     fontSize: 12,
     color: '#666',
-    marginBottom: 3
+    marginBottom: 3,
   },
   productQty: {
     fontSize: 12,
@@ -183,7 +247,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#444',
-    marginBottom: 5
+    marginBottom: 5,
   },
   deliveryDate: {
     fontSize: 13,

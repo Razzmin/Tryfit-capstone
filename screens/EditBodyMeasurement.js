@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,21 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  setDoc,
+  doc,
+} from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+
 export default function BodyMeasurements() {
   const navigation = useNavigation();
+  const db = getFirestore();
+  const auth = getAuth();
 
   const [formData, setFormData] = useState({
     height: '',
@@ -20,14 +33,73 @@ export default function BodyMeasurements() {
   });
 
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [docId, setDocId] = useState(null); // Store Firestore document ID
+
+  useEffect(() => {
+    const fetchMeasurements = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const q = query(
+          collection(db, 'measurements'),
+          where('userId', '==', user.uid)
+        );
+
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          const docSnap = querySnapshot.docs[0];
+          const docData = docSnap.data();
+          setDocId(docSnap.id); // save the doc ID to update later
+          setFormData({
+            height: docData.height || '',
+            weight: docData.weight || '',
+            waist: docData.waist || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching measurements:', error);
+      }
+    };
+
+    fetchMeasurements();
+  }, []);
 
   const handleChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    console.log('Measurements:', formData);
-    setShowSuccessPopup(true); // Only show success popup
+  const handleSave = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        console.error('User not logged in');
+        return;
+      }
+
+      if (docId) {
+        // Update existing document
+        await setDoc(
+          doc(db, 'measurements', docId),
+          {
+            ...formData,
+            userId: user.uid,
+          },
+          { merge: true } // merge so it overwrites fields but keeps others if any
+        );
+      } else {
+        // Create new document with auto ID
+        await setDoc(doc(collection(db, 'measurements')), {
+          ...formData,
+          userId: user.uid,
+        });
+      }
+
+      setShowSuccessPopup(true);
+    } catch (error) {
+      console.error('Error saving measurements:', error);
+    }
   };
 
   return (
@@ -75,7 +147,7 @@ export default function BodyMeasurements() {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ Success Modal Only */}
+      {/* Success Modal */}
       <Modal visible={showSuccessPopup} transparent animationType="fade">
         <View style={styles.popupOverlay}>
           <View style={styles.popupBox}>
@@ -94,6 +166,7 @@ export default function BodyMeasurements() {
 }
 
 const styles = StyleSheet.create({
+  /* your existing styles here */
   container: {
     flex: 1,
     backgroundColor: '#fff',

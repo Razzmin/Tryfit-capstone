@@ -11,7 +11,11 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
+
+import { db, auth } from '../firebase/config';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 export default function EditProfile() {
   const navigation = useNavigation();
@@ -21,6 +25,50 @@ export default function EditProfile() {
   const [gender, setGender] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        try {
+          const userDoc = doc(db, 'users', currentUser.uid);
+          const userSnap = await getDoc(userDoc);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            setName(userData.name || '');
+            setUsername(userData.username || '');
+            setGender(userData.gender || '');
+            setPhone(userData.phone || '');
+            setEmail(userData.email || '');
+          }
+        } catch (error) {
+          console.log('Error fetching user data:', error);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleSave = async () => {
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      try {
+        const userRef = doc(db, 'users', currentUser.uid);
+        await updateDoc(userRef, {
+          name,
+          username,
+          gender,
+          phone,
+          email,
+        });
+        Alert.alert('Success', 'Profile updated successfully');
+      } catch (error) {
+        console.log('Error updating profile:', error);
+        Alert.alert('Error', 'Failed to update profile');
+      }
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -43,6 +91,7 @@ export default function EditProfile() {
             style={styles.input}
             value={name}
             onChangeText={setName}
+            placeholder="Enter your name"
           />
         </View>
 
@@ -52,24 +101,25 @@ export default function EditProfile() {
             style={styles.input}
             value={username}
             onChangeText={setUsername}
+            placeholder="Enter your username"
           />
         </View>
 
         <View style={styles.inputGroup}>
-        <Text style={styles.label}>Gender</Text>
-        <View style={styles.pickerWrapper}>
+          <Text style={styles.label}>Gender</Text>
+          <View style={styles.pickerWrapper}>
             <Picker
-            selectedValue={gender}
-            onValueChange={(itemValue) => setGender(itemValue)}
-            style={styles.picker}
+              selectedValue={gender}
+              onValueChange={(itemValue) => setGender(itemValue)}
+              style={styles.picker}
             >
-            <Picker.Item label="Select Gender" value="" enabled={false} />
-            <Picker.Item label="Female" value="Female" />
-            <Picker.Item label="Male" value="Male" />
-            <Picker.Item label="Other" value="Other" />
-            <Picker.Item label="Prefer not to say" value="Prefer not to say" />
+              <Picker.Item label="Select Gender" value="" enabled={false} />
+              <Picker.Item label="Female" value="Female" />
+              <Picker.Item label="Male" value="Male" />
+              <Picker.Item label="Other" value="Other" />
+              <Picker.Item label="Prefer not to say" value="Prefer not to say" />
             </Picker>
-        </View>
+          </View>
         </View>
 
         <View style={styles.inputGroup}>
@@ -79,6 +129,7 @@ export default function EditProfile() {
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
+            placeholder="Enter phone number"
           />
         </View>
 
@@ -89,11 +140,12 @@ export default function EditProfile() {
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
+            placeholder="Enter your email"
           />
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity style={styles.saveButton}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -146,17 +198,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     marginBottom: 5,
-    backgroundColor: '#F3F3F3',  
-  
+    backgroundColor: '#F3F3F3',
   },
   picker: {
     height: 50,
     width: '100%',
     color: '#333',
-    backgroundColor: 'rgba(201, 201, 201, 0.22)'
+    backgroundColor: 'rgba(201, 201, 201, 0.22)',
   },
   saveButton: {
-    marginTop:  150,
+    marginTop: 150,
     backgroundColor: '#9747FF',
     paddingVertical: 16,
     borderRadius: 10,

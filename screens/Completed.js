@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,49 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore';
+
+const db = getFirestore();
+const auth = getAuth();
+
+const randomSizes = ['small', 'medium', 'large', 'xl', 'xxl'];
 
 export default function Completed() {
   const navigation = useNavigation();
+  const user = auth.currentUser;
   const activeTab = 'Completed';
+
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    if (!user) {
+      setOrders([]);
+      return;
+    }
+    const q = query(
+      collection(db, 'orders'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'Completed')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const fetchedOrders = [];
+        snapshot.forEach((doc) => {
+          fetchedOrders.push({ id: doc.id, ...doc.data() });
+        });
+        setOrders(fetchedOrders);
+      },
+      (error) => {
+        console.error('Error fetching completed orders:', error);
+        setOrders([]);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user]);
 
   const tabRoutes = {
     'To Ship': 'ToShip',
@@ -52,37 +91,52 @@ export default function Completed() {
       </ScrollView>
 
       <ScrollView>
-        <View style={styles.orderCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.orderStatus}>Completed</Text>
-          </View>
+        {orders.length === 0 ? (
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
+            No completed orders found.
+          </Text>
+        ) : (
+          orders.map((order) => {
+            const item = order.items && order.items.length > 0 ? order.items[0] : null;
+            if (!item) return null;
 
-          <View style={styles.productRow}>
-            <Image
-              source={{ uri: 'https://placehold.co/100x100' }}
-              style={styles.productImage}
-            />
-            <View style={styles.productInfo}>
-              <Text style={styles.productName}>Coquette Ruffle Skirt</Text>
-              <Text style={styles.productSize}>small</Text>
-              <Text style={styles.productQty}>Qty: 1</Text>
-            </View>
-          </View>
+            const size = randomSizes[Math.floor(Math.random() * randomSizes.length)];
 
-          <View style={styles.totalRow}>
-            <Text style={[styles.totalLabel, { marginLeft: 175 }]}>Total Payment:</Text>
-            <Text style={styles.totalPrice}>₱250</Text>
-          </View>
+            return (
+              <View key={order.id} style={styles.orderCard}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.orderStatus}>Completed</Text>
+                </View>
 
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={[styles.secondaryButton, { marginLeft: 90}]}>
-              <Text style={styles.secondaryButtonText }>Rate</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>Buy Again</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+                <View style={styles.productRow}>
+                  <Image
+                    source={{ uri: item.image || 'https://placehold.co/100x100' }}
+                    style={styles.productImage}
+                  />
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName}>{item.name}</Text>
+                    <Text style={styles.productSize}>{size}</Text>
+                    <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.totalRow}>
+                  <Text style={[styles.totalLabel, { marginLeft: 175 }]}>Total Payment:</Text>
+                  <Text style={styles.totalPrice}>₱{order.total || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity style={[styles.secondaryButton, { marginLeft: 90 }]}>
+                    <Text style={styles.secondaryButtonText}>Rate</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.actionButton}>
+                    <Text style={styles.actionButtonText}>Buy Again</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })
+        )}
       </ScrollView>
     </View>
   );
@@ -157,7 +211,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 10
+    marginBottom: 10,
   },
   productPrice: {
     color: '#9747FF',

@@ -1,9 +1,10 @@
+import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
-
-//icons 
-import { FontAwesome } from '@expo/vector-icons';
+import { db, auth } from '../firebase/config';
+import { collection, addDoc } from 'firebase/firestore';
+import { InteractionManager } from 'react-native';
 
 import {
   Modal,
@@ -14,11 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-import {
-  CreateAccountTitle,
-} from '../components/styles';
-
 
 export default function BodyMeasurements() {
   const navigation = useNavigation();
@@ -35,34 +31,44 @@ export default function BodyMeasurements() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = () => {
-  console.log('Measurements:', formData);
-  };
-  const handleSkip = () => {
-      handleSubmit(); 
-  navigation.navigate('LandingPage');
-};
+  const handleSubmit = async () => {
+    const user = auth.currentUser;
 
-  const handleNext = () => {
-  handleSubmit(); 
-  setShowPopup(true); 
-};
+    if (!user) {
+      alert('You must be logged in.');
+      return;
+    }
+
+    try {
+      // ✅ Save in 'measurements' collection with userId included
+      const measurementsRef = collection(db, 'measurements');
+      await addDoc(measurementsRef, {
+        ...formData,
+        userId: user.uid,
+      });
+
+      console.log('Measurements saved:', formData);
+      setShowPopup(true);
+    } catch (error) {
+      console.error('Error saving measurements:', error);
+      alert('Something went wrong while saving your data.');
+    }
+  };
 
   return (
-    <LinearGradient colors={['hsl(266, 100%, 78%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
+    <LinearGradient
+      colors={['#E0BBFF', '#F3E5F5']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradient}
+    >
       <View style={styles.container}>
         <View style={styles.inner}>
-       {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-                <FontAwesome name="arrow-left" size={24} color="#000" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}> Create your account</Text>
-              <View style={{ width: 24 }} />
-            </View>
+          <TouchableOpacity style={styles.header} onPress={() => navigation.goBack()}>
+            <FontAwesome name="arrow-left" size={16} color="black" />
+            <Text style={styles.title}>Body Measurements</Text>
+          </TouchableOpacity>
 
-        <CreateAccountTitle> Body Measurement </CreateAccountTitle>
-     
           <View style={styles.form}>
             <Text style={styles.label}>Height (cm)</Text>
             <TextInput
@@ -88,44 +94,39 @@ export default function BodyMeasurements() {
               keyboardType="numeric"
             />
 
-          <View style={styles.buttonwrapper}>
-  <TouchableOpacity style={styles.button2} onPress={handleSkip}>
-    <Text style={{ color: 'white', fontSize: 18 }}>Skip</Text>
-  </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+              <Text style={{ color: 'white' }}>Next</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-  <TouchableOpacity style={styles.button} onPress={handleNext}>
-    <Text style={{ color: 'white', fontSize: 18 }}>Next</Text>
-  </TouchableOpacity>
-</View>
-
-       
-</View>
- </View>
-       <Modal visible={showPopup} transparent animationType="fade">
-        <View style={styles.popupOverlay}>
-        <Pressable style={styles.overlayTouchable} onPress={() => setShowPopup(false)} />
-       <View style={styles.popupBox}>
-        <Text style={styles.popupText}>Allow the application to access your camera?</Text>
-        <View style={styles.popupButtons}>
-        <TouchableOpacity
-          style={styles.popupButtonYes}
-           onPress={() => {
-          setShowPopup(false);
-           navigation.navigate('BodyTracking');
-           }}
-        >
-          <Text style={{ color: '#fff' }}>Yes</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.popupButtonNo}
-          onPress={() => setShowPopup(false)}
-        >
-          <Text style={{ color: '#fff' }}>No</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+        <Modal visible={showPopup} transparent animationType="fade">
+          <View style={styles.popupOverlay}>
+            <Pressable style={styles.overlayTouchable} onPress={() => setShowPopup(false)} />
+            <View style={styles.popupBox}>
+              <Text style={styles.popupText}>Allow the application to access your camera?</Text>
+              <View style={styles.popupButtons}>
+                <TouchableOpacity
+                  style={styles.popupButtonYes}
+                  onPress={() => {
+                    setShowPopup(false);
+                    InteractionManager.runAfterInteractions(() => {
+                      navigation.navigate('BodyTracking');
+                    });
+                  }}
+                >
+                  <Text style={{ color: '#fff' }}>Yes</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.popupButtonNo}
+                  onPress={() => setShowPopup(false)}
+                >
+                  <Text style={{ color: '#fff' }}>No</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </LinearGradient>
   );
@@ -135,71 +136,58 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
- container: {
+  container: {
     flex: 1,
-    backgroundColor: 'transparent',
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    position: 'relative',
+    paddingHorizontal: 15,
+    paddingTop: 70,
+    fontFamily: 'System',
+  },
+  inner: {
+    maxWidth: 330,
+    alignSelf: 'center',
+    width: '100%',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 40,
+    gap: 17,
   },
-  headerTitle: {
-    fontSize: 20,
+  title: {
+    fontSize: 22,
     fontWeight: '600',
+    color: '#333',
+    marginLeft: 5,
   },
   form: {
     marginTop: 10,
-    padding: 10,
   },
   label: {
-    fontSize: 15,
+    fontSize: 12,
+    fontWeight: 'bold',
     marginBottom: 5,
     color: '#696969',
+    letterSpacing: 1,
   },
   input: {
-    padding: 10,
+    padding: 15,
     borderRadius: 8,
+    backgroundColor: '#FFFAFA',
     borderWidth: 1,
-    fontSize: 15,
+    borderColor: '#ccc',
+    fontSize: 14,
     marginBottom: 30,
-    borderWidth: 1,
-    borderRadius: 10,
-    borderColor: '#000',
-    height: 55,
-    backgroundColor: '#EDEDED',
-    paddingLeft: 20,
   },
   button: {
     backgroundColor: '#9747FF',
-    flexDirection: 'row',
     padding: 14,
-    borderRadius: 10,
-    width: '47%',
-    height: 60,
-    marginVertical: 5,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
+    alignSelf: 'flex-end',
+    width: 120,
+    marginTop: 20,
   },
-  button2: {
-    backgroundColor: 'gray',
-    flexDirection: 'row',
-    padding: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    width: '47%',
-    height: 60,
-    marginVertical: 5,
-     justifyContent: 'center',
-  },
-buttonwrapper: {
-  flexDirection: 'row',
-  justifyContent: 'space-around',
-  alignItems: 'center',
-},
   popupOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',

@@ -10,8 +10,11 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
+import { getAuth, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
+
 export default function Password() {
   const navigation = useNavigation();
+  const auth = getAuth();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -21,22 +24,44 @@ export default function Password() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleSetPassword = () => {
+  const handleSetPassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Please fill in all password fields.');
+      Alert.alert('Error', 'Please fill in all password fields.');
       return;
     }
+
     if (newPassword !== confirmPassword) {
-      Alert.alert('New passwords do not match.');
+      Alert.alert('Error', 'New passwords do not match.');
       return;
     }
 
-    // Change nalang this kapag may Firebase/Backend :)
+    const user = auth.currentUser;
 
-    Alert.alert('Success', 'Your password has been changed.');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    if (!user || !user.email) {
+      Alert.alert('Error', 'User not logged in.');
+      return;
+    }
+
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+
+    try {
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+
+      Alert.alert('Success', 'Your password has been changed.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error('Password change error:', error);
+      if (error.code === 'auth/wrong-password') {
+        Alert.alert('Error', 'Current password is incorrect.');
+      } else if (error.code === 'auth/weak-password') {
+        Alert.alert('Error', 'New password should be at least 6 characters.');
+      } else {
+        Alert.alert('Error', 'Failed to change password. Try again.');
+      }
+    }
   };
 
   return (

@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-// dropdown list to and if want niyo palitan feel free, ginawa ko lang na ganiyan for kaartehan purposes
-// sabi ni project manager kun limit nalang into 3 municipalities since marami masyado yung brgy ng tarlac city
+import { getFirestore, collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+
 const MUNICIPALITIES = {
-  'Bamban': ['Anupul', 'Banaba', 'Bangcu', 'Culubasa', 'La Paz', 'Lourdes', 'San Nicolas', 'San Pedro', 
+  Bamban: ['Anupul', 'Banaba', 'Bangcu', 'Culubasa', 'La Paz', 'Lourdes', 'San Nicolas', 'San Pedro', 
   'San Rafael', 'San Vicente', 'Santo Niño'],
-  'Capas': ['Aranguren', 'Cub-cub', 'Dolores', 'Estrada', 'Lawy', 'Manga', 'Maruglu', 'O’Donnell', 
+  Capas: ['Aranguren', 'Cub-cub', 'Dolores', 'Estrada', 'Lawy', 'Manga', 'Maruglu', 'O’Donnell', 
   'Santa Juliana', 'Santa Lucia', 'Santa Rita', 'Santo Domingo', 'Santo Rosario', 'Talaga'],
   'Tarlac City': ['Aguso', 'Alvindia Segundo', 'Amucao', 'Armenia', 'Asturias', 'Atioc', 'Balanti', 
   'Balete', 'Balibago I', 'Balibago II', 'Balingcanaway', 'Banaba', 'Bantog', 'Baras-baras', 'Batang-batang', 
@@ -24,6 +32,8 @@ const MUNICIPALITIES = {
 
 export default function ShippingLocation() {
   const navigation = useNavigation();
+  const db = getFirestore();
+  const auth = getAuth();
 
   const [stage, setStage] = useState('municipality');
   const [municipality, setMunicipality] = useState('');
@@ -35,6 +45,31 @@ export default function ShippingLocation() {
   const [house, setHouse] = useState('');
   const [postal, setPostal] = useState('');
 
+  useEffect(() => {
+    const fetchShippingLocation = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const q = query(collection(db, 'shippingLocations'), where('userId', '==', user.uid));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const data = querySnapshot.docs[0].data();
+        setName(data.name || '');
+        setPhone(data.phone || '');
+        setHouse(data.house || '');
+        setMunicipality(data.municipality || '');
+        setBarangay(data.barangay || '');
+        setPostal(data.postalCode || '');
+        const composed = `${data.barangay}, ${data.municipality}, Tarlac`;
+        setFinalAddress(composed);
+        setStage('final');
+      }
+    };
+
+    fetchShippingLocation();
+  }, []);
+
   const handlePickerChange = (value) => {
     if (stage === 'municipality') {
       setMunicipality(value);
@@ -45,7 +80,6 @@ export default function ShippingLocation() {
       setFinalAddress(composed);
       setStage('final');
     } else if (stage === 'final') {
-      // When clicked again — reset to municipalities
       setMunicipality('');
       setBarangay('');
       setFinalAddress('');
@@ -64,7 +98,7 @@ export default function ShippingLocation() {
     } else if (stage === 'barangay') {
       return [
         <Picker.Item key="default" label={`Select Barangay in ${municipality}`} value="" />,
-        ...MUNICIPALITIES[municipality].map(b => (
+        ...MUNICIPALITIES[municipality]?.map(b => (
           <Picker.Item key={b} label={b} value={b} />
         ))
       ];
@@ -72,6 +106,41 @@ export default function ShippingLocation() {
       return [
         <Picker.Item key="selected" label={finalAddress} value={finalAddress} />
       ];
+    }
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) return Alert.alert('Validation Error', 'Please enter the receiver name.');
+    if (!phone.trim()) return Alert.alert('Validation Error', 'Please enter the phone number.');
+    if (!house.trim()) return Alert.alert('Validation Error', 'Please enter house/street/building info.');
+    if (!municipality) return Alert.alert('Validation Error', 'Please select a municipality.');
+    if (!barangay) return Alert.alert('Validation Error', 'Please select a barangay.');
+    if (!postal.trim()) return Alert.alert('Validation Error', 'Please enter postal code.');
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Not logged in', 'Please login to save your shipping location.');
+        return;
+      }
+
+      await addDoc(collection(db, 'shippingLocations'), {
+        userId: user.uid,
+        name: name.trim(),
+        phone: phone.trim(),
+        house: house.trim(),
+        municipality,
+        barangay,
+        postalCode: postal.trim(),
+        fullAddress: finalAddress,
+        createdAt: new Date(),
+      });
+
+      Alert.alert('Success', 'Shipping location saved successfully!');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error saving shipping location:', error);
+      Alert.alert('Error', 'Failed to save shipping location.');
     }
   };
 
@@ -92,15 +161,22 @@ export default function ShippingLocation() {
       <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="numeric" />
 
       <Text style={styles.label}>House No., Street / Building</Text>
-      <TextInput style={styles.input} value={house} onChangeText={setHouse} placeholder="e.g.,225, Purok Alpha" />
+      <TextInput
+        style={styles.input}
+        value={house}
+        onChangeText={setHouse}
+        placeholder="e.g., 225, Purok Alpha"
+      />
 
       <Text style={styles.label}>Address</Text>
       <View style={styles.pickerWrapper}>
         <Picker
           selectedValue={
-            stage === 'municipality' ? municipality :
-            stage === 'barangay' ? barangay :
-            finalAddress
+            stage === 'municipality'
+              ? municipality
+              : stage === 'barangay'
+              ? barangay
+              : finalAddress
           }
           onValueChange={handlePickerChange}
           style={styles.picker}
@@ -112,7 +188,7 @@ export default function ShippingLocation() {
       <Text style={styles.label}>Postal Code</Text>
       <TextInput style={styles.input} value={postal} onChangeText={setPostal} keyboardType="numeric" />
 
-      <TouchableOpacity style={styles.saveButton}>
+      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveText}>Save</Text>
       </TouchableOpacity>
     </View>

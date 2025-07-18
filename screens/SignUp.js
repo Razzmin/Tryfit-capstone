@@ -183,9 +183,13 @@ const Signup = () => {
                         importantForAutofill="no"  
                     />
                     <SignInButton 
-                   onPress={() => navigation.navigate('BodyMeasurement')}>
-                    <SignInButtonText>Next</SignInButtonText>
+                      onPress={handleSubmit}
+                      disabled={!values.username || !values.email || !values.password}
+                      style={{
+                        opacity: !values.username || !values.email || !values.password ? 0.5 : 1 }} >
+                      <SignInButtonText>Next</SignInButtonText>
                     </SignInButton>
+
                     <SignUpBottomTextWrapper>
                         <LogInPlainText>Already have an account?</LogInPlainText>
                         <LogInButton onPress={() => navigation.navigate('BodyMeasurement')}>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,22 +9,50 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore';
+
+const db = getFirestore();
+const auth = getAuth();
+
+const randomSizes = ['small', 'medium', 'large', 'xl', 'xxl'];
 
 export default function Cancelled() {
   const navigation = useNavigation();
-  const route = useRoute(); // ✅ Get current route
+  const route = useRoute();
   const currentRoute = route.name;
 
-  const cancelledItems = [
-    {
-      id: '1',
-      name: 'Unisex Oversized Hoodie',
-      price: '₱350',
-      image: 'https://placehold.co/100x100',
-      date: 'June 12, 2025',
-      reason: 'Cancelled by buyer',
-    },
-  ];
+  const user = auth.currentUser;
+  const [cancelledOrders, setCancelledOrders] = useState([]);
+
+  useEffect(() => {
+    if (!user) {
+      setCancelledOrders([]);
+      return;
+    }
+    const q = query(
+      collection(db, 'orders'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'Cancelled')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const fetchedOrders = [];
+        snapshot.forEach((doc) => {
+          fetchedOrders.push({ id: doc.id, ...doc.data() });
+        });
+        setCancelledOrders(fetchedOrders);
+      },
+      (error) => {
+        console.error('Error fetching cancelled orders:', error);
+        setCancelledOrders([]);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user]);
 
   const tabRoutes = {
     'To Ship': 'ToShip',
@@ -65,34 +93,55 @@ export default function Cancelled() {
 
       {/* Cancelled Items */}
       <ScrollView>
-        {cancelledItems.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.status}>Cancelled</Text>
-              <Text style={styles.date}>{item.date}</Text>
-            </View>
+        {cancelledOrders.length === 0 ? (
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
+            No cancelled orders found.
+          </Text>
+        ) : (
+          cancelledOrders.map((order) => {
+            // Use first item if exists, else skip
+            const item = order.items && order.items.length > 0 ? order.items[0] : null;
+            if (!item) return null;
 
-            <View style={styles.productRow}>
-              <Image source={{ uri: item.image }} style={styles.image} />
-              <View style={styles.details}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.productSize}>small</Text>
-                <Text style={styles.productQty}>Qty: 1</Text>
-                <View style={styles.totalRow}>
-                  <Text style={[styles.totalLabel, { marginLeft: 95 }]}>Total Payment:</Text>
-                  <Text style={styles.price}>{item.price}</Text>
+            const size = randomSizes[Math.floor(Math.random() * randomSizes.length)];
+            // Format date (if stored as timestamp, convert it here)
+            const formattedDate = order.cancelledDate
+              ? new Date(order.cancelledDate.seconds * 1000).toLocaleDateString()
+              : 'N/A';
+
+            return (
+              <View key={order.id} style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.status}>Cancelled</Text>
+                  <Text style={styles.date}>{formattedDate}</Text>
+                </View>
+
+                <View style={styles.productRow}>
+                  <Image
+                    source={{ uri: item.image || 'https://placehold.co/100x100' }}
+                    style={styles.image}
+                  />
+                  <View style={styles.details}>
+                    <Text style={styles.name}>{item.name}</Text>
+                    <Text style={styles.productSize}>{size}</Text>
+                    <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
+                    <View style={styles.totalRow}>
+                      <Text style={[styles.totalLabel, { marginLeft: 95 }]}>Total Payment:</Text>
+                      <Text style={styles.price}>₱{order.total || 'N/A'}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Buttons */}
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity style={styles.primaryButton}>
+                    <Text style={styles.primaryButtonText}>Buy Again</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-            </View>
-
-            {/* Buttons */}
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.primaryButton}>
-                <Text style={styles.primaryButtonText}>Buy Again</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+            );
+          })
+        )}
       </ScrollView>
     </View>
   );
@@ -201,7 +250,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 120,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#9747FF'
+    borderColor: '#9747FF',
   },
   primaryButtonText: {
     color: '#9747FF',

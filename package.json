@@ -23,6 +23,7 @@
     "expo-status-bar": "~2.2.3",
     "firebase": "^11.10.0",
     "formik": "^2.4.6",
+    "fuse.js": "^7.1.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
@@ -32,8 +33,7 @@
     "react-native-screens": "^4.11.1",
     "react-native-toast-message": "^2.3.3",
     "react-native-web": "^0.20.0",
-    "styled-components": "^6.1.19",
-    "expo-clipboard": "~7.1.5"
+    "styled-components": "^6.1.19"
   },
   "expo": {
     "doctor": {
