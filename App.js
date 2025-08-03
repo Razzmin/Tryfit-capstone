@@ -23,6 +23,7 @@ import CategoryProductsScreen from './screens/CategoryProductsScreen';
 import ProductDetail from './screens/Products/ProductDetail';
 import ChatSupportScreen from './screens/ChatSupportScreen';
 import SearchResults from './screens/SearchResults';
+import CheckoutSummary from './screens/CheckoutSummary';
 
 import Orders from './screens/Orders';
 import ToShip from './screens/ToShip';
@@ -76,7 +77,7 @@ export default function App() {
         <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
         <Stack.Screen name="ChatSupport" component={ChatSupportScreen} />
         <Stack.Screen name="SearchResults" component={SearchResults} />
-
+         <Stack.Screen name="CheckoutSummary" component={CheckoutSummary} />
       </Stack.Navigator> 
       )}
     </NavigationContainer>

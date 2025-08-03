@@ -3,7 +3,7 @@ import { FlatList, View, Text, TouchableOpacity, ActivityIndicator } from 'react
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-
+import { FontAwesome } from '@expo/vector-icons';
 import GradientBackground from '../components/gradientbackground';
 import {
   StyledContainer,
@@ -114,43 +114,45 @@ const CategoryProductsScreen = () => {
           {/* Header */}
           <View
             style={{
-              width: '100%',
-              height: 50,
+              width: '110%',
+              height: 90,
               justifyContent: 'center',
               alignItems: 'center',
               position: 'relative',
+              flexDirection: 'row',
             }}
           >
             <TouchableOpacity
               onPress={() => navigation.goBack()}
-              style={{ position: 'absolute', left: 10, padding: 8 }}
+              style={{ position: 'absolute', left: 10 , padding: 8 }}
             >
-              <Ionicons name="arrow-back" size={24} color="black" />
+            <FontAwesome name="arrow-left" size={24} color="#000" />
             </TouchableOpacity>
-
             <Text
               style={{
-                fontSize: 18,
-                fontWeight: 'bold',
+                fontSize: 20,
+                fontWeight: '600',
                 color: 'black',
                 textTransform: 'uppercase',
               }}
             >
+            <View style={{ width: 24 }} />
               {currentCategory.label}
             </Text>
           </View>
 
           {/* Categories Filter */}
-          <FilterScroll horizontal showsHorizontalScrollIndicator={false}>
+          <FilterScroll horizontal showsHorizontalScrollIndicator={false}
+           contentContainerStyle={{ paddingHorizontal: 5, paddingRight: 5}}>
             {categories.map(cat => (
               <FilterButton
                 key={cat.key}
                 onPress={() => navigation.navigate('CategoryProducts', { categoryKey: cat.key })}
                 style={{
                   backgroundColor: cat.key === currentCategory.key ? Colors.brand : 'transparent',
-                }}
+                marginRight: 8,}}
               >
-                <FilterButtonText style={{ color: cat.key === currentCategory.key ? 'white' : 'black' }}>
+                <FilterButtonText style={{ color: cat.key === currentCategory.key ? '#9747FF' : 'black' }}>
                   {cat.label}
                 </FilterButtonText>
               </FilterButton>
@@ -171,7 +173,7 @@ const CategoryProductsScreen = () => {
                 keyExtractor={item => item.id}
                 numColumns={2}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 8 }}
+                contentContainerStyle={{ paddingHorizontal: 12 }}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     onPress={() => navigation.navigate('ProductDetail', { product: item })}

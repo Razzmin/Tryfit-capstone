@@ -123,9 +123,9 @@ export default function ShoppingCart() {
     );
   };
 
-  const totalPrice = cartItems
-    .filter(item => item.selected !== false)
-    .reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const selectedItems = cartItems.filter(item => item.selected !== false);
+  const totalPrice = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
 
   return (
     <CartContainer>
@@ -165,10 +165,10 @@ export default function ShoppingCart() {
                 <FontAwesome name="trash" size={20} color='#000000' />
               </TouchableOpacity>
 
-              <ItemImage source={{ uri: item.image || 'https://via.placeholder.com/70' }} />
+              <ItemImage source={{ uri: item.productImage || 'https://via.placeholder.com/70' }} />
 
               <ItemInfo>
-                <ItemName>{item.name}</ItemName>
+                <ItemName>{item.productName}</ItemName>
                 <Text style={{ fontSize: 12, color: 'black', paddingBottom: 10 }}>
                   Color: {item.color}
                 </Text>
@@ -191,12 +191,15 @@ export default function ShoppingCart() {
           ))
         )}
       </ScrollView>
-
       {cartItems.length > 0 && (
         <CartFooter>
-          <TotalPrice> Total: ₱{totalPrice} </TotalPrice>
-
-          <CheckoutBtn onPress={async () => {
+        <View style = {{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+          <TotalPrice> Selected Items: {selectedItems.length}</TotalPrice>
+           <TotalPrice> Total: ₱{totalPrice} </TotalPrice>
+        </View>
+        <View style={{ alignItems: 'center' }}>
+          <CheckoutBtn
+          style = {{width: '100%'}} onPress={async () => {
             const selectedItems = cartItems.filter(item => item.selected !== false);
             const total = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -232,6 +235,7 @@ export default function ShoppingCart() {
           }}>
             <CheckoutText> CHECKOUT </CheckoutText>
           </CheckoutBtn>
+          </View>
         </CartFooter>
       )}
     </CartContainer>

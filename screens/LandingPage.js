@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext, useMemo } from 'react';
-import { FontAwesome } from '@expo/vector-icons';
+import {FontAwesome }  from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { collection, getDocs, getDoc, doc, query, where, Timestamp } from 'firebase/firestore';

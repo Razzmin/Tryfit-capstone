@@ -11,6 +11,7 @@ export const Colors = {
     white: "#FFFFFF",
     black: "#000000",
     gray: "#717171",
+    purple: "#9747FF",
     gradient: [
    "#a166ff", 
     "#a875ff",
@@ -21,8 +22,7 @@ export const Colors = {
     "#d6bfff",
     "#e0cfff",
     "#ebdfff"
-  ],
-  purple: "#9747FF",
+  ]
 };
 const {primary, secondary, white, black, gray, purple} = Colors; 
 
@@ -112,7 +112,6 @@ export const LeftIcon = styled.View`
     top: 38px;
     position: absolute;
     z-index: 1;
-    
 `;
 export const RightIcon = styled.TouchableOpacity`
     right: 10px;
@@ -122,7 +121,7 @@ export const RightIcon = styled.TouchableOpacity`
 `;
 export const StyledButton = styled.TouchableOpacity`
     padding: 15px;
-    background-color: ${purple};
+    background-color: ${secondary};
     justify-content: center;
     border-radius: 10px;
     margin-vertical: 5px;
@@ -140,7 +139,6 @@ export const BottomTextWrapper = styled.View`
   margin-top: 20px;
 `;
 export const SignUpButton = styled.TouchableOpacity`
-   color: ${purple};
 `;
 export const LinkText = styled.Text`
     color: ${secondary};
@@ -153,13 +151,11 @@ export const PlainText = styled.Text`
 `;
 
 //signup contents
-export const SignupContainer = styled.View`
-   flex:1;
-    background-color: ${white};
-    padding: 30px 20px;
-    position: relative;
-    padding-top: 60px;
+
+export const SignupContainer = styled(StyledContainer)`
     background-color: transparent;
+`;
+export const SignupInnerContainer = styled(InnerContainer)`
 `;
 export const BackArrowWrapper = styled.TouchableOpacity`
     margin-top: 30px;
@@ -180,10 +176,9 @@ export const BackText = styled.Text`
     margin-left: 5px;
 `;
 export const CreateAccountTitle = styled(SubTitle)`
-     font-size: 20px;
+     font-size: 31px;
      margin-top: 20px;
      margin-bottom: 10px;
-     color: ${secondary};
 `;
 export const PersonalDetailsSubtitle = styled(PageTitle)`
     font-size: 18px;
@@ -195,23 +190,16 @@ export const PersonalDetailsSubtitle = styled(PageTitle)`
 `;
 export const SignupFormArea= styled(StyledFormArea)`
     width: 110%;
-    margin-top: 20px;
-    padding-right: 40px;
+    padding: 0 12px;
+    margin-top: 25px;
 `;
 export const SignUpTextInput = styled(StyledTextInput)`
-    padding-left: 50px;
+    padding-left: 30px;
     color:${black};
-    border-color: ${black};
 `;
 export const SignUpStyleInputLabel= styled(StyleInputLabel)`
 `;
 export const SignUpRightIcon = styled(RightIcon)`
-`;
-export const SignUpLeftIcon = styled.View`
-    left: 10px;
-    top: 40px;
-    position: absolute;
-    z-index: 1;
 `;
 export const SignInButton = styled(StyledButton)`
 `;
@@ -225,22 +213,22 @@ export const LogInLinkText = styled(LinkText)`
 `;
 export const LogInPlainText = styled(PlainText)`
 `;
-export const BodyMBackWrapper = styled.View`
+export const BodyMBackWrapper = styled(BackArrowWrapper)`
 `;
 
-
-
-//image slider 
 
 export const ProductContainer = styled.View`
     padding-top: 60px;
     background-color: ${white};
     flex: 1;
 `;
+
 export const PageScroll = styled.ScrollView`
     background-color: transparent;
     flex: 1;
 `;
+
+//image slider
 export const ImageSlider = styled.ScrollView`
   width: 100%;
   height: 320px;
@@ -282,7 +270,7 @@ export const RightHeartIcon = styled(RightIcon)`
 export const ProductPrice = styled.Text`
   font-size: 22px;
   font-weight: bold;
-  color: ${purple};
+  color: #9747FF;
   margin-bottom: 15px;
 `;
 
@@ -379,12 +367,14 @@ export const NavBar = styled.View`
     justify-content: space-around;
     align-items: center;
     padding-vertical: 30px;
-    background-color: ${white};
+    background-color:rgb(242, 242, 242);
     border-top-left-radius: 40px;
     border-top-right-radius: 40px;
     shadow-offset: 0px 4px;
     shadow-radius: 8px;
     elevation: 10;
+    height: 110px,
+
 `;
 
 export const AddCartBtn = styled.TouchableOpacity`
@@ -479,7 +469,7 @@ export const TotalPrice = styled.Text`
     margin-bottom: 20px;
     color: ${black};
     text-align: left;
-    padding-left: 40px;
+    padding-left: 5px;
 `;
 export const ItemFooter = styled.View`
     flex-direction: row;
@@ -488,7 +478,7 @@ export const ItemFooter = styled.View`
     margin-top: 5px;
 `;
 export const CartFooter = styled.View`
-    flex-direction: column;
+    padding: 16px;
     position: absolute;
     bottom: 0;
     left: 0;

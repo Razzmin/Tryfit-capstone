@@ -12,6 +12,8 @@ import {
   Image,
   Alert,
 } from 'react-native';
+
+
 import { NotificationContent } from '../../content/notificationcontent';
 import { CartContext } from '../../content/shoppingcartcontent';
 import {
@@ -61,8 +63,8 @@ import {
   BackBtnPro,
 } from '../../components/styles';
 
-import AntDesign from '@expo/vector-icons/AntDesign';
-import { FontAwesome } from '@expo/vector-icons';
+import AntDesign from '@expo/vector-icons/AntDesign'
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 const db = getFirestore();
 const auth = getAuth();
@@ -94,7 +96,7 @@ export default function ProductDetail() {
   const [selectedColor, setSelectedColor] = useState(colors[0]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSelectedColor, setModalSelectedColor] = useState(colors[0]);
-  const [modalQuantity, setModalQuantity] = useState(1); // New quantity state
+  const [modalQuantity, setModalQuantity] = useState(1); 
 
   const { addNotification } = useContext(NotificationContent);
   const { addToCart } = useContext(CartContext);
@@ -149,7 +151,7 @@ export default function ProductDetail() {
         displayName = data.displayName || displayName;
       }
     } catch {
-      // no Firestore user profile found
+      
     }
 
     const newReview = {
@@ -197,7 +199,7 @@ export default function ProductDetail() {
       productId: product.id,
       productName: product.name,
       productImage: product.imageUrl,
-      color: modalSelectedColor,
+      color: colorNameMap[modalSelectedColor] || modalSelectedColor,
       quantity: modalQuantity,
       price: product.price,
       timestamp: serverTimestamp(),
@@ -207,14 +209,14 @@ export default function ProductDetail() {
       await addDoc(cartRef, cartItem);
       addNotification(`${product.name} added to cart`);
       setModalVisible(false);
-      setModalQuantity(1); // reset quantity for next time
+      setModalQuantity(1); 
     } catch (error) {
       Alert.alert('Error', 'Failed to add item to cart.');
       console.error('Add to cart error:', error);
     }
   };
 
-  // Handler for increment/decrement quantity
+  
   const incrementQuantity = () => {
     const stockAvailable = getStock(modalSelectedColor);
     if (modalQuantity < stockAvailable) {
@@ -473,7 +475,7 @@ export default function ProductDetail() {
                         style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}
                         onPress={() => {
                           setModalSelectedColor(color);
-                          setModalQuantity(1); // reset quantity on color change
+                          setModalQuantity(1); 
                         }}
                       >
                         <View
