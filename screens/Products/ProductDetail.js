@@ -242,7 +242,7 @@ export default function ProductDetail() {
         }}
       >
         <ProductContainer>
-          <PageScroll contentContainerStyle={{ paddingBottom: 150 }}>
+          <PageScroll contentContainerStyle={{  flexGrow: 1, paddingBottom: 150 }}>
             <Header>
               <BackBtnPro onPress={() => navigation.goBack()}>
                 <FontAwesome name="arrow-left" size={24} color="black" />

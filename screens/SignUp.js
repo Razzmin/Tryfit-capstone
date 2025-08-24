@@ -1,8 +1,7 @@
 import React, {useRef, useEffect } from 'react';
-import { useIsFocused } from '@react-navigation/native';
-import { View, Text } from 'react-native';
+import { useIsFocused, useNavigation  } from '@react-navigation/native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useNavigation } from '@react-navigation/native';
 import Popup from '../components/Popup'; 
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -17,15 +16,11 @@ import { db } from "../firebase/config";
 import { Formik } from "formik";
 
 //icons
-import {Ionicons} from '@expo/vector-icons';
-import {Octicons} from '@expo/vector-icons';
-import { FontAwesome } from '@expo/vector-icons';
+import {Ionicons, Octicons, FontAwesome  } from '@expo/vector-icons';
 
 //content structure
 import {
     CreateAccountTitle,
-    SignupContainer,
-    Colors,
     SignUpStyleInputLabel,
     SignupFormArea,
     SignUpTextInput,
@@ -40,15 +35,21 @@ import {
     SignBackBtn,
     SignTitle,
     SignUpLeftIcon,
+    InnerContainer,
 
 } from "./../components/styles";
 
 import { useState } from 'react';
-import { Header } from '@react-navigation/stack';
+
 
 //colors
-const {black} = Colors;
-const {gray} = Colors;
+const colors = {
+  bg: "#382a47",
+  purple: "#9747FF",
+  main: "#1f1926",
+  text: "#bba1d4",
+  white: "#EDEDED",
+};
 
 const Signup = () => {
     const navigation = useNavigation();
@@ -114,21 +115,17 @@ const Signup = () => {
         }
     };
   return (
-     <LinearGradient colors={['hsl(266, 100%, 78%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
-     <SignupContainer>
+       <LinearGradient colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']}style={{ flex: 1 }}>
+      <View style= {styles.container}>
             <StatusBar style="dark"/>
-            <SignHeader>
-              <SignBackBtn onPress={() => navigation.navigate('Login')}>
-                        <FontAwesome name="arrow-left" size={24} color="#000" />
-                      </SignBackBtn>
-                         <View style={{ flex: 1, alignItems: 'center' }}>
-                        <SignTitle> Create your account </SignTitle>
-                        </View>
-              
+            <View style={styles.inner}>
+            <TouchableOpacity style={styles.header} onPress={() => navigation.goBack()}>
+                       <FontAwesome name="arrow-left" size={16} color= "#1f1926" />
+                       <Text style={styles.title}> Create your account</Text>
+                     </TouchableOpacity>
                       <View style={{ width: 24 }} />
-                      </SignHeader>
-            
-                <CreateAccountTitle> Personal Details </CreateAccountTitle>
+
+              <Text style={styles.subtitle}>Personal Details</Text>
 
                 <Formik
                 innerRef={formikRef}
@@ -136,12 +133,15 @@ const Signup = () => {
                 onSubmit={handleSignup}
                 >
                 {({handleChange,handleBlur,handleSubmit, values}) => (
-                <SignupFormArea>
-                      <UserTextInput
+
+                <View style={styles.formArea}>
+                  <Text style = {styles.label}> Username: </Text>
+                        <View style= {styles.inputWrapper}>
+                        <Octicons name = "person" size={24} style={styles.leftIcon} />
+                        <TextInput
                         label="Username"
-                        icon="person"
-                        placeholder="ex. Kween LengLeng"
-                        placeholderTextColor={gray}
+                        placeholder=""
+                        style ={styles.inputArea}
                         onChangeText={handleChange('username')}
                         onBlur={handleBlur('username')}
                         value={values.username}
@@ -151,11 +151,15 @@ const Signup = () => {
                         autoCorrect={false}
                         importantForAutofill="no" 
                     />
-                     <UserTextInput
+                    </View>
+
+                      <Text style = {styles.label}> Email Address: </Text>
+                      <View style= {styles.inputWrapper}>
+                      <Octicons name = "mail" size={24} style={styles.leftIcon} />
+                        <TextInput
                         label="Email Address"
-                        icon="mail"
-                        placeholder="ex. lenglenggandamoh@vvko.com"
-                        placeholderTextColor={gray}
+                        placeholder=""
+                        style ={styles.inputArea}
                         onChangeText={handleChange('email')}
                         onBlur={handleBlur('email')}
                         value={values.email}
@@ -165,11 +169,15 @@ const Signup = () => {
                         autoCorrect={false}
                         importantForAutofill="no"  
                     />
-                    <UserTextInput
+                    </View>
+
+                  <Text style = {styles.label}> Password: </Text>
+                    <View style= {styles.inputWrapper}>
+                    <FontAwesome name = "lock" size={24} style={styles.leftIcon}/>
+                        <TextInput
                         label="Password"
-                         icon="lock"
-                        placeholder="    "
-                        placeholderTextColor={gray}
+                        placeholder=""
+                        style ={styles.inputArea}
                         onChangeText={handleChange('password')}
                         onBlur={handleBlur('password')}
                         value={values.password}
@@ -182,6 +190,7 @@ const Signup = () => {
                         autoCorrect={false}
                         importantForAutofill="no"  
                     />
+                     </View>
                     <SignInButton 
                       onPress={handleSubmit}
                       disabled={!values.username || !values.email || !values.password}
@@ -196,10 +205,12 @@ const Signup = () => {
                         <LogInLinkText> Log In</LogInLinkText>
                         </LogInButton>
                     </SignUpBottomTextWrapper>
-                </SignupFormArea>
+               </View>
                 )}
                  </Formik>
-    </SignupContainer>
+               </View>  
+        </View>
+
 
                 <Popup
         visible={popupVisible}
@@ -214,20 +225,109 @@ const Signup = () => {
     </LinearGradient>
     )
 }
-const UserTextInput = ({label, icon,isPassword, hidePassword, setHidePassword ,...props}) => {
+function UserTextInput ({label, icon,isPassword, hidePassword, setHidePassword ,...props}) {
     return(
         <View style={{width: '100%', marginBottom: 20 }}>
         <SignUpLeftIcon>
-            <Octicons name={icon} size={27} color={black} />
+            <Octicons name={icon} size={27} color= "#1f1926" />
         </SignUpLeftIcon>
         <SignUpStyleInputLabel>{label}</SignUpStyleInputLabel>
         <SignUpTextInput {...props} />
         {isPassword && (
         <SignUpRightIcon onPress={() => setHidePassword(!hidePassword)}>
-            <Ionicons name={hidePassword ? 'eye-off' : 'eye'} size={30} color={black}/>
+            <Ionicons name={hidePassword ? 'eye-off' : 'eye'} size={30} color= "#1f1926"/>
         </SignUpRightIcon>
         )}
         </View>
     )
 }
 export default Signup; 
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    position: 'relative',
+    paddingHorizontal: 15,
+    paddingTop: 70,
+    fontFamily: 'System',
+  },
+  inner: {
+    maxWidth: 330,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 17,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.main,
+    marginLeft: 5,
+    fontFamily: "KronaOne",
+  },
+  subtitle: {
+    fontSize: 19,
+    marginTop: 50,
+    marginBottom: 3,
+    fontWeight:'600',
+    color: colors.main,
+    textAlign: "left",
+    padding: 20,
+    fontFamily: "KronaOne",
+  },
+  formArea: {
+    width: "100%",
+    paddingHorizontal: 15,
+    marginTop: 5,
+  },
+  inputWrapper: {
+    position: "relative",
+    marginBottom: 20,
+  },
+  leftIcon: {
+    position: "absolute",
+    left: 15,
+    top: 20,
+    color: colors.bg,
+    zIndex: 1,
+  },
+  rightIcon: {
+     position: "absolute",
+    left: 15,
+    top: 15,
+    color: colors.bg,
+    zIndex: 1,
+  },
+  inputArea: {
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.bg,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingLeft: 45,
+    borderRadius: 10,
+    fontSize: 16,
+    height: 55,
+    color: colors.bg,
+    marginVertical: 6,
+    marginBottom: 5,
+    color: colors.bg,
+    width: "100%",
+  },
+  label: {
+    color: colors.bg,
+    fontSize: 16,
+    textAlign: "left",
+    marginBottom: 5,
+  },  
+  button: {
+    color: colors.white,
+    fontSize: 18,
+    textAlign: 'center',
+  }
+  
+});

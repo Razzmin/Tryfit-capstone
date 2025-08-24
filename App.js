@@ -3,11 +3,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { CartProvider } from './content/shoppingcartcontent';
 import { NotificationProvider } from './content/notificationcontent';
+import { useFonts, KronaOne_400Regular } from '@expo-google-fonts/krona-one';
+
 
 // Screens
 import Login from './screens/LogIn';
 import Signup from './screens/SignUp';
-import SplashScreen from './screens/splashscreen';
+import SplashScreen from './screens/SplashScreen';
 import BodyMeasurements from './screens/BodyMeasurement';
 import BodyTracking from './screens/BodyTracking';
 import LandingPage from './screens/LandingPage';
@@ -39,12 +41,24 @@ export default function App() {
 
   const [isShowSplash, setIsShowSplash] = useState(true);
 
+  const [fontsLoaded] = useFonts({
+    KronaOne: KronaOne_400Regular,
+  });
+
   useEffect(() => {
     const timer = setTimeout(() => 
-    setIsShowSplash(false), 3000);
+    setIsShowSplash(false), 4000);
     return () => clearTimeout(timer);
   }, []);
 
+ if (!fontsLoaded) {
+    return  <SplashScreen />;
+  }
+
+  if (fontsLoaded) {
+  Text.defaultProps = Text.defaultProps || {};
+  Text.defaultProps.style = { fontFamily: "KronaOne" };
+}
 
   return (
     <CartProvider>
@@ -54,7 +68,7 @@ export default function App() {
      <SplashScreen />
      ) : (
 
-        <Stack.Navigator screenOptions={{ headerShown: false }}  initialRouteName="Login">
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="Signup" component={Signup} />
         <Stack.Screen name="BodyMeasurement" component={BodyMeasurements} />
@@ -77,7 +91,7 @@ export default function App() {
         <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
         <Stack.Screen name="ChatSupport" component={ChatSupportScreen} />
         <Stack.Screen name="SearchResults" component={SearchResults} />
-         <Stack.Screen name="CheckoutSummary" component={CheckoutSummary} />
+        <Stack.Screen name="CheckoutSummary" component={CheckoutSummary} />
       </Stack.Navigator> 
       )}
     </NavigationContainer>

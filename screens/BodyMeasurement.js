@@ -16,6 +16,15 @@ import {
   View,
 } from 'react-native';
 
+//colors
+const colors = {
+  bg: "#382a47",
+  purple: "#9747FF",
+  main: "#1f1926",
+  text: "#bba1d4",
+  white: "#EDEDED",
+};
+
 export default function BodyMeasurements() {
   const navigation = useNavigation();
 
@@ -40,7 +49,7 @@ export default function BodyMeasurements() {
     }
 
     try {
-      // ✅ Save in 'measurements' collection with userId included
+     
       const measurementsRef = collection(db, 'measurements');
       await addDoc(measurementsRef, {
         ...formData,
@@ -56,18 +65,15 @@ export default function BodyMeasurements() {
   };
 
   return (
-    <LinearGradient
-      colors={['#E0BBFF', '#F3E5F5']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.gradient}
-    >
+    <LinearGradient colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']}style={{ flex: 1 }}>
       <View style={styles.container}>
         <View style={styles.inner}>
           <TouchableOpacity style={styles.header} onPress={() => navigation.goBack()}>
             <FontAwesome name="arrow-left" size={16} color="black" />
             <Text style={styles.title}>Body Measurements</Text>
           </TouchableOpacity>
+
+           <Text style={styles.subtitle}>Measurement Details</Text>
 
           <View style={styles.form}>
             <Text style={styles.label}>Height (cm)</Text>
@@ -78,6 +84,8 @@ export default function BodyMeasurements() {
               keyboardType="numeric"
             />
 
+
+            <View style= {styles.inputWrapper}>
             <Text style={styles.label}>Weight (kg)</Text>
             <TextInput
               style={styles.input}
@@ -93,9 +101,10 @@ export default function BodyMeasurements() {
               onChangeText={value => handleChange('waist', value)}
               keyboardType="numeric"
             />
+            </View>
 
             <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-              <Text style={{ color: 'white' }}>Next</Text>
+              <Text style={{ color: 'white', fontSize: 16, fontFamily: "KronaOne" }}>Next</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -115,13 +124,13 @@ export default function BodyMeasurements() {
                     });
                   }}
                 >
-                  <Text style={{ color: '#fff' }}>Yes</Text>
+                  <Text style={{ color: '#fff',  fontSize: 15}}>Yes</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.popupButtonNo}
                   onPress={() => setShowPopup(false)}
                 >
-                  <Text style={{ color: '#fff' }}>No</Text>
+                  <Text style={{ color: '#fff', fontSize: 15 }}>No</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -151,53 +160,77 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
     gap: 17,
   },
   title: {
-    fontSize: 22,
+    fontSize: 17,
     fontWeight: '600',
     color: '#333',
     marginLeft: 5,
+    fontFamily: "KronaOne",
+  },
+  subtitle: {
+    fontSize: 17,
+    marginTop: 40,
+    marginBottom: 5,
+    fontWeight:'600',
+    color: colors.main,
+    textAlign: "left",
+    padding: 20,
+    fontFamily: "KronaOne",
+
   },
   form: {
+    width: "100%",
+    paddingHorizontal: 15,
     marginTop: 10,
   },
   label: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#696969',
-    letterSpacing: 1,
+    color: colors.main,
+    fontSize: 14,
+    textAlign: "left",
   },
   input: {
-    padding: 15,
-    borderRadius: 8,
-    backgroundColor: '#FFFAFA',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    fontSize: 14,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.bg,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingLeft: 20,
+    borderRadius: 10,
+    fontSize: 16,
+    height: 55,
+    color: colors.bg,
+    marginVertical: 6,
     marginBottom: 30,
+    color: colors.bg,
+    width: "100%",
+  },
+   inputWrapper: {
+    position: "relative",
   },
   button: {
     backgroundColor: '#9747FF',
-    padding: 14,
+    padding: 20,
     borderRadius: 8,
     alignItems: 'center',
     alignSelf: 'flex-end',
-    width: 120,
-    marginTop: 20,
+    width: "100%",
+    marginTop: 10,
+    fontSize: 30,
   },
   popupOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'flex-end',
+
   },
   popupBox: {
     backgroundColor: 'rgba(255, 255, 255, 0.57)',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 40,
+    padding: 30,
     alignItems: 'center',
   },
   popupText: {

@@ -7,11 +7,13 @@ const StatusBarHeight = Constants.statusBarHeight;
 //palette
 export const Colors = {
     primary: "#EDEDED",
+    bg: "#382a47",
     secondary:"#5C427E",
     white: "#FFFFFF",
     black: "#000000",
     gray: "#717171",
     purple: "#9747FF",
+    main: "#1f1926",
     gradient: [
    "#a166ff", 
     "#a875ff",
@@ -22,9 +24,10 @@ export const Colors = {
     "#d6bfff",
     "#e0cfff",
     "#ebdfff"
-  ]
+  ],
+    text: "#bba1d4",
 };
-const {primary, secondary, white, black, gray, purple} = Colors; 
+const {primary, secondary, white, black, gray, purple, text, bg, main} = Colors; 
 
 //splashscreen contents
 export const SplashContainer = styled.View`
@@ -48,106 +51,111 @@ export const StyledContainer = styled.View`
     background-color: transparent;
     align-items: center;
     justify-content: center;
-
 `;
 export const InnerContainer = styled.View`
-    flex: 1;
     width: 90%;
-    align-items:center
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 50px;
 `;
 
 export const PageLogo = styled.Image.attrs(() => ({
   resizeMode: "contain",
 }))`
-  width: 200px;
-  height: 200px;
+     width: 200px;
+    height: 200px;
 `;
 export const PageTitle = styled.Text`
-    font-size: 30px;
-    font-weight: bold;
-    color:${black};
-    padding: 5px;
-    margin-top: 0px;
+    font-size: 20px;
+    color:${main};
     text-align: left;
-    width: 100%;
-    padding-left: 0px;
+    font-family: "KronaOne";
+    letter-spacing: 1px;
+    align-self: flex-start;
+    margin-top: 15px;
 `;
 export const SubTitle = styled.Text`
-     font-size: 40px;
-     margin-bottom: 20px;
+     font-size: 26px;
+     margin-bottom: 2px;
      letter-spacing: 1px;
-     font-weight: bold;
-     color: ${black};
+     color: ${main};
      text-align: left;
      width: 100%;
+     padding: 8px;
+     font-family: "KronaOne";
 `;
 
 export const StyledFormArea = styled.View`
     width: 110%;
-    padding: 0 10px;
-    margin-top: 25pxpx;
+    padding: 0 15px;
+    margin-top: 10px;
 `;
 
 export const StyledTextInput = styled.TextInput`
     background-color: ${primary};
-    border-width: 1px;
-    border-color: ${black};
-     padding: 15px 20px;
+    border-width: 2px;
+    border-color: ${main};
+     padding: 10px 20px;
      padding-left: 50px;
      border-radius: 10px;
      font-size: 16px;
      height: 55px;
-     margin-vertical: 8px;
-     margin-bottom: 10px;
-     color: ${black};
+     margin-vertical: 6px;
+     margin-bottom: 3px;
+     color: ${main};
      width: 100%;
 `;
 export const StyleInputLabel = styled.Text`
-    color: ${gray};
+    color: ${main};
     font-size: 15px;
     text-align: left;
 `;
 export const LeftIcon = styled.View`
     left: 10px;
-    top: 38px;
+    top: 40px;
     position: absolute;
     z-index: 1;
 `;
 export const RightIcon = styled.TouchableOpacity`
     right: 10px;
-    top: 38px;
+    top: 40px;
     position: absolute;
     z-index: 1;
 `;
 export const StyledButton = styled.TouchableOpacity`
     padding: 15px;
-    background-color: ${secondary};
+    background-color: ${purple};
     justify-content: center;
     border-radius: 10px;
-    margin-vertical: 5px;
+    margin-vertical: 10px;
     height: 60px;
-    width: 100%
+    width: 100%;
+    font-family: "KronaOne";
+
 `;
 export const ButtonText = styled.Text`
     color: ${white};
-    font-size: 18px;
+    font-size: 15px;
     text-align: center;
+   font-family: "KronaOne";
 `;
 export const BottomTextWrapper = styled.View`
   flex-direction: row;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: 2px;
+  margin-bottom: 90px;
 `;
 export const SignUpButton = styled.TouchableOpacity`
 `;
 export const LinkText = styled.Text`
-    color: ${secondary};
+    color: ${purple};
   font-size: 15px;
   text-decoration: underline;
 `;
 export const PlainText = styled.Text`
-     color: ${gray};
+     color: ${main};
     font-size: 15px;
+    
 `;
 
 //signup contents
@@ -155,27 +163,7 @@ export const PlainText = styled.Text`
 export const SignupContainer = styled(StyledContainer)`
     background-color: transparent;
 `;
-export const SignupInnerContainer = styled(InnerContainer)`
-`;
-export const BackArrowWrapper = styled.TouchableOpacity`
-    margin-top: 30px;
-    flex-direction: row;
-    margin-top: 20px;
-    margin-bottom:10px;
-    align-items: center;
-    justify-content: flex-start;
-`;
-export const BackArrowtIcon = styled.View`
-    margin-top: 50px;
-    margin-bottom: 0px;
-    
-`;
-export const BackText = styled.Text`
-    font-size: 14px;
-    color: ${black};
-    margin-left: 5px;
-`;
-export const CreateAccountTitle = styled(SubTitle)`
+export const CreateAccountTitle = styled.Text`
      font-size: 31px;
      margin-top: 20px;
      margin-bottom: 10px;
@@ -188,32 +176,48 @@ export const PersonalDetailsSubtitle = styled(PageTitle)`
     padding: 2px;
     text-align: left;
 `;
-export const SignupFormArea= styled(StyledFormArea)`
+export const SignupFormArea= styled.View`
     width: 110%;
-    padding: 0 12px;
-    margin-top: 25px;
+    padding: 0 15px;
+    margin-top: 10px;
 `;
-export const SignUpTextInput = styled(StyledTextInput)`
-    padding-left: 30px;
-    color:${black};
+export const SignUpTextInput = styled.TextInput`
+    background-color: ${text};
+    border-width: 3px;
+    border-color: ${bg};
+     padding: 10px 20px;
+     padding-left: 50px;
+     border-radius: 10px;
+     font-size: 16px;
+     height: 55px;
+     margin-vertical: 8px;
+     margin-bottom: 5px;
+     color: ${main};
+     width: 100%;
 `;
 export const SignUpStyleInputLabel= styled(StyleInputLabel)`
 `;
 export const SignUpRightIcon = styled(RightIcon)`
 `;
+export const SignUpLeftIcon = styled(LeftIcon)`
+`;
 export const SignInButton = styled(StyledButton)`
 `;
 export const SignInButtonText = styled(ButtonText)`
+    font-family: "KronaOne";
+    font-size: 18px;
 `;
 export const SignUpBottomTextWrapper = styled(BottomTextWrapper)`
 `;
 export const LogInButton = styled(SignUpButton)`
 `;
 export const LogInLinkText = styled(LinkText)`
+     font-family: "KronaOne";
+    font-size: 10px;
 `;
 export const LogInPlainText = styled(PlainText)`
-`;
-export const BodyMBackWrapper = styled(BackArrowWrapper)`
+    font-family: "KronaOne";
+    font-size: 10px;
 `;
 
 
@@ -225,7 +229,6 @@ export const ProductContainer = styled.View`
 
 export const PageScroll = styled.ScrollView`
     background-color: transparent;
-    flex: 1;
 `;
 
 //image slider
@@ -238,7 +241,7 @@ export const SliderIndicatorWrapper = styled.View`
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    marginTop: 10px;
+    margin-top: 10px;
 `;
 export const Dash = styled.View`
   height: 6px;

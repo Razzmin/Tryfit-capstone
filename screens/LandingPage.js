@@ -16,6 +16,15 @@ import {
   View,
 } from 'react-native';
 
+
+//colors
+const colors = {
+  bg: "#382a47",
+  purple: "#9747FF",
+  main: "#1f1926",
+  text: "#bba1d4",
+  white: "#EDEDED",
+};
 import { CartContext } from '../content/shoppingcartcontent';
 
 import Fuse from 'fuse.js';  // <-- Import Fuse for fuzzy search
@@ -141,17 +150,15 @@ export default function LandingPage() {
   };
 
   return (
-    <LinearGradient colors={['hsl(266, 100%, 78%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
+    <LinearGradient colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
           <View style={styles.header}>
             <Text style={styles.title}>TRYFIT</Text>
             <View style={styles.topRow}>
+             
               <TouchableOpacity onPress={() => setIsMenuOpen(true)}>
-                <FontAwesome name="bars" size={24} color="#000" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => navigation.navigate('ChatSupport')}>
-                <FontAwesome name="comments" size={24} color="#000" />
+              <FontAwesome name="bars" size={25} color="#000" />
               </TouchableOpacity>
 
               <View style={{ flex: 1 }}>
@@ -177,6 +184,11 @@ export default function LandingPage() {
                   </View>
                 )}
               </View>
+
+              
+              <TouchableOpacity onPress={() => navigation.navigate('ChatSupport')}>
+                <FontAwesome name="comments" size={27} color="#000" />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -322,11 +334,12 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 180 },
   header: { padding: 20 },
   title: {
-    fontSize: 30,
-    fontWeight: 'bold',
+    fontSize: 27,
     textAlign: 'center',
-    letterSpacing: 2,
-    marginTop: 20,
+    letterSpacing: 3,
+    marginTop: 30,
+    fontFamily: "KronaOne",
+     marginBottom: 10,
   },
   topRow: {
     flexDirection: 'row',
@@ -337,18 +350,19 @@ const styles = StyleSheet.create({
   searchBar: {
     flex: 1,
     padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 20,
+    borderWidth: 2,
     borderColor: '#ccc',
     backgroundColor: '#DEDEDE',
     color: '#000',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
     marginHorizontal: 20,
     marginVertical: 10,
     paddingBottom: 15,
+    fontFamily: "KronaOne",
   },
   newArrivalsRow: {
     paddingHorizontal: 20,
@@ -509,7 +523,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: colors.main,
     backgroundColor: '#DEDEDE',
     color: '#000',
   },

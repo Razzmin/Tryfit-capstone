@@ -1,21 +1,34 @@
-import React from 'react';
-import { View } from "react-native";
-import GradientBackground from '../components/gradientbackground';
+import React, { useRef } from 'react';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import LottieView from 'lottie-react-native';
 
 
-import Icon from "./../assets/icon.png";
+export default function SplashScreen({ navigation }) {
+  const animationRef = useRef(null);
 
-import {
-        SplashContainer,
-        SplashImage,
-    } from "./../components/styles";
-
-export default function SplashScreen(){
-    return (
-    <GradientBackground>
-    <SplashContainer>
-    <SplashImage source={require('./../assets/icon.png')}  resizeMode="contain" />
-    </SplashContainer>
-    </GradientBackground>
+  return (
+    <View style={styles.container}>
+      <LottieView
+        ref={animationRef}
+        source={require('../assets/animations/splassh1.json')}
+        autoPlay
+        loop={false}
+        resizeMode="cover"
+        style={styles.animation}
+      />
+    </View>
   );
 }
+
+
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#382a47', 
+  },
+  animation: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+});

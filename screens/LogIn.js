@@ -40,7 +40,7 @@ import { useState } from 'react';
 import { LinearGradient } from "expo-linear-gradient";
 
 //colors
-const {black} = Colors;
+const {black, main} = Colors;
 
 
 const Login = () => {
@@ -106,7 +106,7 @@ const Login = () => {
 };
 
     return(
-       <LinearGradient colors={['hsl(266, 100%, 78%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
+     <LinearGradient colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
         <StyledContainer>
         <StatusBar style="dark"/>
             <InnerContainer>
@@ -122,7 +122,7 @@ const Login = () => {
 
                 <StyledFormArea>
                     <MyTextInput
-                        label="Email Address"
+                        label="Email Address:"
                         icon="mail"
                         placeholder="   "
                         placeholderTextColor={black}
@@ -132,7 +132,7 @@ const Login = () => {
                         keyboardType="email-address"
                     />
                     <MyTextInput
-                        label="Password"
+                        label="Password:"
                         icon="lock"
                         placeholder="    "
                         placeholderTextColor={black}
@@ -146,7 +146,7 @@ const Login = () => {
                     />
                     
                     <StyledButton onPress={handleSubmit}>
-                        <ButtonText>LOGIN</ButtonText>
+                        <ButtonText>Login</ButtonText>
                     </StyledButton> 
                     <BottomTextWrapper>
                     <PlainText>Don't have an account? </PlainText>
@@ -172,7 +172,7 @@ const MyTextInput = ({label, icon,isPassword, hidePassword, setHidePassword ,...
     return(
         <View style={{width: '100%', marginBottom: 20 }}>
         <LeftIcon>
-            <Octicons name={icon} size={30} color={black} />
+            <Octicons name={icon} size={30} color={main} />
         </LeftIcon>
         <StyleInputLabel>{label}</StyleInputLabel>
         <StyledTextInput {...props} />

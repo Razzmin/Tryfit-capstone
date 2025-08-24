@@ -9,10 +9,20 @@ import {
   View,
 } from 'react-native';
 
+ //colors
+const colors = {
+  bg: "#382a47",
+  purple: "#9747FF",
+  main: "#1f1926",
+  text: "#bba1d4",
+  white: "#EDEDED",
+};
+
 export default function BodyTracking() {
   const navigation = useNavigation();
   const [showSuccess, setShowSuccess] = useState(false);
 
+ 
   const handleConfirm = () => {
     setShowSuccess(true);
     setTimeout(() => {
@@ -23,7 +33,7 @@ export default function BodyTracking() {
 
   return (
     <LinearGradient
-      colors={['#E0BBFF', '#F3E5F5']}
+      colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.container}
@@ -62,7 +72,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 15,
   },
   title: {
     padding: 10,
@@ -72,40 +82,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   description: {
-    fontSize: 12,
-    color: '#808080',
-    marginBottom: 15,
+    fontSize: 14,
+    color: colors.bg,
+    marginBottom: 10,
+    textAlign: 'left',
+    padding: 10,
   },
   arCanvas: {
     flex: 1,
     backgroundColor: '#000',
     borderRadius: 10,
-    marginBottom: 20,
+    marginBottom: 30,
   },
   confirmButton: {
-    paddingVertical: 12,
+    paddingVertical: 18,
     paddingHorizontal: 24,
-    backgroundColor: '#9747FF',
+    backgroundColor: colors.purple,
     borderRadius: 8,
     alignItems: 'center',
     alignSelf: 'center',
-    width: '100%',
+    width: "100%",
     maxWidth: 350,
+    marginBottom: 80,
+
   },
   confirmText: {
     color: 'white',
     fontWeight: 'bold',
+    fontSize: 17,
   },
  successPopup: {
   position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: [{ translateX: -100 }, { translateY: -40 }],
+  top: '50',
+  left: '50',
   backgroundColor: '#333',
   paddingVertical: 12,
   paddingHorizontal: 24,
   borderRadius: 10,
   zIndex: 10,
+  width: 200,
+  height: 80,
+  marginLeft: -100,
+  marginTop: -40,
+
 },
   successText: {
     color: '#FFFFFF',
