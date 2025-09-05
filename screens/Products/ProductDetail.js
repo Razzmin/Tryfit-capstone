@@ -26,6 +26,7 @@ import {
   orderBy,
   getDoc,
   doc,
+  setDoc,
   deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -71,32 +72,22 @@ const auth = getAuth();
 const avatarColors = ['#D98EFF', '#BDBDBD', '#FFB6C1', '#90CAF9', '#FFF59D', '#EF9A9A', '#CE93D8'];
 
 export default function ProductDetail() {
-  const route = useRoute();
-  const { product } = route.params;
+  const route = useRoute(); 
+  const product = route.params?.product;
   const navigation = useNavigation();
   const user = auth.currentUser;
 
   const images = product.images || [product.imageUrl];
-  const colors = product.colors || ['#FF0000', '#00FF00', '#0000FF'];
-  const colorNameMap = {
-    '#FF0000': 'Red',
-    '#00FF00': 'Green',
-    '#0000FF': 'Blue',
-    '#D98EFF': 'Purple',
-    '#BDBDBD': 'Gray',
-    '#FFB6C1': 'Pink',
-    '#90CAF9': 'Light Blue',
-    '#FFF59D': 'Yellow',
-    '#EF9A9A': 'Light Red',
-    '#CE93D8': 'Lavender',
-    // add more mappings if needed
-  };
+  const colors = product.colors || []; 
+  
 
   const [activeImage, setActiveImage] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(colors[0]);
+  const [selectedColor, setSelectedColor] = useState(colors[0] || null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalSelectedColor, setModalSelectedColor] = useState(colors[0]);
+  const [modalSelectedColor, setModalSelectedColor] = useState(colors[0] || null);
   const [modalQuantity, setModalQuantity] = useState(1); 
+  const [selectedSize, setSelectedSize] = useState(null);
+
 
   const { addNotification } = useContext(NotificationContent);
   const { addToCart } = useContext(CartContext);
@@ -107,6 +98,13 @@ export default function ProductDetail() {
 
   const reviewsRef = collection(db, 'productReviews');
   const cartRef = collection(db, 'cartItems');
+  const colorMap = {
+        Black: '#000000',
+        White: '#FFFFFF',
+        Red: '#FF0000',
+        Yellow: '#FFFF00',
+        Blue: '#0000FF', 
+      };
 
   useEffect(() => {
     const q = query(
@@ -174,61 +172,89 @@ export default function ProductDetail() {
     }
   };
 
-  const getStock = (color) => {
-    if (!product.stock) return 'N/A';
-    if (typeof product.stock === 'object') {
-      return product.stock[color] ?? 0;
-    }
-    return product.stock;
+  // --- helper to safely get stock ---
+  const safeStock = product?.stock || {};
+
+  // check total stock for a color
+  const getColorStock = (color) => {
+    const sizes = safeStock[color] || {};
+    return Object.values(sizes).reduce((sum, qty) => sum + qty, 0);
   };
+
+  // get stock for specific color + size
+  const getSizeStock = (color, size) => {
+    return safeStock[color]?.[size] ?? 0;
+  };
+
 
   const saveCartItem = async () => {
-    if (!user) {
-      Alert.alert('Error', 'You must be logged in to add to cart.');
-      return;
-    }
+  if (!user) {
+    Alert.alert('Error', 'You must be logged in to add to cart.');
+    return;
+  }
+  if (!modalSelectedColor || !selectedSize) {
+    Alert.alert('Error', 'Please select color and size.');
+    return;
+  }
 
-    const stockAvailable = getStock(modalSelectedColor);
-    if (modalQuantity > stockAvailable) {
-      Alert.alert('Error', `Only ${stockAvailable} item(s) available in stock for this color.`);
-      return;
-    }
+  const stockAvailable = getSizeStock(modalSelectedColor, selectedSize);
+  if (modalQuantity > stockAvailable) {
+    Alert.alert('Error', `Only ${stockAvailable} item(s) available for this option.`);
+    return;
+  }
 
-    const cartItem = {
-      userId: user.uid,
-      productId: product.id,
-      productName: product.name,
-      productImage: product.imageUrl,
-      color: colorNameMap[modalSelectedColor] || modalSelectedColor,
-      quantity: modalQuantity,
-      price: product.price,
-      timestamp: serverTimestamp(),
-    };
+  // ✅ Generate Firestore-style unique cart item ID
+  const cartItemCode = doc(collection(db, "tmp")).id;
 
-    try {
-      await addDoc(cartRef, cartItem);
-      addNotification(`${product.name} added to cart`);
-      setModalVisible(false);
-      setModalQuantity(1); 
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add item to cart.');
-      console.error('Add to cart error:', error);
-    }
+  const cartItem = {
+    cartItemCode,       // unique identifier for this cart item
+    userId: user.uid,
+    productId: product.id,
+    productName: product.name,
+    productImage: product.imageUrl,
+    color: modalSelectedColor,
+    size: selectedSize,
+    quantity: modalQuantity,
+    price: product.price,
+    timestamp: serverTimestamp(),
   };
+
+  try {
+    // ✅ Use setDoc to assign our own ID
+    await setDoc(doc(cartRef, cartItemCode), cartItem);
+
+    addNotification(`${product.name} added to cart`);
+    Alert.alert("Success", "Item is added to your cart");
+
+    setModalVisible(false);
+    setModalQuantity(1);
+    setSelectedSize(null);
+  } catch (error) {
+    Alert.alert('Error', 'Failed to add item to cart.');
+    console.error('Add to cart error:', error);
+  }
+};
+
+
 
   
   const incrementQuantity = () => {
-    const stockAvailable = getStock(modalSelectedColor);
-    if (modalQuantity < stockAvailable) {
-      setModalQuantity(modalQuantity + 1);
-    }
-  };
+  const stockAvailable = selectedSize
+    ? getSizeStock(modalSelectedColor, selectedSize)
+    : getColorStock(modalSelectedColor);
 
-  const decrementQuantity = () => {
-    if (modalQuantity > 1) {
-      setModalQuantity(modalQuantity - 1);
-    }
-  };
+  if (modalQuantity < stockAvailable) {
+    setModalQuantity(modalQuantity + 1);
+  }
+};
+
+const decrementQuantity = () => {
+  if (modalQuantity > 1) {
+    setModalQuantity(modalQuantity - 1);
+  }
+};
+
+
 
   return (
     <>
@@ -292,7 +318,7 @@ export default function ProductDetail() {
                     <ColorCircle
                       key={i}
                       style={{
-                        backgroundColor: color,
+                        backgroundColor: colorMap[color] || '#ccc', // fallback if color not in map
                         borderColor: selectedColor === color ? '#9747FF' : '#ccc',
                         borderWidth: selectedColor === color ? 2 : 1,
                       }}
@@ -301,6 +327,7 @@ export default function ProductDetail() {
                   ))}
                 </ColorRow>
               </ColorWrapper>
+
 
               <SectionTitle>Product Details</SectionTitle>
               {product.description?.split('\n').map((line, index) => (
@@ -466,89 +493,141 @@ export default function ProductDetail() {
                     {product.name}
                   </Text>
 
-                  {/* Color name radio buttons */}
-                  <View style={{ marginBottom: 10 }}>
-                    <Text style={{ marginBottom: 6 }}>Choose Color:</Text>
-                    {colors.map((color) => (
-                      <TouchableOpacity
-                        key={color}
-                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}
-                        onPress={() => {
-                          setModalSelectedColor(color);
-                          setModalQuantity(1); 
-                        }}
-                      >
-                        <View
-                          style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: 10,
-                            borderWidth: 2,
-                            borderColor: modalSelectedColor === color ? '#9747FF' : '#ccc',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginRight: 8,
-                          }}
-                        >
-                          {modalSelectedColor === color && (
+                  {/* Color selection */}
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={{ marginBottom: 6 }}>Choose Color:</Text>
+                      {Object.keys(safeStock).map((color) => {
+                        const totalStock = getColorStock(color);
+
+                        return (
+                          <TouchableOpacity
+                            key={color}
+                            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}
+                            onPress={() => {
+                              setModalSelectedColor(color);
+                              setModalQuantity(1);
+                            }}
+                          >
                             <View
                               style={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: 5,
-                                backgroundColor: '#9747FF',
+                                width: 20,
+                                height: 20,
+                                borderRadius: 10,
+                                borderWidth: 2,
+                                borderColor: modalSelectedColor === color ? '#9747FF' : '#ccc',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: 8,
                               }}
-                            />
-                          )}
+                            >
+                              {modalSelectedColor === color && (
+                                <View
+                                  style={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: 5,
+                                    backgroundColor: '#9747FF',
+                                  }}
+                                />
+                              )}
+                            </View>
+                            <Text style={{ fontSize: 16 }}> {color} </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    {/* Size selection */}
+                    {modalSelectedColor && (
+                      <View style={{ marginBottom: 10 }}>
+                        <Text style={{ marginBottom: 6 }}>Choose Size:</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                          {Object.entries(safeStock[modalSelectedColor] || {}).map(([size, qty]) => (
+                            <TouchableOpacity
+                              key={size}
+                              disabled={qty === 0}
+                              onPress={() => {
+                                setSelectedSize(size);
+                                setModalQuantity(1);
+                              }}
+                              style={{
+                                paddingHorizontal: 12,
+                                paddingVertical: 8,
+                                borderRadius: 6,
+                                borderWidth: 1,
+                                borderColor: selectedSize === size ? '#9747FF' : '#ccc',
+                                backgroundColor: qty === 0 ? '#f2f2f2' : '#fff',
+                                marginRight: 8,
+                                marginBottom: 8,
+                                opacity: qty === 0 ? 0.5 : 1,
+                              }}
+                            >
+                              <Text style={{ fontSize: 16 }}> {size}  </Text>
+                            </TouchableOpacity>
+                          ))}
                         </View>
-                        <Text style={{ fontSize: 16 }}>{colorNameMap[color] || color}</Text>
+                      </View>
+                    )} 
+
+                  {/* Stock, Quantity, and Price + Add Button Row */}
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ marginBottom: 6, fontWeight: "600" }}>Quantity</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      {/* Decrement Button */}
+                      <TouchableOpacity
+                        onPress={decrementQuantity}
+                        disabled={modalQuantity <= 1}
+                        style={{
+                          backgroundColor: modalQuantity <= 1 ? "#ddd" : "#9747FF",
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                          borderRadius: 4,
+                          marginLeft: 6,
+                        }}
+                      >
+                        <Text style={{ color: "white", fontSize: 18 }}>−</Text>
                       </TouchableOpacity>
-                    ))}
+
+                      {/* Quantity Display */}
+                      <Text style={{ fontSize: 16, fontWeight: "bold", minWidth: 40, textAlign: "center" }}>
+                        {modalQuantity}
+                      </Text>
+
+                      {/* Increment Button */}
+                      <TouchableOpacity
+                        onPress={incrementQuantity}
+                        disabled={modalQuantity >= getSizeStock(modalSelectedColor, selectedSize)}
+                        style={{
+                          backgroundColor:
+                            modalQuantity >= getSizeStock(modalSelectedColor, selectedSize) ? "#ddd" : "#9747FF",
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 4,
+                          marginLeft: 6,
+                        }}
+                      >
+                        <Text style={{ color: "white", fontSize: 18 }}>＋</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
 
-                  {/* Quantity selector */}
+                  {/* Stock and Price + Add Button */}
                   <View
                     style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      marginBottom: 10,
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
                     }}
                   >
-                    <Text style={{ marginRight: 10 }}>Quantity:</Text>
-                    <TouchableOpacity
-                      onPress={decrementQuantity}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: '#ccc',
-                        borderRadius: 4,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                      }}
-                    >
-                      <Text style={{ fontSize: 20, fontWeight: 'bold' }}>−</Text>
-                    </TouchableOpacity>
-                    <Text style={{ marginHorizontal: 12, fontSize: 16 }}>{modalQuantity}</Text>
-                    <TouchableOpacity
-                      onPress={incrementQuantity}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: '#ccc',
-                        borderRadius: 4,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                      }}
-                    >
-                      <Text style={{ fontSize: 20, fontWeight: 'bold' }}>＋</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Stock and Price + Add Button Row */}
-                  <View
-                    style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-                  >
                     <View>
-                      <Text>Stock: {getStock(modalSelectedColor)}</Text>
-                      <Text style={{ fontWeight: 'bold', marginTop: 4 }}>Price: {product.price}</Text>
+                      <Text>
+                        Stock:{" "}
+                        {selectedSize
+                          ? getSizeStock(modalSelectedColor, selectedSize)
+                          : getColorStock(modalSelectedColor)}
+                      </Text>
+                      <Text style={{ fontWeight: "bold", marginTop: 4 }}>
+                        Price: ₱{(product.price * modalQuantity).toLocaleString()}
+                      </Text>
                     </View>
 
                     <AddCartBtn
@@ -558,6 +637,7 @@ export default function ProductDetail() {
                       <AddCartText>Add to Cart</AddCartText>
                     </AddCartBtn>
                   </View>
+
                 </View>
               </View>
             </TouchableWithoutFeedback>

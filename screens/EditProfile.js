@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 
 import { db, auth } from '../firebase/config';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection } from 'firebase/firestore';
 
 export default function EditProfile() {
   const navigation = useNavigation();
@@ -51,24 +51,41 @@ export default function EditProfile() {
   }, []);
 
   const handleSave = async () => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      try {
-        const userRef = doc(db, 'users', currentUser.uid);
-        await updateDoc(userRef, {
-          name,
-          username,
-          gender,
-          phone,
-          email,
-        });
-        Alert.alert('Success', 'Profile updated successfully');
-      } catch (error) {
-        console.log('Error updating profile:', error);
-        Alert.alert('Error', 'Failed to update profile');
+  const currentUser = auth.currentUser;
+  if (currentUser) {
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+
+      // ✅ Check if user already has a userId
+      const userSnap = await getDoc(userRef);
+      let userId = '';
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        userId = userData.userId || ''; 
       }
+
+      if (!userId) {
+        // Generate a Firestore-style unique ID
+        const newId = doc(collection(db, "tmp")).id;
+        userId = newId;
+      }
+      // ✅ Update Firestore with info + userId
+      await updateDoc(userRef, {
+        name,
+        username,
+        gender,
+        phone,
+        email,
+        userId, // make sure it’s always present
+      });
+
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (error) {
+      console.log('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile');
     }
-  };
+  }
+};
 
   return (
     <KeyboardAvoidingView

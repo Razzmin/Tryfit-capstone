@@ -9,7 +9,6 @@ import { useFonts, KronaOne_400Regular } from '@expo-google-fonts/krona-one';
 // Screens
 import Login from './screens/LogIn';
 import Signup from './screens/SignUp';
-import SplashScreen from './screens/SplashScreen';
 import BodyMeasurements from './screens/BodyMeasurement';
 import BodyTracking from './screens/BodyTracking';
 import LandingPage from './screens/LandingPage';
@@ -32,6 +31,7 @@ import ToShip from './screens/ToShip';
 import Completed from './screens/Completed';
 import Cancelled from './screens/Cancelled';
 import TrackOrder from './screens/TrackOrder';     
+import SplashScreen from './screens/splashscreen';
 
               
 

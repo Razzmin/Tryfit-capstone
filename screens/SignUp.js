@@ -201,7 +201,7 @@ const Signup = () => {
 
                     <SignUpBottomTextWrapper>
                         <LogInPlainText>Already have an account?</LogInPlainText>
-                        <LogInButton onPress={() => navigation.navigate('BodyMeasurement')}>
+                        <LogInButton onPress={() => navigation.navigate('Login')}>
                         <LogInLinkText> Log In</LogInLinkText>
                         </LogInButton>
                     </SignUpBottomTextWrapper>

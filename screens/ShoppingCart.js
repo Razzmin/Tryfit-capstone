@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { TouchableOpacity, Text, View, ScrollView, Alert } from "react-native";
-
-import { 
+import {
   BackBtn,
   CartContainer,
   CartEmpty,
@@ -21,7 +20,6 @@ import {
   ItemQty,
   CartFooter,
 } from '../components/styles';
-
 import { FontAwesome } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
 import {
@@ -31,6 +29,8 @@ import {
   where,
   onSnapshot,
   doc,
+  getDoc,
+  getDocs,
   updateDoc,
   deleteDoc,
   addDoc,
@@ -43,25 +43,27 @@ const auth = getAuth();
 export default function ShoppingCart() {
   const navigation = useNavigation();
   const user = auth.currentUser;
-
   const [cartItems, setCartItems] = useState([]);
 
   useEffect(() => {
     if (!user) {
-      setCartItems([]); 
+      setCartItems([]);
       return;
     }
     const q = query(collection(db, 'cartItems'), where('userId', '==', user.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = [];
-      snapshot.forEach((doc) => {
-        items.push({ id: doc.id, ...doc.data() });
-      });
-      setCartItems(items);
-    }, (error) => {
-      console.error('Error fetching cart items:', error);
-    });
-
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const items = [];
+        snapshot.forEach((doc) => {
+          items.push({ id: doc.id, ...doc.data() });
+        });
+        setCartItems(items);
+      },
+      (error) => {
+        console.error('Error fetching cart items:', error);
+      }
+    );
     return () => unsubscribe();
   }, [user]);
 
@@ -77,16 +79,44 @@ export default function ShoppingCart() {
     }
   };
 
-  const increaseQuantity = async (id, color) => {
+  const getAvailableStock = async (productId, color) => {
+    try {
+      const productRef = doc(db, "products", productId);
+      const productSnap = await getDoc(productRef);
+      if (productSnap.exists()) {
+        const data = productSnap.data();
+        if (data.stock && data.stock[color]) {
+          return Object.values(data.stock[color]).reduce((a, b) => a + b, 0);
+        }
+        return 0;
+      }
+    } catch (err) {
+      console.error("Error fetching stock:", err);
+    }
+    return 0;
+  };
+
+  const increaseQuantity = async (id, color, productId) => {
     try {
       const item = cartItems.find(i => i.id === id && i.color === color);
       if (!item) return;
 
-      const docRef = doc(db, 'cartItems', id);
+      const stock = await getAvailableStock(productId, color);
+
+      if (item.quantity >= 20) {
+        Alert.alert("Limit reached", "You can only add up to 20 units of this item.");
+        return;
+      }
+      if (item.quantity >= stock) {
+        Alert.alert("Out of stock", "You have reached the maximum available stock.");
+        return;
+      }
+
+      const docRef = doc(db, "cartItems", id);
       await updateDoc(docRef, { quantity: item.quantity + 1 });
     } catch (err) {
-      Alert.alert('Error', 'Failed to increase quantity.');
       console.error(err);
+      Alert.alert("Error", "Failed to increase quantity.");
     }
   };
 
@@ -94,12 +124,11 @@ export default function ShoppingCart() {
     try {
       const item = cartItems.find(i => i.id === id && i.color === color);
       if (!item || item.quantity <= 1) return;
-
-      const docRef = doc(db, 'cartItems', id);
+      const docRef = doc(db, "cartItems", id);
       await updateDoc(docRef, { quantity: item.quantity - 1 });
     } catch (err) {
-      Alert.alert('Error', 'Failed to decrease quantity.');
       console.error(err);
+      Alert.alert("Error", "Failed to decrease quantity.");
     }
   };
 
@@ -123,9 +152,11 @@ export default function ShoppingCart() {
     );
   };
 
-  const selectedItems = cartItems.filter(item => item.selected !== false);
-  const totalPrice = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const selectedItems = cartItems.filter(item => item.selected === true);
 
+  const totalSelectedQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0); 
+  const finalTotal = totalPrice;
 
   return (
     <CartContainer>
@@ -133,17 +164,17 @@ export default function ShoppingCart() {
         <BackBtn onPress={() => navigation.navigate('LandingPage')}>
           <FontAwesome name="arrow-left" size={24} color="#000" />
         </BackBtn>
-
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <ShoppingCartTitle> Shopping Cart ({cartItems.length}) </ShoppingCartTitle>
+          <ShoppingCartTitle>
+            Shopping Cart ({cartItems.length})
+          </ShoppingCartTitle>
         </View>
-
         <View style={{ width: 24 }} />
       </Header>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 150 }}>
         {cartItems.length === 0 ? (
-          <CartEmpty> Your cart is Empty. </CartEmpty>
+          <CartEmpty>Your cart is Empty.</CartEmpty>
         ) : (
           cartItems.map(item => (
             <CartItem key={item.id + item.color}>
@@ -166,22 +197,21 @@ export default function ShoppingCart() {
               </TouchableOpacity>
 
               <ItemImage source={{ uri: item.productImage || 'https://via.placeholder.com/70' }} />
-
               <ItemInfo>
                 <ItemName>{item.productName}</ItemName>
                 <Text style={{ fontSize: 12, color: 'black', paddingBottom: 10 }}>
                   Color: {item.color}
                 </Text>
-
                 <ItemFooter>
-                  <Text style={{ fontSize: 16, fontWeight: 'bold', color:'#9747FF' }}>₱{item.price}</Text>
-
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color:'#9747FF' }}>
+                    ₱{item.price}
+                  </Text>
                   <QuantityControl>
-                    <QtyButton onPress={() => decreaseQuantity(item.id, item.color)}>
-                      <Text style={{ fontSize: 18 }}>−</Text>
+                    <QtyButton disabled={item.quantity <= 1} onPress={() => decreaseQuantity(item.id, item.color)}>
+                      <Text style={{ fontSize: 18, opacity: item.quantity <= 1 ? 0.3 : 1 }}>−</Text>
                     </QtyButton>
                     <ItemQty>{item.quantity}</ItemQty>
-                    <QtyButton onPress={() => increaseQuantity(item.id, item.color)}>
+                    <QtyButton onPress={() => increaseQuantity(item.id, item.color, item.productId)}>
                       <Text style={{ fontSize: 18 }}>＋</Text>
                     </QtyButton>
                   </QuantityControl>
@@ -191,50 +221,77 @@ export default function ShoppingCart() {
           ))
         )}
       </ScrollView>
+
       {cartItems.length > 0 && (
         <CartFooter>
-        <View style = {{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-          <TotalPrice> Selected Items: {selectedItems.length}</TotalPrice>
-           <TotalPrice> Total: ₱{totalPrice} </TotalPrice>
-        </View>
-        <View style={{ alignItems: 'center' }}>
-          <CheckoutBtn
-          style = {{width: '100%'}} onPress={async () => {
-            const selectedItems = cartItems.filter(item => item.selected !== false);
-            const total = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+            <TotalPrice>Selected Items: {totalSelectedQuantity}</TotalPrice>
+          </View> 
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+            <TotalPrice>Total: ₱{finalTotal}</TotalPrice>
+          </View>
+          <View style={{ alignItems: 'center' }}>
+            <CheckoutBtn
+              style={{ width: '100%' }}
+              onPress={async () => {
+                const selectedItems = cartItems.filter(item => item.selected === true);
 
-            if (selectedItems.length === 0) {
-              Alert.alert('No items selected', 'Please select items to checkout.');
-              return;
-            }
+                const subtotal = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                const deliveryFee = selectedItems.length > 0 ? 50 : 0;
+                const finalTotal = subtotal; 
 
-            try {
-              if (!user) {
-                Alert.alert('Error', 'You must be logged in.');
-                return;
-              }
+                if (selectedItems.length === 0) {
+                  Alert.alert('No items selected', 'Please select items to checkout.');
+                  return;
+                }
 
-              await addDoc(collection(db, 'orders'), {  // changed from 'checkouts' to 'orders'
-                userId: user.uid,
-                items: selectedItems,
-                total,
-                createdAt: serverTimestamp(),
-              });
+                try {
+                  if (!user) {
+                    Alert.alert('Error', 'You must be logged in.');
+                    return;
+                  }
 
-              const deletePromises = selectedItems.map(item =>
-                deleteDoc(doc(db, 'cartItems', item.id))
-              );
-              await Promise.all(deletePromises);
+                  // ✅ Fetch shippingLocation of this user
+                  const q = query(
+                    collection(db, "shippingLocations"),
+                    where("userId", "==", user.uid)
+                  );
+                  const snapshot = await getDocs(q);
 
-              navigation.navigate('Checkout', { selectedItems, total });
+                  let shippingLocation = null;
+                  if (!snapshot.empty) {
+                    // take the most recent shippingLocation (latest createdAt)
+                    shippingLocation = snapshot.docs
+                      .map(doc => ({ id: doc.id, ...doc.data() }))
+                      .sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds)[0];
+                  }
 
-            } catch (error) {
-              console.error('Checkout error:', error);
-              Alert.alert('Error', 'Failed to complete checkout.');
-            }
-          }}>
-            <CheckoutText> CHECKOUT </CheckoutText>
-          </CheckoutBtn>
+                  if (!shippingLocation) {
+                    Alert.alert(
+                      "No shipping address",
+                      "Please add a shipping address before checkout."
+                    );
+                    navigation.navigate("ShippingLocation");
+                    return;
+                  } 
+
+                  // ✅ Pass shippingLocation to Checkout screen
+                  navigation.navigate("Checkout", {
+                    selectedItems,
+                    subtotal,
+                    deliveryFee,
+                    total: finalTotal,
+                    shippingLocation,
+                  });
+                } catch (error) {
+                  console.error("Checkout error:", error);
+                  Alert.alert("Error", "Failed to complete checkout.");
+                }
+              }}
+
+            >
+              <CheckoutText>CHECKOUT</CheckoutText>
+            </CheckoutBtn>
           </View>
         </CartFooter>
       )}

@@ -11,7 +11,7 @@ import { Picker } from '@react-native-picker/picker';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-import { getFirestore, collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const MUNICIPALITIES = {
@@ -123,18 +123,30 @@ export default function ShippingLocation() {
         Alert.alert('Not logged in', 'Please login to save your shipping location.');
         return;
       }
+     // 🔹 Get custom userId from users collection
+    const userDocRef = doc(db, "users", user.uid); 
+    const userDocSnap = await getDoc(userDocRef);
 
-      await addDoc(collection(db, 'shippingLocations'), {
-        userId: user.uid,
-        name: name.trim(),
-        phone: phone.trim(),
-        house: house.trim(),
-        municipality,
-        barangay,
-        postalCode: postal.trim(),
-        fullAddress: finalAddress,
-        createdAt: new Date(),
-      });
+    if (!userDocSnap.exists()) {
+      Alert.alert("Error", "User profile not found.");
+      return;
+    }
+
+    const userData = userDocSnap.data();
+    const customUserId = userData.userId; // ✅ your unique userId
+
+    // 🔹 Save shipping info with custom userId
+    await addDoc(collection(db, 'shippingLocations'), {
+      userId: customUserId, // ✅ not user.uid anymore
+      name: name.trim(),
+      phone: phone.trim(),
+      house: house.trim(),
+      municipality,
+      barangay,
+      postalCode: postal.trim(),
+      fullAddress: finalAddress,
+      createdAt: new Date(),
+    });
 
       Alert.alert('Success', 'Shipping location saved successfully!');
       navigation.goBack();

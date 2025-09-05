@@ -14,10 +14,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from 'react-native'; 
 
+import { CartContext } from '../content/shoppingcartcontent';
 
-//colors
+import Fuse from 'fuse.js';  // <-- Import Fuse for fuzzy search
+
 const colors = {
   bg: "#382a47",
   purple: "#9747FF",
@@ -25,9 +27,6 @@ const colors = {
   text: "#bba1d4",
   white: "#EDEDED",
 };
-import { CartContext } from '../content/shoppingcartcontent';
-
-import Fuse from 'fuse.js';  // <-- Import Fuse for fuzzy search
 
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/130x180.png?text=No+Image';
 
@@ -49,72 +48,90 @@ export default function LandingPage() {
     threshold: 0.4,
   }), []);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'products'));
-        const fetched = [];
+ useEffect(() => {
+  const fetchProducts = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'products'));
+      const fetched = [];
 
-        querySnapshot.forEach((doc) => {
-          const product = doc.data();
-          if (product.price) {
-            const numericPrice =
-              typeof product.price === 'string'
-                ? parseInt(product.price.replace(/[^\d]/g, ''))
-                : typeof product.price === 'number'
-                ? product.price
-                : null;
+      querySnapshot.forEach((doc) => {
+        const product = doc.data();
+        if (product.price) {
+          const numericPrice =
+            typeof product.price === 'string'
+              ? parseInt(product.price.replace(/[^\d]/g, ''))
+              : typeof product.price === 'number'
+              ? product.price
+              : null;
 
-            if (numericPrice !== null && numericPrice <= 250) {
-              fetched.push({ id: doc.id, ...product });
-            }
-          }
-        });
-
-        setProducts(fetched);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      }
-    };
-
-    const fetchNewArrivals = async () => {
-      try {
-        const oneMonthAgo = new Date();
-        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        const firestoreDate = Timestamp.fromDate(oneMonthAgo);
-
-        const logsSnapshot = await getDocs(
-          query(
-            collection(db, 'recentActivityLogs'),
-            where('timestamp', '>=', firestoreDate)
-          )
-        );
-
-        const uniqueProductIds = new Set();
-        logsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.productId) uniqueProductIds.add(data.productId);
-        });
-
-        const newProducts = [];
-        for (const id of uniqueProductIds) {
-          const prodRef = doc(db, 'products', id);
-          const prodSnap = await getDoc(prodRef);
-          if (prodSnap.exists()) {
-            const data = prodSnap.data();
-            if (data?.imageUrl) newProducts.push({ id, imageUrl: data.imageUrl });
+          if (numericPrice !== null && numericPrice <= 250) {
+            fetched.push({ id: doc.id, ...product });
           }
         }
+      });
 
-        setNewArrivals(newProducts);
-      } catch (error) {
-        console.error('Error fetching new arrivals:', error);
+      setProducts(fetched);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  const fetchNewArrivals = async () => {
+    try {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      const firestoreDate = Timestamp.fromDate(oneMonthAgo);
+
+      // Get recent activity logs from the past month
+      const logsSnapshot = await getDocs(
+        query(
+          collection(db, 'recentActivityLogs'),
+          where('timestamp', '>=', firestoreDate)
+        )
+      );
+
+      const uniqueProductIds = new Set();
+      logsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.productId) uniqueProductIds.add(data.productId);
+      });
+
+      const newProducts = [];
+      for (const id of uniqueProductIds) {
+        const prodRef = doc(db, 'products', id);
+        const prodSnap = await getDoc(prodRef);
+
+        if (prodSnap.exists()) {
+          const data = prodSnap.data();
+
+          // Push all necessary product info
+          newProducts.push({
+            id,
+            productID: data.productID,
+            name: data.name,
+            price: data.price,
+            rating: data.rating,
+            sold: data.sold,
+            delivery: data.delivery,
+            categoryMain: data.categoryMain,
+            categorySub: data.categorySub,
+            sizes: data.sizes,
+            stock: data.stock,
+            colors: data.colors,
+            images: [data.imageUrl], // can add more images if available
+          });
+        }
       }
-    };
 
-    fetchProducts();
-    fetchNewArrivals();
-  }, []);
+      setNewArrivals(newProducts);
+    } catch (error) {
+      console.error('Error fetching new arrivals:', error);
+    }
+  };
+
+  fetchProducts();
+  fetchNewArrivals();
+}, []);
 
   const handleSearchSubmit = () => {
     if (searchText.trim().length > 0) {
@@ -193,7 +210,11 @@ export default function LandingPage() {
           </View>
 
           {isMenuOpen && (
-            <Pressable style={styles.overlay} onPress={() => setIsMenuOpen(false)}>
+            <>
+              {/* overlay that closes the menu when tapping outside */}
+              <Pressable style={styles.overlay} onPress={() => setIsMenuOpen(false)} />
+
+              {/* the actual side menu, separate from the overlay */}
               <View style={styles.sideMenu}>
                 <Text style={styles.menuBrand}>CATEGORIES</Text>
 
@@ -217,8 +238,9 @@ export default function LandingPage() {
                   </TouchableOpacity>
                 </View>
               </View>
-            </Pressable>
+            </>
           )}
+
 
           {/* New Arrivals */}
           <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { categoryKey: 'latest' })}>
@@ -229,11 +251,11 @@ export default function LandingPage() {
               <TouchableOpacity
                 key={product.id}
                 style={styles.newArrivalCard}
-                onPress={() => navigation.navigate('CategoryProducts', { categoryKey: 'latest' })}
+                onPress={() => navigation.navigate('ProductDetail', { product })}
               >
                 <Image source={{ uri: product.imageUrl || PLACEHOLDER_IMAGE }} style={styles.newImage} />
                 <View style={styles.newLabel}>
-                  <Text style={styles.newLabelText}>New</Text>
+                  
                 </View>
               </TouchableOpacity>
             ))}
@@ -250,7 +272,7 @@ export default function LandingPage() {
                 <TouchableOpacity
                   key={product.id}
                   style={styles.popularCard}
-                  onPress={() => navigation.navigate('CategoryProducts', { categoryKey: 'popular' })}
+                  onPress={() => navigation.navigate('ProductDetail', { product })}
                 >
                   <Image
                     source={{ uri: product.imageUrl || PLACEHOLDER_IMAGE }}
@@ -275,7 +297,7 @@ export default function LandingPage() {
                     product: {
                       ...product,
                       images: [product.imageUrl],
-                      colors: ['#FF0000', '#00FF00', '#0000FF']
+                      colors: product.colors || [] 
                     },
                   })
                 }
@@ -473,22 +495,29 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    zIndex: 99,
-  },
-  sideMenu: {
-    width: '70%',
-    height: '100%',
-    backgroundColor: 'rgba(162, 89, 251, 0.91)',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    zIndex: 10,
-  },
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0,0,0,0.2)',
+  zIndex: 99,
+  elevation: 99, // Android
+},
+
+sideMenu: {
+  position: 'absolute',
+  top: 0,
+  bottom: 0,
+  left: 0,
+  width: '70%',
+  backgroundColor: 'rgba(162, 89, 251, 0.91)',
+  paddingTop: 50,
+  paddingHorizontal: 20,
+  zIndex: 100,     // must be above overlay
+  elevation: 100,  // Android
+},
+
   menuBrand: {
     color: '#fff',
     fontSize: 28,

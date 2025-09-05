@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View,
    Text, 
    FlatList, 
@@ -8,21 +7,70 @@ import { View,
    TouchableOpacity,
    SafeAreaView,
    Modal,
-   Pressable,
   } from 'react-native';
 
-//icosn
+//icons
 import { FontAwesome } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 
 //animation
 import LottieView from 'lottie-react-native';
 
+// firebase
+import { 
+  getAuth 
+} from "firebase/auth";
+import { 
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  setDoc,
+  doc,
+  getDoc,
+  addDoc,
+  serverTimestamp
+} from "firebase/firestore";
+import { deleteDoc } from "firebase/firestore";
+
+
 export default function Checkout({ route, navigation }) {
   const { selectedItems: initialItems = [], total = 0 } = route.params || {};
   const [checkoutItems, setCheckoutItems] = useState(initialItems);
   const [showPopup, setShowPopup] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [shippingLocation, setShippingLocation] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const auth = getAuth();
+  const db = getFirestore();
+
+  // fetch shipping location for this user
+ useEffect(() => {
+  const fetchShippingLocation = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const q = query(
+        collection(db, "shippingLocations"),
+        where("userId", "==", user.uid)
+      );
+      const querySnap = await getDocs(q);
+
+      if (!querySnap.empty) {
+        // take the first shipping address (or map them if you want multiple)
+        setShippingLocation(querySnap.docs[0].data());
+      } else {
+        setShippingLocation(null);
+      }
+    } catch (error) {
+      console.error("Error fetching shipping location:", error);
+    }
+  };
+
+  fetchShippingLocation();
+}, []);
 
   const handleDelete = (itemId) => {
    setCheckoutItems(prevItems => 
@@ -86,9 +134,21 @@ export default function Checkout({ route, navigation }) {
   justifyContent: 'space-between',
   alignItems: 'center' }}>  
   <View>
-    <Text style ={styles.sectionText}>ARIANA INOCENCIO (+639636781122) </Text>
-    <Text style ={styles.sectionText} >Cornella St. Grandline</Text>
-    <Text style ={styles.sectionText}>East Blue, Fishman District, 3D2Y</Text>
+    {shippingLocation ? (
+        <>
+          <Text style={styles.sectionText}>
+            {shippingLocation.name} ({shippingLocation.phone})
+          </Text>
+          <Text style={styles.sectionText}>{shippingLocation.house}</Text>
+          <Text style={styles.sectionText}>{shippingLocation.fullAddress}</Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.sectionText}>No shipping address saved.</Text>
+          <Text style={styles.sectionText}>Tap here to add one.</Text>
+        </>
+      )}
+
   </View>
   <Entypo name="chevron-right" size={29} color="black" 
     style={{ alignSelf: 'flex-start', marginBottom: 40 }} />
@@ -132,13 +192,100 @@ export default function Checkout({ route, navigation }) {
                   <View style = {styles.popupOverlay}>
                   <View style = {styles.popupBox}>
                   <Text style={styles.popupText}>You’re about to place your order. Proceed to checkout?</Text>
-                  <View style={styles.popupButtons}>
+                  <View style={styles.popupButtons}> 
                     <TouchableOpacity
                       style={styles.popupButtonYes}
-                      onPress={() => setOrderPlaced(true)}
+                      onPress={async () => {
+  if (isSubmitting) return;
+  setIsSubmitting(true);
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const userDocRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userDocRef);
+    if (!userSnap.exists()) return;
+
+    const uniqueUserId = userSnap.data().userId;
+
+    const orderData = {
+      userId: uniqueUserId,
+      address: shippingLocation
+        ? `${shippingLocation.house}, ${shippingLocation.fullAddress}`
+        : null,
+      deliveryFee: 58,
+      createdAt: serverTimestamp(),
+      status: "Pending",
+      items: checkoutItems.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        price: item.price,
+        color: item.color || "-",
+        size: item.size || "-",
+      })),
+    };
+
+    // Save order in Firestore
+    await addDoc(collection(db, "orders"), orderData);
+
+    // ✅ Decrease stock for each item ordered
+    for (const item of checkoutItems) {
+      const productRef = doc(db, "products", item.productId);
+      const productSnap = await getDoc(productRef);
+
+      if (productSnap.exists()) {
+        const productData = productSnap.data();
+        const currentStock = productData.stock || {};
+
+        // Access stock[color][size]
+        const colorStock = currentStock[item.color] || {};
+        const currentQty = colorStock[item.size] || 0;
+
+        const newQty = Math.max(currentQty - item.quantity, 0);
+
+        // Update Firestore
+        await setDoc(
+          productRef,
+          {
+            stock: {
+              ...currentStock,
+              [item.color]: {
+                ...colorStock,
+                [item.size]: newQty,
+              },
+            },
+          },
+          { merge: true }
+        );
+      }
+    }
+
+    // delete ordered items from cart
+    const cartSnap = await getDocs(
+      query(collection(db, "cartItems"), where("userId", "==", user.uid))
+    );
+    const deletePromises = cartSnap.docs.map(async (docSnap) => {
+      const isOrdered = checkoutItems.some(item => item.id === docSnap.id);
+      if (isOrdered) await deleteDoc(docSnap.ref);
+    });
+    await Promise.all(deletePromises);
+
+    setOrderPlaced(true);
+  } catch (err) {
+    console.error("Error saving order:", err);
+  } finally {
+    setIsSubmitting(false);
+  }
+}}
+
                     >
-                      <Text style={{ color: '#fff', fontSize: 15,}}>Yes, proceed</Text>
+                      <Text style={{ color: "#fff", fontSize: 15 }}>Yes, proceed</Text>
                     </TouchableOpacity>
+
+
+
                     <TouchableOpacity
                       style={styles.popupButtonNo}
                       onPress={() => setShowPopup(false)}
@@ -154,7 +301,6 @@ export default function Checkout({ route, navigation }) {
 </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {

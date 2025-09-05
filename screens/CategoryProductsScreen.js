@@ -3,7 +3,7 @@ import { FlatList, View, Text, TouchableOpacity, ActivityIndicator } from 'react
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { FontAwesome } from '@expo/vector-icons';
+
 import GradientBackground from '../components/gradientbackground';
 import {
   StyledContainer,
@@ -106,110 +106,137 @@ const CategoryProductsScreen = () => {
 }, [currentCategory]);
 
 
-  return (
-    <GradientBackground>
-      <StyledContainer>
-        <StatusBar style="dark" />
-        <InnerContainer>
-          {/* Header */}
-          <View
+ return (
+  <GradientBackground>
+    <StyledContainer style={{ flex: 1, justifyContent: "flex-start" }}>
+      <StatusBar style="dark" />
+      <InnerContainer style={{ flex: 1, justifyContent: "flex-start" }}>
+        
+        {/* Header */}
+        <View
+          style={{
+            width: "100%",
+            height: 50,
+            justifyContent: "center",
+            alignItems: "center",
+            position: "relative",
+            marginTop: 10, // optional: push it slightly down from the very top
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ position: "absolute", left: 10, padding: 8 }}
+          >
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+
+          <Text
             style={{
-              width: '110%',
-              height: 90,
-              justifyContent: 'center',
-              alignItems: 'center',
-              position: 'relative',
-              flexDirection: 'row',
+              fontSize: 18,
+              fontWeight: "bold",
+              color: "black",
+              textTransform: "uppercase",
             }}
           >
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ position: 'absolute', left: 10 , padding: 8 }}
-            >
-            <FontAwesome name="arrow-left" size={24} color="#000" />
-            </TouchableOpacity>
-            <Text
+            {currentCategory.label}
+          </Text>
+        </View>
+
+        {/* Categories Filter */}
+        <FilterScroll
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginVertical: 10 }}
+        >
+          {categories.map((cat) => (
+            <FilterButton
+              key={cat.key}
+              onPress={() =>
+                navigation.navigate("CategoryProducts", { categoryKey: cat.key })
+              }
               style={{
-                fontSize: 20,
-                fontWeight: '600',
-                color: 'black',
-                textTransform: 'uppercase',
+                backgroundColor:
+                  cat.key === currentCategory.key ? Colors.brand : "transparent",
               }}
             >
-            <View style={{ width: 24 }} />
-              {currentCategory.label}
-            </Text>
-          </View>
-
-          {/* Categories Filter */}
-          <FilterScroll horizontal showsHorizontalScrollIndicator={false}
-           contentContainerStyle={{ paddingHorizontal: 5, paddingRight: 5}}>
-            {categories.map(cat => (
-              <FilterButton
-                key={cat.key}
-                onPress={() => navigation.navigate('CategoryProducts', { categoryKey: cat.key })}
+              <FilterButtonText
                 style={{
-                  backgroundColor: cat.key === currentCategory.key ? Colors.brand : 'transparent',
-                marginRight: 8,}}
+                  color: cat.key === currentCategory.key ? "white" : "black",
+                }}
               >
-                <FilterButtonText style={{ color: cat.key === currentCategory.key ? '#9747FF' : 'black' }}>
-                  {cat.label}
-                </FilterButtonText>
-              </FilterButton>
-            ))}
-          </FilterScroll>
+                {cat.label}
+              </FilterButtonText>
+            </FilterButton>
+          ))}
+        </FilterScroll>
 
-          {/* Product List */}
-          {loading ? (
-            <ActivityIndicator size="large" color={Colors.brand} style={{ marginTop: 40 }} />
-          ) : products.length === 0 ? (
-            <Text style={{ textAlign: 'center', marginTop: 20 }}>
-              No {currentCategory.label} products found.
-            </Text>
-          ) : (
-            <ProductListWrapper>
-              <FlatList
-                data={products}
-                keyExtractor={item => item.id}
-                numColumns={2}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 12 }}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('ProductDetail', { product: item })}
-                    activeOpacity={0.85}
-                    style={{
-                      flex: 1,
-                      margin: 8,
-                      maxWidth: '47%',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <ProductCard style={{ backgroundColor: '#edebebff' }}>
-                      {item.imageUrl ? (
-                        <ProductImage
-                          source={{ uri: item.imageUrl }}
-                          resizeMode="cover"
-                          style={{ height: 180 }}
-                        />
-                      ) : (
-                        <View style={{ height: 180, backgroundColor: '#ccc' }} />
-                      )}
+        {/* Product List */}
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color={Colors.brand}
+            style={{ marginTop: 40 }}
+          />
+        ) : products.length === 0 ? (
+          <Text style={{ textAlign: "center", marginTop: 20 }}>
+            No {currentCategory.label} products found.
+          </Text>
+        ) : (
+          <ProductListWrapper style={{ flex: 1 }}>
+            <FlatList
+              data={products}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 8,
+                paddingBottom: 20, // give space at bottom
+              }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate("ProductDetail", { product: item })
+                  }
+                  activeOpacity={0.85}
+                  style={{
+                    flex: 1,
+                    margin: 8,
+                    maxWidth: "47%",
+                    flexShrink: 0,
+                  }}
+                >
+                  <ProductCard style={{ backgroundColor: "#edebebff" }}>
+                    {item.imageUrl ? (
+                      <ProductImage
+                        source={{ uri: item.imageUrl }}
+                        resizeMode="cover"
+                        style={{ height: 180 }}
+                      />
+                    ) : (
+                      <View style={{ height: 180, backgroundColor: "#ccc" }} />
+                    )}
 
-                      <ProductName style={{ marginTop: 10 }}>{item.name || 'Unnamed'}</ProductName>
-                      <ProductPrice>₱{item.price ?? 'N/A'}</ProductPrice>
-                      <ProductMeta>⭐ {item.rating ?? '-'} • {item.sold ?? '0'} Sold</ProductMeta>
-                      <ProductDelivery>🚚 {item.delivery ?? 'N/A'}</ProductDelivery>
-                    </ProductCard>
-                  </TouchableOpacity>
-                )}
-              />
-            </ProductListWrapper>
-          )}
-        </InnerContainer>
-      </StyledContainer>
-    </GradientBackground>
-  );
+                    <ProductName style={{ marginTop: 10 }}>
+                      {item.name || "Unnamed"}
+                    </ProductName>
+                    <ProductPrice>₱{item.price ?? "N/A"}</ProductPrice>
+                    <ProductMeta>
+                      ⭐ {item.rating ?? "-"} • {item.sold ?? "0"} Sold
+                    </ProductMeta>
+                    <ProductDelivery>
+                      🚚 {item.delivery ?? "N/A"}
+                    </ProductDelivery>
+                  </ProductCard>
+                </TouchableOpacity>
+              )}
+            />
+          </ProductListWrapper>
+        )}
+      </InnerContainer>
+    </StyledContainer>
+  </GradientBackground>
+);
+
 };
 
 export default CategoryProductsScreen;
