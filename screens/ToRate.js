@@ -102,25 +102,29 @@ export default function ToRate() {
           const currentRateCount = productData.ratecount || 0;
           const currentTotalRate = productData.totalrate || 0;
 
+          // inside handleSubmit, where you compute updatedAverage
           const newRateCount = currentRateCount + 1;
           const newTotalRate = currentTotalRate + userRating;
           updatedAverage = newTotalRate / newRateCount;
+
+          // ✅ round to 2 decimals but keep as number
+          updatedAverage = Math.round(updatedAverage * 100) / 100;
 
           await updateDoc(productRef, {
             ratecount: newRateCount,
             totalrate: newTotalRate,
             rating: updatedAverage,
           });
+
         } else {
           // if product doc doesn't exist (unlikely), still try to set some fields
-          updatedAverage = userRating;
+          updatedAverage = Math.round(userRating * 100) / 100;
           await updateDoc(productRef, {
             ratecount: 1,
             totalrate: userRating,
             rating: updatedAverage,
-          }).catch(() => {
-            // ignore if update fails because doc doesn't exist; real apps should create doc properly
           });
+
         }
 
         // Save review entry (comment optional, rating required)

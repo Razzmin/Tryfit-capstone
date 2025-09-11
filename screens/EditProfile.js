@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 
 import { db, auth } from '../firebase/config';
-import { doc, getDoc, updateDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, updateDoc,} from 'firebase/firestore';
 
 export default function EditProfile() {
   const navigation = useNavigation();
@@ -54,29 +54,21 @@ export default function EditProfile() {
   const currentUser = auth.currentUser;
   if (currentUser) {
     try {
-      const userRef = doc(db, 'users', currentUser.uid);
-
-      // ✅ Check if user already has a userId
+      const userRef = doc(db, 'users', currentUser.uid); 
+      
       const userSnap = await getDoc(userRef);
       let userId = '';
       if (userSnap.exists()) {
         const userData = userSnap.data();
         userId = userData.userId || ''; 
-      }
-
-      if (!userId) {
-        // Generate a Firestore-style unique ID
-        const newId = doc(collection(db, "tmp")).id;
-        userId = newId;
-      }
-      // ✅ Update Firestore with info + userId
+      }  
       await updateDoc(userRef, {
         name,
         username,
         gender,
         phone,
         email,
-        userId, // make sure it’s always present
+        userId, 
       });
 
       Alert.alert('Success', 'Profile updated successfully');

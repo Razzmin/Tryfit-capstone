@@ -45,25 +45,43 @@ export default function Checkout({ route, navigation }) {
   const auth = getAuth();
   const db = getFirestore();
 
-  // fetch shipping location for this user
- useEffect(() => {
+useEffect(() => {
   const fetchShippingLocation = async () => {
     try {
       const user = auth.currentUser;
       if (!user) return;
 
+      // Get custom userId from users collection
+      const userDocRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userDocRef);
+      if (!userSnap.exists()) return;
+
+      const customUserId = userSnap.data().userId;
+
+      // Query shippingLocations using customUserId
       const q = query(
         collection(db, "shippingLocations"),
-        where("userId", "==", user.uid)
+        where("userId", "==", customUserId)
       );
-      const querySnap = await getDocs(q);
+      const snapshot = await getDocs(q);
 
-      if (!querySnap.empty) {
-        // take the first shipping address (or map them if you want multiple)
-        setShippingLocation(querySnap.docs[0].data());
-      } else {
+      if (snapshot.empty) {
         setShippingLocation(null);
+        return;
       }
+
+      const shippingLoc = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort(
+          (a, b) =>
+            (b.createdAt?.toDate?.().getTime?.() || 0) -
+            (a.createdAt?.toDate?.().getTime?.() || 0)
+        )[0];
+
+      setShippingLocation(shippingLoc || null);
+
+      console.log("Fetched shipping location:", shippingLoc);
+
     } catch (error) {
       console.error("Error fetching shipping location:", error);
     }
@@ -71,6 +89,7 @@ export default function Checkout({ route, navigation }) {
 
   fetchShippingLocation();
 }, []);
+
 
   const handleDelete = (itemId) => {
    setCheckoutItems(prevItems => 

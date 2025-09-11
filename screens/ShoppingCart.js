@@ -32,9 +32,7 @@ import {
   getDoc,
   getDocs,
   updateDoc,
-  deleteDoc,
-  addDoc,
-  serverTimestamp,
+  deleteDoc, 
 } from 'firebase/firestore';
 
 const db = getFirestore();
@@ -252,29 +250,29 @@ export default function ShoppingCart() {
                   }
 
                   // ✅ Fetch shippingLocation of this user
+                  const userDocRef = doc(db, "users", user.uid);
+                  const userDocSnap = await getDoc(userDocRef);
+
+                  if (!userDocSnap.exists()) {
+                    Alert.alert("Error", "User profile not found.");
+                    return;
+                  }
+
+                  const customUserId = userDocSnap.data().userId;
+
                   const q = query(
                     collection(db, "shippingLocations"),
-                    where("userId", "==", user.uid)
+                    where("userId", "==", customUserId)
                   );
                   const snapshot = await getDocs(q);
 
                   let shippingLocation = null;
                   if (!snapshot.empty) {
-                    // take the most recent shippingLocation (latest createdAt)
                     shippingLocation = snapshot.docs
                       .map(doc => ({ id: doc.id, ...doc.data() }))
                       .sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds)[0];
-                  }
-
-                  if (!shippingLocation) {
-                    Alert.alert(
-                      "No shipping address",
-                      "Please add a shipping address before checkout."
-                    );
-                    navigation.navigate("ShippingLocation");
-                    return;
                   } 
-
+                  
                   // ✅ Pass shippingLocation to Checkout screen
                   navigation.navigate("Checkout", {
                     selectedItems,

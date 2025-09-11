@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 //Firebase
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase/config";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase/config";
 
 //formik for forms
@@ -70,50 +70,58 @@ const Signup = () => {
 
     
      // Firebase Signup Function
-    const handleSignup = async (values, {setFieldValue }) => {
-        try {
-            const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            values.email,
-            values.password
-            );
-            const user = userCredential.user;
+    // Firebase Signup Function
+const handleSignup = async (values, { setFieldValue }) => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      values.email,
+      values.password
+    );
+    const user = userCredential.user;
 
-            await setDoc(doc(db, "users", user.uid), {
-            username: values.username, 
-            email: values.email,
-            createdAt: new Date()
-            });
-          
-            navigation.navigate("BodyMeasurement");
-            } catch (error) {
-                console.log("Firebase Error:", error);
-               let message = '';
-    
+    // ✅ Generate a Firestore-style custom userId
+    const userId = doc(collection(db, "tmp")).id;
+
+    // ✅ Save user data to Firestore with userId included
+    await setDoc(doc(db, "users", user.uid), {
+      username: values.username,
+      email: values.email,
+      userId,
+      createdAt: serverTimestamp()
+    });
+
+    navigation.navigate("BodyMeasurement");
+  } catch (error) {
+    console.log("Firebase Error:", error);
+    let message = "";
+
     switch (error.code) {
-      case 'auth/email-already-in-use':
-        message = 'This email is already in use.';
-        setFieldValue('email', '');
+      case "auth/email-already-in-use":
+        message = "This email is already in use.";
+        setFieldValue("email", "");
         break;
-      case 'auth/invalid-email':
-        message = 'The email address is not valid.';
-        setFieldValue('email', '');
+      case "auth/invalid-email":
+        message = "The email address is not valid.";
+        setFieldValue("email", "");
         break;
-      case 'auth/weak-password':
-        message = 'Password should be at least 6 characters.';
-        setFieldValue('password', '');
+      case "auth/weak-password":
+        message = "Password should be at least 6 characters.";
+        setFieldValue("password", "");
         break;
-      case 'auth/network-request-failed':
-        message = 'Network error. Please check your internet.';
+      case "auth/network-request-failed":
+        message = "Network error. Please check your internet.";
         break;
       default:
-        message = 'Something went wrong. Please try again.';
+        message = "Something went wrong. Please try again.";
     }
+
     setPopupMessage(message);
     setPopupVisible(true);
     formikRef.current?.resetForm();
-        }
-    };
+  }
+};
+
   return (
        <LinearGradient colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']}style={{ flex: 1 }}>
       <View style= {styles.container}>

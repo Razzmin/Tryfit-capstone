@@ -11,7 +11,7 @@ import { Picker } from '@react-native-picker/picker';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc,setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const MUNICIPALITIES = {
@@ -46,11 +46,22 @@ export default function ShippingLocation() {
   const [postal, setPostal] = useState('');
 
   useEffect(() => {
-    const fetchShippingLocation = async () => {
+  const fetchShippingLocation = async () => {
+    try {
       const user = auth.currentUser;
       if (!user) return;
 
-      const q = query(collection(db, 'shippingLocations'), where('userId', '==', user.uid));
+      // get custom userId from users collection
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (!userDocSnap.exists()) return;
+      const customUserId = userDocSnap.data().userId;
+
+      // query shippingLocations using customUserId
+      const q = query(
+        collection(db, 'shippingLocations'),
+        where('userId', '==', customUserId)
+      );
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
@@ -61,14 +72,16 @@ export default function ShippingLocation() {
         setMunicipality(data.municipality || '');
         setBarangay(data.barangay || '');
         setPostal(data.postalCode || '');
-        const composed = `${data.barangay}, ${data.municipality}, Tarlac`;
-        setFinalAddress(composed);
+        setFinalAddress(`${data.barangay}, ${data.municipality}, Tarlac`);
         setStage('final');
       }
-    };
+    } catch (err) {
+      console.error('Error fetching shipping location:', err);
+    }
+  };
 
-    fetchShippingLocation();
-  }, []);
+  fetchShippingLocation();
+}, []);
 
   const handlePickerChange = (value) => {
     if (stage === 'municipality') {
@@ -110,51 +123,69 @@ export default function ShippingLocation() {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) return Alert.alert('Validation Error', 'Please enter the receiver name.');
-    if (!phone.trim()) return Alert.alert('Validation Error', 'Please enter the phone number.');
-    if (!house.trim()) return Alert.alert('Validation Error', 'Please enter house/street/building info.');
-    if (!municipality) return Alert.alert('Validation Error', 'Please select a municipality.');
-    if (!barangay) return Alert.alert('Validation Error', 'Please select a barangay.');
-    if (!postal.trim()) return Alert.alert('Validation Error', 'Please enter postal code.');
+  if (!name.trim()) return Alert.alert('Validation Error', 'Please enter the receiver name.');
+  if (!phone.trim()) return Alert.alert('Validation Error', 'Please enter the phone number.');
+  if (!house.trim()) return Alert.alert('Validation Error', 'Please enter house/street/building info.');
+  if (!municipality) return Alert.alert('Validation Error', 'Please select a municipality.');
+  if (!barangay) return Alert.alert('Validation Error', 'Please select a barangay.');
+  if (!postal.trim()) return Alert.alert('Validation Error', 'Please enter postal code.');
 
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        Alert.alert('Not logged in', 'Please login to save your shipping location.');
-        return;
-      }
-     // 🔹 Get custom userId from users collection
-    const userDocRef = doc(db, "users", user.uid); 
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert('Not logged in', 'Please login to save your shipping location.');
+      return;
+    }
+
+    // Get custom userId
+    const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
-
     if (!userDocSnap.exists()) {
       Alert.alert("Error", "User profile not found.");
       return;
     }
+    const customUserId = userDocSnap.data().userId;
 
-    const userData = userDocSnap.data();
-    const customUserId = userData.userId; // ✅ your unique userId
+    // Check if a location already exists
+    const q = query(collection(db, 'shippingLocations'), where('userId', '==', customUserId));
+    const querySnapshot = await getDocs(q);
 
-    // 🔹 Save shipping info with custom userId
-    await addDoc(collection(db, 'shippingLocations'), {
-      userId: customUserId, // ✅ not user.uid anymore
-      name: name.trim(),
-      phone: phone.trim(),
-      house: house.trim(),
-      municipality,
-      barangay,
-      postalCode: postal.trim(),
-      fullAddress: finalAddress,
-      createdAt: new Date(),
-    });
-
-      Alert.alert('Success', 'Shipping location saved successfully!');
-      navigation.goBack();
-    } catch (error) {
-      console.error('Error saving shipping location:', error);
-      Alert.alert('Error', 'Failed to save shipping location.');
+    if (!querySnapshot.empty) {
+      // Update existing location
+      const docRef = querySnapshot.docs[0].ref;
+      await setDoc(docRef, {
+        userId: customUserId,
+        name: name.trim(),
+        phone: phone.trim(),
+        house: house.trim(),
+        municipality,
+        barangay,
+        postalCode: postal.trim(),
+        fullAddress: `${barangay}, ${municipality}, Tarlac`,
+        createdAt: new Date(),
+      }, { merge: true });
+    } else {
+      // Add new location
+      await addDoc(collection(db, 'shippingLocations'), {
+        userId: customUserId,
+        name: name.trim(),
+        phone: phone.trim(),
+        house: house.trim(),
+        municipality,
+        barangay,
+        postalCode: postal.trim(),
+        fullAddress: `${barangay}, ${municipality}, Tarlac`,
+        createdAt: new Date(),
+      });
     }
-  };
+
+    Alert.alert('Success', 'Shipping location saved successfully!');
+    navigation.goBack();
+  } catch (error) {
+    console.error('Error saving shipping location:', error);
+    Alert.alert('Error', 'Failed to save shipping location.');
+  }
+};
 
   return (
     <View style={styles.container}>
