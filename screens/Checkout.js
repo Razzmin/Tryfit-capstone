@@ -196,96 +196,104 @@ export default function Checkout({ route, navigation }) {
                     <TouchableOpacity
                       style={styles.popupButtonYes}
                       onPress={async () => {
-  if (isSubmitting) return;
-  setIsSubmitting(true);
-  try {
-    const user = auth.currentUser;
-    if (!user) return;
+                        if (isSubmitting) return;
+                        setIsSubmitting(true);
+                        try {
+                          const user = auth.currentUser;
+                          if (!user) return;
 
-    const userDocRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userDocRef);
-    if (!userSnap.exists()) return;
+                          const userDocRef = doc(db, "users", user.uid);
+                          const userSnap = await getDoc(userDocRef);
+                          if (!userSnap.exists()) return;
 
-    const uniqueUserId = userSnap.data().userId;
+                          const uniqueUserId = userSnap.data().userId;
 
-    const orderData = {
-      userId: uniqueUserId,
-      address: shippingLocation
-        ? `${shippingLocation.house}, ${shippingLocation.fullAddress}`
-        : null,
-      deliveryFee: 58,
-      createdAt: serverTimestamp(),
-      status: "Pending",
-      items: checkoutItems.map(item => ({
-        id: item.id,
-        productId: item.productId,
-        productName: item.productName,
-        quantity: item.quantity,
-        price: item.price,
-        color: item.color || "-",
-        size: item.size || "-",
-      })),
-    };
+                          // Calculate subtotal
+                          const subtotal = checkoutItems.reduce(
+                            (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
+                            0
+                          );
 
-    // Save order in Firestore
-    await addDoc(collection(db, "orders"), orderData);
+                          // Add delivery fee
+                          const total = subtotal + 58;
 
-    // ✅ Decrease stock for each item ordered
-    for (const item of checkoutItems) {
-      const productRef = doc(db, "products", item.productId);
-      const productSnap = await getDoc(productRef);
 
-      if (productSnap.exists()) {
-        const productData = productSnap.data();
-        const currentStock = productData.stock || {};
+                          const orderData = {
+                            userId: uniqueUserId,
+                            address: shippingLocation
+                              ? `${shippingLocation.house}, ${shippingLocation.fullAddress}`
+                              : null,
+                            deliveryFee: 58,
+                            total,  
+                            createdAt: serverTimestamp(),
+                            status: "Pending",
+                            items: checkoutItems.map(item => ({
+                              id: item.id,
+                              productId: item.productId,
+                              productName: item.productName,
+                              quantity: item.quantity,
+                              price: item.price,
+                              color: item.color || "-",
+                              size: item.size || "-",
+                            })),
+                          };
 
-        // Access stock[color][size]
-        const colorStock = currentStock[item.color] || {};
-        const currentQty = colorStock[item.size] || 0;
+                          // Save order in Firestore
+                        await addDoc(collection(db, "orders"), orderData);
 
-        const newQty = Math.max(currentQty - item.quantity, 0);
 
-        // Update Firestore
-        await setDoc(
-          productRef,
-          {
-            stock: {
-              ...currentStock,
-              [item.color]: {
-                ...colorStock,
-                [item.size]: newQty,
-              },
-            },
-          },
-          { merge: true }
-        );
-      }
-    }
+                          // ✅ Decrease stock for each item ordered
+                          for (const item of checkoutItems) {
+                            const productRef = doc(db, "products", item.productId);
+                            const productSnap = await getDoc(productRef);
 
-    // delete ordered items from cart
-    const cartSnap = await getDocs(
-      query(collection(db, "cartItems"), where("userId", "==", user.uid))
-    );
-    const deletePromises = cartSnap.docs.map(async (docSnap) => {
-      const isOrdered = checkoutItems.some(item => item.id === docSnap.id);
-      if (isOrdered) await deleteDoc(docSnap.ref);
-    });
-    await Promise.all(deletePromises);
+                            if (productSnap.exists()) {
+                              const productData = productSnap.data();
+                              const currentStock = productData.stock || {};
 
-    setOrderPlaced(true);
-  } catch (err) {
-    console.error("Error saving order:", err);
-  } finally {
-    setIsSubmitting(false);
-  }
-}}
+                              // Access stock[color][size]
+                              const colorStock = currentStock[item.color] || {};
+                              const currentQty = colorStock[item.size] || 0;
 
-                    >
+                              const newQty = Math.max(currentQty - item.quantity, 0);
+
+                              // Update Firestore
+                              await setDoc(
+                                productRef,
+                                {
+                                  stock: {
+                                    ...currentStock,
+                                    [item.color]: {
+                                      ...colorStock,
+                                      [item.size]: newQty,
+                                    },
+                                  },
+                                },
+                                { merge: true }
+                              );
+                            }
+                          }
+
+                          // delete ordered items from cart
+                          const cartSnap = await getDocs(
+                            query(collection(db, "cartItems"), where("userId", "==", user.uid))
+                          );
+                          const deletePromises = cartSnap.docs.map(async (docSnap) => {
+                            const isOrdered = checkoutItems.some(item => item.id === docSnap.id);
+                            if (isOrdered) await deleteDoc(docSnap.ref);
+                          });
+                          await Promise.all(deletePromises);
+
+                          setOrderPlaced(true);
+                        } catch (err) {
+                          console.error("Error saving order:", err);
+                        } finally {
+                          setIsSubmitting(false);
+                        }
+                      }}  >
                       <Text style={{ color: "#fff", fontSize: 15 }}>Yes, proceed</Text>
                     </TouchableOpacity>
-
-
-
+                    
                     <TouchableOpacity
                       style={styles.popupButtonNo}
                       onPress={() => setShowPopup(false)}

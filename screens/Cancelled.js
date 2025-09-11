@@ -10,7 +10,8 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+
 
 const db = getFirestore();
 const auth = getAuth();
@@ -21,75 +22,100 @@ export default function Cancelled() {
   const navigation = useNavigation();
   const route = useRoute();
   const currentRoute = route.name;
+   const activeTab = 'Cancelled';
 
   const user = auth.currentUser;
   const [cancelledOrders, setCancelledOrders] = useState([]);
 
   useEffect(() => {
-    if (!user) {
-      setCancelledOrders([]);
-      return;
-    }
-    const q = query(
-      collection(db, 'orders'),
-      where('userId', '==', user.uid),
-      where('status', '==', 'Cancelled')
-    );
+    const fetchCustomUserId = async () => {
+      if (!user) return;
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const fetchedOrders = [];
-        snapshot.forEach((doc) => {
-          fetchedOrders.push({ id: doc.id, ...doc.data() });
-        });
-        setCancelledOrders(fetchedOrders);
-      },
-      (error) => {
-        console.error('Error fetching cancelled orders:', error);
-        setCancelledOrders([]);
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          if (userData.userId) {
+            const customId = userData.userId;
+
+            // Listen to cancelled collection for this custom userId
+            const unsubscribe = onSnapshot(
+              collection(db, 'cancelled'), // ✅ fetch from "cancelled" collection
+              (snapshot) => {
+                const fetchedOrders = snapshot.docs
+                  .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+                  .filter(order => order.userId === customId); // ✅ filter by custom userId
+                
+                // Optional: sort by cancelled date if exists
+                fetchedOrders.sort(
+                  (a, b) => (b.cancelledDate?.seconds || 0) - (a.cancelledDate?.seconds || 0)
+                );
+
+                setCancelledOrders(fetchedOrders);
+              },
+              (error) => {
+                console.error('Error fetching cancelled orders:', error);
+                setCancelledOrders([]);
+              }
+            );
+
+            return () => unsubscribe();
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching custom userId:', err);
       }
-    );
+    };
 
-    return () => unsubscribe();
+    fetchCustomUserId();
   }, [user]);
 
-  const tabRoutes = {
-    'To Ship': 'ToShip',
-    'To Receive': 'Orders',
-    'Completed': 'Completed',
-    'Cancelled': 'Cancelled',
-  };
 
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('LandingPage')}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Purchases</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {/* Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabContainer}>
-        {Object.keys(tabRoutes).map((tab) => {
-          const routeName = tabRoutes[tab];
-          const isActive = routeName === currentRoute;
-          return (
+   const tabRoutes = {
+      
+      'Orders': 'Orders',
+      'To Ship': 'ToShip',
+      'To Receive': 'ToReceive',
+      'Completed': 'Completed',
+      'Cancelled': 'Cancelled',
+    };
+  
+  
+    return (
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.navigate('LandingPage')}>
+            <FontAwesome name="arrow-left" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Purchases</Text>
+          <View style={{ width: 24 }} />
+        </View>
+  
+       {/* Nav Tabs */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabContainer}
+        >
+          {Object.keys(tabRoutes).map((tab) => (
             <TouchableOpacity
               key={tab}
-              style={[styles.tab, isActive && styles.activeTab]}
               onPress={() => {
-                if (!isActive) navigation.replace(routeName);
+                if (tab !== activeTab) navigation.replace(tabRoutes[tab]);
               }}
+              style={styles.tabWrap}
             >
-              <Text style={[styles.tabText, isActive && styles.activeTabText]}>{tab}</Text>
+              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                {tab}
+              </Text>
+              <View style={[styles.underline, activeTab === tab && styles.activeUnderline]} />
             </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+          ))}
+        </ScrollView>
+
+  
 
       {/* Cancelled Items */}
       <ScrollView>
@@ -134,9 +160,18 @@ export default function Cancelled() {
 
                 {/* Buttons */}
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={styles.primaryButton}>
+                  <TouchableOpacity
+                    style={styles.primaryButton}
+                    onPress={() => {
+                      navigation.navigate("ReCheckout", {
+                        selectedItems: order.items,   
+                        total: order.total, 
+                        address: order.address, 
+                        deliveryFee: order.deliveryFee, }); }} >
                     <Text style={styles.primaryButtonText}>Buy Again</Text>
                   </TouchableOpacity>
+
+
                 </View>
               </View>
             );
@@ -165,25 +200,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tabContainer: {
-    flexDirection: 'row',
-    marginBottom: 15,
+  flexDirection: 'row',
+  marginBottom: 15,
   },
-  tab: {
+  tabWrap: {
+    alignItems: 'center',
     marginRight: 30,
-    paddingBottom: 6,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
   },
   tabText: {
     fontSize: 14,
     color: '#333',
   },
   activeTabText: {
-    borderBottomColor: '#9747FF',
     color: '#9747FF',
     fontWeight: '600',
-    borderBottomWidth: 2,
   },
+  underline: {
+    height: 3,
+    backgroundColor: 'transparent',
+    width: '100%',
+    marginTop: 4,
+  },
+  activeUnderline: {
+    backgroundColor: '#9747FF',
+  },
+
   card: {
     backgroundColor: '#F7F7F7',
     borderRadius: 10,

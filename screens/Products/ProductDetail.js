@@ -406,36 +406,7 @@ const decrementQuantity = () => {
                 )}
               </ReviewContainer>
 
-              <View style={{ marginTop: 20 }}>
-                <Text style={{ marginBottom: 6, fontWeight: '600', fontSize: 16 }}>Leave a Comment</Text>
-                <TextInput
-                  placeholder="Type your comment here..."
-                  multiline
-                  style={{
-                    borderWidth: 1,
-                    borderColor: '#ccc',
-                    borderRadius: 8,
-                    padding: 10,
-                    minHeight: 60,
-                    textAlignVertical: 'top',
-                    backgroundColor: '#fff',
-                  }}
-                  value={newComment}
-                  onChangeText={setNewComment}
-                />
-                <TouchableOpacity
-                  onPress={postComment}
-                  style={{
-                    marginTop: 10,
-                    backgroundColor: '#9747FF',
-                    paddingVertical: 12,
-                    borderRadius: 8,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{ color: 'white', fontWeight: 'bold' }}>Post Comment</Text>
-                </TouchableOpacity>
-              </View>
+              
             </Content>
           </PageScroll>
 

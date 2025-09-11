@@ -12,7 +12,17 @@ import { useNavigation } from '@react-navigation/native';
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  getDoc,
+  deleteDoc,  
+  addDoc,
+} from 'firebase/firestore';
 
 const db = getFirestore();
 const auth = getAuth();
@@ -23,41 +33,94 @@ export default function ToShip() {
   const navigation = useNavigation();
   const user = auth.currentUser;
 
-  const [orders, setOrders] = useState([]);
+  const activeTab = 'To Ship';
 
+  const [orders, setOrders] = useState([]);
+  const [customUserId, setCustomUserId] = useState(null);
+
+  // 1) resolve the customUserId from users collection
   useEffect(() => {
-    if (!user) {
+    const fetchCustomUserId = async () => {
+      try {
+        if (!user) return;
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          if (data.userId) setCustomUserId(data.userId);
+        }
+      } catch (err) {
+        console.error('Error fetching custom userId:', err);
+      }
+    };
+
+    fetchCustomUserId();
+  }, [user]);
+
+  // 2) listen to the "toShip" collection and only keep docs that belong to this customUserId
+  useEffect(() => {
+    if (!customUserId) {
       setOrders([]);
       return;
     }
 
-    // Query orders where userId matches current user and status is 'To Ship'
-    const q = query(
-      collection(db, 'orders'),
-      where('userId', '==', user.uid),
-      where('status', '==', 'To Ship')
-    );
+    // ✅ Fetch from toShip instead of shipped
+    const q = query(collection(db, 'toShip'), where('userId', '==', customUserId));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedOrders = [];
-      snapshot.forEach((doc) => {
-        fetchedOrders.push({ id: doc.id, ...doc.data() });
-      });
-      setOrders(fetchedOrders);
-    }, (error) => {
-      console.error('Error fetching orders:', error);
-      setOrders([]);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const fetched = [];
+        snapshot.forEach((docSnap) => {
+          fetched.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        // sort by createdAt desc if present
+        fetched.sort((a, b) => {
+          if (a.createdAt && b.createdAt) return b.createdAt.seconds - a.createdAt.seconds;
+          return 0;
+        });
+
+        setOrders(fetched);
+      },
+      (error) => {
+        console.error('Error fetching toShip orders:', error);
+        setOrders([]);
+      }
+    );  
+
+    const handleCancelOrder = (orderId) => {
+Alert.alert(
+  'Confirm Cancellation?',
+  'Are you sure you want to cancel this order?',
+  [
+    { text: 'No', style: 'cancel' },
+    {
+      text: 'Yes',
+      onPress: async () => {
+        try {
+          await deleteDoc(doc(db, 'toShip', orderId));
+          Alert.alert('Cancelled', 'Your order has been cancelled and removed.');
+        } catch (err) {
+          console.error('Error cancelling order:', err);
+          Alert.alert('Error', 'Failed to cancel the order.');
+        }
+      },
+      style: 'destructive',
+    },
+  ]
+);
+};
 
     return () => unsubscribe();
-  }, [user]);
+  }, [customUserId]);
 
   const handleCopy = (orderId) => {
     Clipboard.setStringAsync(orderId);
     Alert.alert('Copied', 'Order ID copied to clipboard');
   };
 
-  const handleCancelOrder = () => {
+  const handleCancelOrder = (order) => {
     Alert.alert(
       'Confirm Cancellation?',
       'Are you sure you want to cancel this order?',
@@ -65,9 +128,23 @@ export default function ToShip() {
         { text: 'No', style: 'cancel' },
         {
           text: 'Yes',
-          onPress: () => {
-            Alert.alert('Cancelled', 'Your order has been cancelled.');
-            // Optional: Navigate or update state or update Firebase here
+          onPress: async () => {
+            try {
+              // ✅ Step 1: Save order into "cancelled"
+              await addDoc(collection(db, 'cancelled'), {
+                ...order,
+                status: 'Cancelled',
+                cancelledAt: new Date(),
+              });
+
+              // ✅ Step 2: Remove it from "toShip"
+              await deleteDoc(doc(db, 'toShip', order.id));
+
+              Alert.alert('Cancelled', 'Your order has been moved to Cancelled.');
+            } catch (err) {
+              console.error('Error cancelling order:', err);
+              Alert.alert('Error', 'Failed to cancel the order.');
+            }
           },
           style: 'destructive',
         },
@@ -76,8 +153,9 @@ export default function ToShip() {
   };
 
   const tabRoutes = {
+    'Orders': 'Orders',
     'To Ship': 'ToShip',
-    'To Receive': 'Orders',
+    'To Receive': 'ToReceive',
     'Completed': 'Completed',
     'Cancelled': 'Cancelled',
   };
@@ -93,17 +171,25 @@ export default function ToShip() {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabContainer}>
+      {/* Nav Tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabContainer}
+        contentContainerStyle={{ paddingHorizontal: 20 }}
+      >
         {Object.keys(tabRoutes).map((tab) => (
           <TouchableOpacity
             key={tab}
-            style={[styles.tab, tab === 'To Ship' && styles.activeTab]}
             onPress={() => {
-              if (tab !== 'To Ship') navigation.navigate(tabRoutes[tab]);
+              if (tab !== activeTab) navigation.replace(tabRoutes[tab]);
             }}
+            style={styles.tabWrap}
           >
-            <Text style={[styles.tabText, tab === 'To Ship' && styles.activeTabText]}>{tab}</Text>
+            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+              {tab}
+            </Text>
+            <View style={[styles.underline, activeTab === tab && styles.activeUnderline]} />
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -112,18 +198,17 @@ export default function ToShip() {
       <ScrollView>
         {orders.length === 0 ? (
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
-            No orders to ship.
+            No "To Ship" orders found.
           </Text>
         ) : (
           orders.map((order) => {
-            // Assuming order.items is an array of items purchased in this order
-            // We'll display the first item only for this UI similar to your static example
             const item = order.items && order.items.length > 0 ? order.items[0] : null;
-
-            // Random size for display
-            const size = randomSizes[Math.floor(Math.random() * randomSizes.length)];
-
             if (!item) return null;
+
+            const size = randomSizes[Math.floor(Math.random() * randomSizes.length)];
+            const productName = item.productName || 'Product';
+            const imageUri =
+              item.image || item.productImage || 'https://placehold.co/100x100';
 
             return (
               <View key={order.id} style={styles.orderCard}>
@@ -132,23 +217,24 @@ export default function ToShip() {
                 </View>
 
                 <View style={styles.productRow}>
-                  <Image
-                    source={{ uri: item.image || 'https://placehold.co/100x100' }}
-                    style={styles.productImage}
-                  />
+                  <Image source={{ uri: imageUri }} style={styles.productImage} />
                   <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{item.name}</Text>
+                    <Text style={styles.productName}>{productName}</Text>
                     <Text style={styles.productSize}>{size}</Text>
                     <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
                     <View style={styles.totalRow}>
                       <Text style={styles.productTotal}>Total Payment:</Text>
-                      <Text style={[styles.totalPrice, { marginLeft: 90 }]}>₱{order.total || 'N/A'}</Text>
+                      <Text style={[styles.totalPrice, { marginLeft: 90 }]}>
+                        ₱{order.total ?? 'N/A'}
+                      </Text>
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.shippingRow}>
-                  <Text style={styles.waitingMessage}>Waiting for courier to confirm{'\n'}shipment</Text>
+                  <Text style={styles.waitingMessage}>
+                    Waiting for courier to confirm{'\n'}shipment
+                  </Text>
                   <TouchableOpacity style={styles.shippingBtn}>
                     <Text style={styles.shippingBtnText}>View Shipping Details</Text>
                   </TouchableOpacity>
@@ -156,7 +242,6 @@ export default function ToShip() {
 
                 <View style={styles.divider} />
 
-                {/* Order ID + Copy */}
                 <View style={styles.orderIdRow}>
                   <Text style={styles.orderIdText}>Order ID: {order.id}</Text>
                   <TouchableOpacity onPress={() => handleCopy(order.id)}>
@@ -164,10 +249,12 @@ export default function ToShip() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Cancel Button */}
-                <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelOrder}>
+                <TouchableOpacity style={styles.cancelBtn}
+                  onPress={() => handleCancelOrder(order)} >
                   <Text style={styles.cancelBtnText}>Cancel Order</Text>
                 </TouchableOpacity>
+
+
               </View>
             );
           })
@@ -198,21 +285,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 15,
   },
-  tab: {
-    marginRight: 30,
+  tabWrap: {
+    alignItems: 'center',
+    marginRight: 40,
   },
   tabText: {
     fontSize: 14,
     color: '#333',
-    paddingBottom: 6,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
   },
   activeTabText: {
     color: '#9747FF',
     fontWeight: '600',
-    borderBottomColor: '#9747FF',
-    borderBottomWidth: 2,
+  },
+  underline: {
+    height: 3,
+    backgroundColor: 'transparent',
+    width: '100%',
+    marginTop: 4,
+  },
+  activeUnderline: {
+    backgroundColor: '#9747FF',
   },
   orderCard: {
     backgroundColor: '#F7F7F7',

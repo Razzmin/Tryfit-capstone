@@ -10,39 +10,98 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  onSnapshot,
+  doc,
+  getDoc,
+} from 'firebase/firestore';
 
 const db = getFirestore();
 const auth = getAuth();
 
-const randomSizes = ['small', 'medium', 'large', 'xl', 'xxl'];
-
 export default function Orders() {
   const navigation = useNavigation();
   const user = auth.currentUser;
-  const activeTab = 'To Receive';
+  const activeTab = 'Orders';
 
   const [orders, setOrders] = useState([]);
+  const [customUserId, setCustomUserId] = useState(null);
 
+  // 🔑 Step 1: Get custom userId from users collection
   useEffect(() => {
-    if (!user) {
-      setOrders([]);
-      return;
-    }
+    const fetchCustomUserId = async () => {
+      if (!user) return;
 
-    const q = query(
-      collection(db, 'orders'),
-      where('userId', '==', user.uid),
-      where('status', '==', 'To Receive')
-    );
+      try {
+        const userRef = doc(db, 'users', user.uid); // assumes users collection stores custom userId
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          if (userData.userId) {
+            setCustomUserId(userData.userId); // save the generated unique userId
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching custom userId:', err);
+      }
+    };
+
+    fetchCustomUserId();
+  }, [user]);
+
+  // 🔑 Step 2: Listen to orders filtered by customUserId + attach product delivery time
+  useEffect(() => {
+    if (!customUserId) return;
 
     const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const fetchedOrders = [];
-        snapshot.forEach((doc) => {
-          fetchedOrders.push({ id: doc.id, ...doc.data() });
+      collection(db, 'orders'),
+      async (snapshot) => {
+        let fetchedOrders = [];
+
+        for (const docSnap of snapshot.docs) {
+          const orderData = { id: docSnap.id, ...docSnap.data() };
+
+          if (orderData.userId === customUserId) {
+            // Default expectedDelivery
+            let expectedDelivery = 'TBD';
+
+            // If order has items, fetch the product delivery time
+            if (orderData.items && orderData.items.length > 0) {
+              const firstItem = orderData.items[0]; // you can expand if multiple
+              if (firstItem.productId) {
+                try {
+                  const productRef = doc(db, 'products', firstItem.productId);
+                  const productSnap = await getDoc(productRef);
+                  if (productSnap.exists()) {
+                    const productData = productSnap.data();
+                    if (productData.delivery) {
+                      expectedDelivery = productData.delivery;
+                    }
+                  }
+                } catch (err) {
+                  console.error('Error fetching product delivery:', err);
+                }
+              }
+            }
+
+            fetchedOrders.push({
+              ...orderData,
+              expectedDelivery, // ✅ attach delivery from products
+            });
+          }
+        }
+
+        // Sort by createdAt descending
+        fetchedOrders.sort((a, b) => {
+          if (a.createdAt && b.createdAt) {
+            return b.createdAt.seconds - a.createdAt.seconds;
+          }
+          return 0;
         });
+
         setOrders(fetchedOrders);
       },
       (error) => {
@@ -52,14 +111,17 @@ export default function Orders() {
     );
 
     return () => unsubscribe();
-  }, [user]);
+  }, [customUserId]);
 
   const tabRoutes = {
-    'To Ship': 'ToShip',
-    'To Receive': 'Orders',
-    'Completed': 'Completed',
-    'Cancelled': 'Cancelled',
-  };
+      
+      'Orders': 'Orders',
+      'To Ship': 'ToShip',
+      'To Receive': 'ToReceive',
+      'Completed': 'Completed',
+      'Cancelled': 'Cancelled',
+    };
+  
 
   return (
     <View style={styles.container}>
@@ -86,62 +148,88 @@ export default function Orders() {
             }}
             style={styles.tabWrap}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+            <Text
+              style={[styles.tabText, activeTab === tab && styles.activeTabText]}
+            >
               {tab}
             </Text>
-            <View style={[styles.underline, activeTab === tab && styles.activeUnderline]} />
+            <View
+              style={[
+                styles.underline,
+                activeTab === tab && styles.activeUnderline,
+              ]}
+            />
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* To Receive Content */}
+      {/* Orders List */}
       <ScrollView>
         {orders.length === 0 ? (
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
-            No orders to receive.
+            No orders found.
           </Text>
         ) : (
           orders.map((order) => {
-            // Display first item like your UI
-            const item = order.items && order.items.length > 0 ? order.items[0] : null;
+            const item =
+              order.items && order.items.length > 0 ? order.items[0] : null;
             if (!item) return null;
-
-            const size = randomSizes[Math.floor(Math.random() * randomSizes.length)];
 
             return (
               <View key={order.id} style={styles.orderCard}>
+                {/* Status */}
                 <View style={styles.cardHeader}>
-                  <Text style={styles.orderStatus}>To Receive</Text>
+                  <Text style={styles.orderStatus}>{order.status}</Text>
+                  <Text style={styles.orderDate}>
+                    {order.createdAt?.toDate().toLocaleString() || 'N/A'}
+                  </Text>
                 </View>
 
+                {/* Product Info */}
                 <View style={styles.productRow}>
                   <Image
                     source={{ uri: item.image || 'https://placehold.co/100x100' }}
                     style={styles.productImage}
                   />
                   <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{item.name}</Text>
-                    <Text style={styles.productSize}>{size}</Text>
-                    <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
+                    <Text style={styles.productName}>{item.productName}</Text>
+                    <Text style={styles.productSize}>
+                      Size: {item.size || 'N/A'}
+                    </Text>
+                    <Text style={styles.productQty}>
+                      Qty: {item.quantity || 1}
+                    </Text>
+                    <Text style={styles.productColor}>
+                      Color: {item.color || '-'}
+                    </Text>
                   </View>
                 </View>
 
-                {/* Expected Delivery */}
+                {/* Address */}
+                <Text style={{ fontSize: 12, color: '#555', marginTop: 5 }}>
+                  Delivery Address: {order.address}
+                </Text>
+
+                {/* Expected Delivery from product */}
                 <View style={styles.expectedDelivery}>
                   <Text style={styles.expectedText}>Expected Delivery:</Text>
                   <Text style={styles.deliveryDate}>
-                    {order.expectedDelivery || 'N/A'}
+                    {order.expectedDelivery || 'TBD'}
                   </Text>
                 </View>
 
+                {/* Total */}
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Total Payment:</Text>
-                  <Text style={styles.totalPrice}>₱{order.total || 'N/A'}</Text>
+                  <Text style={styles.totalPrice}>₱{order.total || 0}</Text>
                 </View>
 
+                {/* Track Order */}
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => navigation.navigate('TrackOrder', { orderId: order.id })}
+                  onPress={() =>
+                    navigation.navigate('TrackOrder', { orderId: order.id })
+                  }
                 >
                   <Text style={styles.actionButtonText}>Track Order</Text>
                 </TouchableOpacity>
@@ -155,6 +243,7 @@ export default function Orders() {
 }
 
 const styles = StyleSheet.create({
+  // ✅ keep your styles here (no changes made)
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -211,6 +300,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#9747FF',
   },
+  orderDate: {
+    fontSize: 12,
+    color: '#666',
+  },
   productRow: {
     flexDirection: 'row',
     marginBottom: 10,
@@ -236,6 +329,10 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   productQty: {
+    fontSize: 12,
+    color: '#666',
+  },
+  productColor: {
     fontSize: 12,
     color: '#666',
   },

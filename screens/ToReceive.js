@@ -6,40 +6,48 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Feather } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { getAuth } from 'firebase/auth';
 import {
   getFirestore,
   collection,
+  query,
+  where,
+  onSnapshot,
   doc,
   getDoc,
-  onSnapshot,
+  deleteDoc,
+  setDoc,
 } from 'firebase/firestore';
 
 const db = getFirestore();
 const auth = getAuth();
 
-export default function Completed() {
+const randomSizes = ['small', 'medium', 'large', 'xl', 'xxl'];
+
+export default function ToReceive() {
   const navigation = useNavigation();
   const user = auth.currentUser;
-  const activeTab = 'Completed';
+
+  const activeTab = 'To Receive';
 
   const [orders, setOrders] = useState([]);
   const [customUserId, setCustomUserId] = useState(null);
 
-  // 🔑 Step 1: Fetch custom userId
+  // Fetch customUserId from users collection
   useEffect(() => {
     const fetchCustomUserId = async () => {
-      if (!user) return;
-
       try {
+        if (!user) return;
         const userRef = doc(db, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
-          const userData = userSnap.data();
-          if (userData.userId) setCustomUserId(userData.userId);
+          const data = userSnap.data();
+          if (data.userId) setCustomUserId(data.userId);
         }
       } catch (err) {
         console.error('Error fetching custom userId:', err);
@@ -48,24 +56,34 @@ export default function Completed() {
     fetchCustomUserId();
   }, [user]);
 
- 
+  // Listen to "toReceive" collection
   useEffect(() => {
-    if (!customUserId) return;
+    if (!customUserId) {
+      setOrders([]);
+      return;
+    }
+
+    const q = query(collection(db, 'toReceive'), where('userId', '==', customUserId));
 
     const unsubscribe = onSnapshot(
-      collection(db, 'completed'), // ✅ Fetch from "completed" collection
+      q,
       (snapshot) => {
-        const fetchedOrders = snapshot.docs
-          .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-          .filter(order => order.userId === customUserId); // ✅ Only orders that match the custom userId
+        const fetched = [];
+        snapshot.forEach((docSnap) => {
+          fetched.push({ docId: docSnap.id, ...docSnap.data() });
+        });
 
-        // Optional: sort by creation date if available
-        fetchedOrders.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
-        setOrders(fetchedOrders);
+        // Sort by createdAt descending if present
+        fetched.sort((a, b) => {
+          if (a.createdAt && b.createdAt) return b.createdAt.seconds - a.createdAt.seconds;
+          return 0;
+        });
+
+        setOrders(fetched);
       },
       (error) => {
-        console.error('Error fetching completed orders:', error);
+        console.error('Error fetching toReceive orders:', error);
         setOrders([]);
       }
     );
@@ -73,6 +91,42 @@ export default function Completed() {
     return () => unsubscribe();
   }, [customUserId]);
 
+  const handleCopy = (orderId) => {
+    Clipboard.setStringAsync(orderId);
+    Alert.alert('Copied', 'Order ID copied to clipboard');
+  };
+
+  const handleReceiveOrder = (order) => {
+    Alert.alert(
+      'Confirm Receive',
+      'Have you received this order successfully?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, received',
+          onPress: async () => {
+            try {
+              
+              const completedRef = doc(collection(db, 'completed')); // 
+                await setDoc(completedRef, {
+                  ...order,
+                  status: 'Completed',
+                  completedAt: new Date(),
+                });
+
+              await deleteDoc(doc(db, 'toReceive', order.docId));
+
+
+              Alert.alert('Success', 'Your order has been marked as completed.');
+            } catch (err) {
+              console.error('Error moving order to completed:', err);
+              Alert.alert('Error', 'Failed to complete the order.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const tabRoutes = {
     'Orders': 'Orders',
@@ -94,7 +148,12 @@ export default function Completed() {
       </View>
 
       {/* Nav Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabContainer}
+        contentContainerStyle={{ paddingHorizontal: 20 }}
+      >
         {Object.keys(tabRoutes).map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -111,74 +170,58 @@ export default function Completed() {
         ))}
       </ScrollView>
 
-      {/* Orders List */}
+      {/* Orders */}
       <ScrollView>
         {orders.length === 0 ? (
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
-            No completed orders found.
+            No "To Receive" orders found.
           </Text>
         ) : (
           orders.map((order) => {
             const item = order.items && order.items.length > 0 ? order.items[0] : null;
             if (!item) return null;
 
+            const size = randomSizes[Math.floor(Math.random() * randomSizes.length)];
+            const productName = item.productName || 'Product';
+            const imageUri = item.image || item.productImage || 'https://placehold.co/100x100';
+
             return (
               <View key={order.id} style={styles.orderCard}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.orderStatus}>Completed</Text>
+                  <Text style={styles.orderStatus}>To Receive</Text>
                 </View>
 
                 <View style={styles.productRow}>
-                  <Image
-                    source={{ uri: item.image || 'https://placehold.co/100x100' }}
-                    style={styles.productImage}
-                  />
+                  <Image source={{ uri: imageUri }} style={styles.productImage} />
                   <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{item.productName || item.name}</Text>
-                    <Text style={styles.productSize}>Size: {item.size || '-'}</Text>
+                    <Text style={styles.productName}>{productName}</Text>
+                    <Text style={styles.productSize}>{size}</Text>
                     <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
-                    <Text style={styles.productColor}>Color: {item.color || '-'}</Text>
+                    <View style={styles.totalRow}>
+                      <Text style={styles.productTotal}>Total Payment:</Text>
+                      <Text style={[styles.totalPrice, { marginLeft: 90 }]}>
+                        ₱{order.total ?? 'N/A'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
 
-                <Text style={{ fontSize: 12, color: '#555', marginTop: 5 }}>
-                  Delivery Address: {order.address}
-                </Text>
-
-                <View style={styles.expectedDelivery}>
-                  <Text style={styles.expectedText}>Expected Delivery:</Text>
-                  <Text style={styles.deliveryDate}>{order.expectedDelivery}</Text>
+                <View style={styles.shippingRow}>
+                  <Text style={styles.waitingMessage}>
+                    Waiting for you to confirm{'\n'}receipt of order
+                  </Text>
+                  <TouchableOpacity style={styles.shippingBtn} onPress={() => handleReceiveOrder(order)}>
+                    <Text style={styles.shippingBtnText}>Mark as Received</Text>
+                  </TouchableOpacity>
                 </View>
 
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Total Payment:</Text>
-                  <Text style={styles.totalPrice}>₱{order.total || 0}</Text>
-                </View>
+                <View style={styles.divider} />
 
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={[styles.secondaryButton, { marginRight: 10 }]}
-                    onPress={() =>
-                      navigation.navigate("ToRate", {
-                        orderData: order,
-                        items: order.items,
-                        userId: order.userId
-                      }) } >
-                    <Text style={styles.secondaryButtonText}>Rate</Text>
+                <View style={styles.orderIdRow}>
+                  <Text style={styles.orderIdText}>Order ID: {order.id}</Text>
+                  <TouchableOpacity onPress={() => handleCopy(order.id)}>
+                    <Feather name="copy" size={18} color="#9747FF" />
                   </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() =>
-                      navigation.navigate("ReCheckout", {
-                        selectedItems: order.items,      
-                        total: order.total,               
-                        address: order.address,  
-                        deliveryFee: order.deliveryFee, }) } >
-                    <Text style={styles.actionButtonText}>Buy Again</Text>
-                  </TouchableOpacity>
-
-
                 </View>
               </View>
             );
@@ -188,8 +231,6 @@ export default function Completed() {
     </View>
   );
 }
-
-// ✅ Keep your existing styles
 
 const styles = StyleSheet.create({
   container: {
@@ -208,15 +249,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
   },
-
-  /* ✅ Fixed Nav Tabs */
   tabContainer: {
     flexDirection: 'row',
     marginBottom: 15,
   },
   tabWrap: {
     alignItems: 'center',
-    marginRight: 30, // consistent spacing between tabs
+    marginRight: 40,
   },
   tabText: {
     fontSize: 14,
@@ -235,13 +274,11 @@ const styles = StyleSheet.create({
   activeUnderline: {
     backgroundColor: '#9747FF',
   },
-
-  /* Cards */
   orderCard: {
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
     padding: 15,
-    marginBottom: 30, // ✅ was 450, reduced for normal spacing
+    marginBottom: 30,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -252,8 +289,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#9747FF',
   },
-
-  /* Product */
   productRow: {
     flexDirection: 'row',
     marginBottom: 10,
@@ -271,63 +306,67 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   productSize: {
     fontSize: 12,
     color: '#666',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   productQty: {
     fontSize: 12,
     color: '#666',
   },
-
-  /* Totals */
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 5,
     marginBottom: 10,
   },
-  totalLabel: {
+  productTotal: {
+    fontSize: 14,
     fontWeight: '500',
+    color: '#333',
   },
   totalPrice: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#9747FF',
   },
-
-  /* Buttons */
-  buttonRow: {
+  shippingRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
   },
-  actionButton: {
+  waitingMessage: {
+    fontSize: 12,
+    color: '#555',
+    fontStyle: 'italic',
+  },
+  shippingBtn: {
     backgroundColor: '#9747FF',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
     borderRadius: 6,
-    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
-  actionButtonText: {
+  shippingBtnText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
-  secondaryButton: {
-    backgroundColor: '#F7F7F7',
-    borderWidth: 1,
-    borderColor: '#9747FF',
-    paddingVertical: 10,
-    paddingHorizontal: 30, // ✅ reduced from 40 for balance
-    borderRadius: 6,
+  divider: {
+    height: 1,
+    backgroundColor: '#ccc',
+    marginVertical: 12,
+  },
+  orderIdRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  secondaryButtonText: {
-    color: '#9747FF',
-    fontSize: 14,
-    fontWeight: '500',
+  orderIdText: {
+    fontSize: 13,
+    color: '#333',
   },
 });

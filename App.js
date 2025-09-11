@@ -25,13 +25,15 @@ import ProductDetail from './screens/Products/ProductDetail';
 import ChatSupportScreen from './screens/ChatSupportScreen';
 import SearchResults from './screens/SearchResults';
 import CheckoutSummary from './screens/CheckoutSummary';
-
+import ReCheckout from './screens/ReCheckout';
 import Orders from './screens/Orders';
 import ToShip from './screens/ToShip';
+import ToReceive from './screens/ToReceive';
 import Completed from './screens/Completed';
 import Cancelled from './screens/Cancelled';
 import TrackOrder from './screens/TrackOrder';     
 import SplashScreen from './screens/splashscreen';
+import ToRate from './screens/ToRate';
 
               
 
@@ -83,15 +85,18 @@ export default function App() {
         <Stack.Screen name="ProductDetail" component={ProductDetail} />
         <Stack.Screen name="Orders" component={Orders} />
         <Stack.Screen name="ToShip" component={ToShip} />
+        <Stack.Screen name="ToReceive" component={ToReceive} />
         <Stack.Screen name="Completed" component={Completed} />
         <Stack.Screen name="Cancelled" component={Cancelled} />
         <Stack.Screen name="TrackOrder" component={TrackOrder} />
         <Stack.Screen name="Checkout" component={Checkout} />
+        <Stack.Screen name="ReCheckout" component={ReCheckout} />
         <Stack.Screen name="ShoppingCart" component={ShoppingCart} />
         <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
         <Stack.Screen name="ChatSupport" component={ChatSupportScreen} />
         <Stack.Screen name="SearchResults" component={SearchResults} />
         <Stack.Screen name="CheckoutSummary" component={CheckoutSummary} />
+        <Stack.Screen name="ToRate" component={ToRate} />
       </Stack.Navigator> 
       )}
     </NavigationContainer>
