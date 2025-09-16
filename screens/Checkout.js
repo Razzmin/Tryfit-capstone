@@ -257,8 +257,18 @@ useEffect(() => {
                             })),
                           };
 
-                          // Save order in Firestore
-                        await addDoc(collection(db, "orders"), orderData);
+                       // Save order and get a reference back
+                          const orderRef = await addDoc(collection(db, "orders"), orderData);
+
+                          // Save notification
+                          await addDoc(collection(db, "notifications"), {
+                            userId: uniqueUserId,
+                            title: "Order Placed",
+                            message: `Your order with total ₱${total} has been placed.`,
+                            orderId: orderRef.id, // ✅ now works
+                            timestamp: serverTimestamp(),
+                            read: false,
+                          });
 
 
                           // ✅ Decrease stock for each item ordered

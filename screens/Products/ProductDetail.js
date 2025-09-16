@@ -109,19 +109,21 @@ export default function ProductDetail() {
   useEffect(() => {
     const q = query(
       reviewsRef,
-      where('productId', '==', product.id),
-      orderBy('timestamp', 'desc')
+      where("productId", "==", product.id),
+      orderBy("createdAt", "desc") // ✅ match your Firestore field
     );
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() });
+      snapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
       });
       setReviews(list);
     });
 
     return () => unsubscribe();
   }, [product.id]);
+
 
   const toggleMenu = (id) => {
     setVisibleMenuId((prev) => (prev === id ? null : id));
@@ -133,42 +135,6 @@ export default function ProductDetail() {
       setVisibleMenuId(null);
     } catch (err) {
       console.error('Error deleting comment:', err);
-    }
-  };
-
-  const postComment = async () => {
-    const trimmed = newComment.trim();
-    if (!trimmed || !user) return;
-
-    let displayName = user.displayName || user.email?.split('@')[0] || 'Anonymous';
-
-    try {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        displayName = data.displayName || displayName;
-      }
-    } catch {
-      
-    }
-
-    const newReview = {
-      userId: user.uid,
-      userName: displayName,
-      productId: product.id,
-      variation: selectedColor,
-      rating: Math.floor(Math.random() * 5) + 1,
-      comment: trimmed,
-      timestamp: serverTimestamp(),
-      avatarColor: avatarColors[Math.floor(Math.random() * avatarColors.length)],
-    };
-
-    setNewComment('');
-
-    try {
-      await addDoc(reviewsRef, newReview);
-    } catch (err) {
-      console.error('Error adding comment:', err);
     }
   };
 
@@ -222,6 +188,19 @@ export default function ProductDetail() {
   try {
     // ✅ Use setDoc to assign our own ID
     await setDoc(doc(cartRef, cartItemCode), cartItem);
+
+   // ✅ Also save notification in "notifications" collection
+    await addDoc(collection(db, "notifications"), {
+      userId: user.uid,
+      title: "Item Added to Cart",
+      message: `${product.name} (${modalSelectedColor}, ${selectedSize}) was added to your cart.`,
+      productName: product.name,
+      color: modalSelectedColor,
+      size: selectedSize,
+      timestamp: serverTimestamp(),
+      read: false, // default unread
+    });
+
 
     addNotification(`${product.name} added to cart`);
     Alert.alert("Success", "Item is added to your cart");
@@ -335,78 +314,77 @@ const decrementQuantity = () => {
               ))}
 
               <SectionTitle>Reviews</SectionTitle>
-              <ReviewContainer>
-                {(showAllReviews ? reviews : reviews.slice(0, 3)).map((item) => (
-                  <ReviewItems key={item.id} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Avatar style={{ backgroundColor: item.avatarColor || '#9747FF' }}>
-                      <AvatarText>{item.userName?.[0]?.toUpperCase() || 'A'}</AvatarText>
-                    </Avatar>
+                <ReviewContainer>
+                  {(showAllReviews ? reviews : reviews.slice(0, 3)).map((item) => (
+                    <ReviewItems key={item.id} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                      <Avatar style={{ backgroundColor: item.avatarColor || '#9747FF' }}>
+                        <AvatarText>{item.username?.[0]?.toUpperCase() || 'A'}</AvatarText>
+                      </Avatar>
 
-                    <ReviewContent style={{ flex: 1 }}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          marginBottom: 4,
-                        }}
-                      >
-                        <ReviewerName>{item.userName}</ReviewerName>
+                      <ReviewContent style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <ReviewerName>{item.username}</ReviewerName>
 
-                        {user?.uid === item.userId && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', position: 'relative' }}>
-                            {visibleMenuId === item.id && (
-                              <TouchableOpacity
-                                onPress={() => deleteComment(item.id)}
-                                style={{
-                                  marginRight: 10,
-                                  backgroundColor: '#E0E0E0',
-                                  paddingHorizontal: 12,
-                                  borderRadius: 6,
-                                  zIndex: 999,
-                                }}
-                              >
-                                <Text style={{ color: 'black', fontWeight: 'bold' }}>Delete</Text>
+                          {user?.uid === item.userId && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', position: 'relative' }}>
+                              {visibleMenuId === item.id && (
+                                <TouchableOpacity
+                                  onPress={() => deleteComment(item.id)}
+                                  style={{
+                                    marginRight: 10,
+                                    backgroundColor: '#E0E0E0',
+                                    paddingHorizontal: 12,
+                                    borderRadius: 6,
+                                    zIndex: 999,
+                                  }}
+                                >
+                                  <Text style={{ color: 'black', fontWeight: 'bold' }}>Delete</Text>
+                                </TouchableOpacity>
+                              )}
+
+                              <TouchableOpacity onPress={() => toggleMenu(item.id)}>
+                                <AntDesign name="ellipsis1" size={18} color="#333" />
                               </TouchableOpacity>
-                            )}
+                            </View>
+                          )}
+                        </View>
 
-                            <TouchableOpacity onPress={() => toggleMenu(item.id)}>
-                              <AntDesign name="ellipsis1" size={18} color="#333" />
-                            </TouchableOpacity>
-                          </View>
-                        )}
-                      </View>
+                        {/* ✅ show color + size */}
+                        <VariationText>
+                          Size: {item.size} • Color: {item.color}
+                        </VariationText>
 
-                      <VariationText>Color: {item.variation}</VariationText>
-                      <StarRatings>
-                        {[...Array(5)].map((_, i) => (
-                          <AntDesign
-                            key={i}
-                            name={i < item.rating ? 'star' : 'staro'}
-                            size={14}
-                            color="#F7C700"
-                            style={{ marginRight: 2 }}
-                          />
-                        ))}
-                      </StarRatings>
-                      <CommentText>{item.comment}</CommentText>
-                    </ReviewContent>
-                  </ReviewItems>
-                ))}
+                        {/* ✅ stars */}
+                        <StarRatings>
+                          {[...Array(5)].map((_, i) => (
+                            <AntDesign
+                              key={i}
+                              name={i < item.rating ? 'star' : 'staro'}
+                              size={14}
+                              color="#F7C700"
+                              style={{ marginRight: 2 }}
+                            />
+                          ))}
+                        </StarRatings>
 
-                {reviews.length > 3 && (
-                  <TouchableOpacity
-                    onPress={() => setShowAllReviews(!showAllReviews)}
-                    style={{ marginTop: 10, alignSelf: 'center' }}
-                  >
-                    <Text style={{ color: '#9747FF', fontWeight: '600' }}>
-                      {showAllReviews ? 'Hide Reviews' : 'Show More Reviews'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </ReviewContainer>
+                        {/* ✅ comment */}
+                        <CommentText>{item.comment}</CommentText>
+                      </ReviewContent>
+                    </ReviewItems>
+                  ))}
 
-              
+                  {reviews.length > 3 && (
+                    <TouchableOpacity
+                      onPress={() => setShowAllReviews(!showAllReviews)}
+                      style={{ marginTop: 10, alignSelf: 'center' }}
+                    >
+                      <Text style={{ color: '#9747FF', fontWeight: '600' }}>
+                        {showAllReviews ? 'Hide Reviews' : 'Show More Reviews'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </ReviewContainer>
+
             </Content>
           </PageScroll>
 
