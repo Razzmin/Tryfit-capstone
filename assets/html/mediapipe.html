@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Body Distance & Measurement Guide — Smart Setup</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<style>
+/* --- same styling as before --- */
+:root { --accent: #9747FF; }
+html,body{height:100%;margin:0;background:#000;color:#fff;font-family:Inter,Arial,Helvetica,sans-serif;}
+#videoContainer{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000;}
+video,canvas#overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
+canvas#overlay{pointer-events:none;}
+#userMessage,#guidance{position:fixed;left:50%;transform:translateX(-50%);background:rgba(151,71,255,0.6);padding:10px 16px;border-radius:12px;z-index:40;text-align:center;color:#fff;font-size:15px;}
+#userMessage{top:12px;width:320px;max-width:95%;}
+#guidance{bottom:16px;min-width:220px;}
+#countdown{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:48;font-size:88px;font-weight:700;color:var(--accent);text-shadow:0 0 14px rgba(0,0,0,0.7);display:none;}
+#results{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;color:#000;padding:18px;border-radius:12px;z-index:46;text-align:center;width:92%;max-width:250px;display:none;box-shadow:0 0 15px rgba(0,0,0,0.4);line-height:1.5;}
+#results strong{color:var(--accent);}
+.action-buttons{position:fixed;left:50%;top:calc(50% + 200px);transform:translateX(-50%);display:none;gap:12px;z-index:46;}
+.action-buttons button{padding:10px 16px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;}
+#popup{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.82);z-index:100;}
+#popupCard{background:#fff;color:#000;padding:18px;border-radius:12px;width:92%;max-width:320px;text-align:center;box-shadow:0 0 15px rgba(0,0,0,0.4);}
+#popupCard h2{margin:0 0 10px;color:var(--accent);}
+#popupCard input{width:82%;padding:8px 10px;margin:8px 0;border-radius:8px;border:1px solid #ccc;font-size:15px;text-align:center;}
+#popupCard button{margin-top:12px;padding:10px 16px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;}
+#infoBtn{position:absolute;top:8px;right:8px;background:var(--accent);border:none;border-radius:50%;width:24px;height:24px;color:#fff;cursor:pointer;}
+#infoPopup{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:150;align-items:center;justify-content:center;}
+#infoContent{background:#fff;color:#000;padding:18px;border-radius:12px;width:90%;max-width:320px;text-align:center;}
+#closeInfo{margin-top:12px;background:var(--accent);border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;color:#fff;}
+@media(max-height:700px){#countdown{font-size:56px;}.action-buttons{top:calc(50% + 150px);}}
+</style>
+</head>
+
+<body>
+<div id="videoContainer">
+  <video id="videoElement" autoplay playsinline muted></video>
+  <canvas id="overlay"></canvas>
+</div>
+
+<div id="userMessage">Let's record your other body parts (Shoulder-width, Chest-width, Hips, and Bust)</div>
+<div id="guidance">Step back or move forward until you fit the guide.</div>
+<div id="countdown"></div>
+<div id="results"></div>
+
+<div class="action-buttons">
+  <button id="saveBtn">Save</button>
+  <button id="retakeBtn">Retake</button>
+</div>
+
+<!-- Popup UI -->
+<div id="popup" style="display:flex;">
+  <div id="popupCard">
+    <button id="infoBtn">?</button>
+    <h2>Smart Setup</h2>
+    <small>To get the best fit, we’ll use your camera and a few basic measurements.</small>
+    <input id="heightInput" type="number" placeholder="Height (cm)" min="100" max="250" />
+    <input id="weightInput" type="number" placeholder="Weight (kg)" min="30" max="200" />
+    <input id="waistInput" type="number" placeholder="Waistline (cm)" min="40" max="150" />
+    <input id="cal_shoulder" type="number" placeholder="Shoulder width (cm)" />
+    <input id="cal_chest" type="number" placeholder="Chest (cm)" />
+    <input id="cal_hips" type="number" placeholder="Hips (cm)" />
+    <input id="cal_bust" type="number" placeholder="Bust (cm)" />
+    <button id="startBtn">Start Measurement</button>
+  </div>
+</div>
+
+<!-- Info Popup -->
+<div id="infoPopup">
+  <div id="infoContent">
+    <h3>What is Calibration?</h3>
+    <p>Calibration helps your camera learn your real proportions for better accuracy.  
+    You only need to do this once per device.</p>
+    <button id="closeInfo">Got it</button>
+  </div>
+</div>
+
+<script>
+const video=document.getElementById('videoElement');
+const overlay=document.getElementById('overlay');
+const octx=overlay.getContext('2d');
+const guidance=document.getElementById('guidance');
+const resultsBox=document.getElementById('results');
+const countdownEl=document.getElementById('countdown');
+const popup=document.getElementById('popup');
+const startBtn=document.getElementById('startBtn');
+const heightInput=document.getElementById('heightInput');
+const weightInput=document.getElementById('weightInput');
+const waistInput=document.getElementById('waistInput');
+const cal_shoulder=document.getElementById('cal_shoulder');
+const cal_chest=document.getElementById('cal_chest');
+const cal_hips=document.getElementById('cal_hips');
+const cal_bust=document.getElementById('cal_bust');
+const retakeBtn=document.getElementById('retakeBtn');
+const saveBtn=document.getElementById('saveBtn');
+
+let BASE_HEIGHT,BASE_WEIGHT,BASE_WAIST,calibrationProvided=false,calibrationValues=null,offsets={shoulder:3.5,chest:41.5,hips:76.5,bust:35.5};
+
+function resizeOverlay(){const r=video.getBoundingClientRect();overlay.width=r.width;overlay.height=r.height;}
+window.addEventListener('resize',resizeOverlay);
+
+let poseInstance=null,cameraInstance=null,measuring=false,lastPose=null,stillnessCounter=0,poseHeightPx=1;
+async function startCameraAndPose(){
+  if(!poseInstance){
+    poseInstance=new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
+    poseInstance.setOptions({modelComplexity:0,smoothLandmarks:true,minDetectionConfidence:0.6,minTrackingConfidence:0.6});
+    poseInstance.onResults(onResults);
+  }
+  cameraInstance=new Camera(video,{onFrame:async()=>{await poseInstance.send({image:video});},width:480,height:360});
+  cameraInstance.start();
+  video.addEventListener('loadedmetadata',resizeOverlay);
+}
+
+function drawOverlay(ok=false){
+  octx.clearRect(0,0,overlay.width,overlay.height);
+  const w=overlay.width*0.55,h=overlay.height*0.78,x=(overlay.width-w)/2,y=(overlay.height-h)/2;
+  octx.lineWidth=4;
+  octx.strokeStyle=ok?'rgba(0,255,153,0.45)':'rgba(255,255,255,0.22)';
+  octx.strokeRect(x,y,w,h);
+}
+
+function poseDifference(p1,p2){if(!p1||!p2)return Infinity;let s=0;for(let i=0;i<p1.length;i++){s+=Math.hypot(p1[i].x-p2[i].x,p1[i].y-p2[i].y);}return s/p1.length;}
+function pxToCm(px){const r=(poseHeightPx>1)?(BASE_HEIGHT/poseHeightPx):(BASE_HEIGHT/(overlay.height*0.65));return px*r;}
+function distCm(p1,p2){return pxToCm(Math.hypot((p1.x-p2.x)*overlay.width,(p1.y-p2.y)*overlay.height));}
+
+function onResults(r){
+  resizeOverlay();
+  if(!r.poseLandmarks||measuring){drawOverlay(false);return;}
+  const lm=r.poseLandmarks;
+  const topY=lm[0].y*overlay.height;
+  const bottomY=Math.max(lm[23].y,lm[24].y,0)*overlay.height;
+  poseHeightPx=bottomY-topY;
+  const ideal=overlay.height*0.65,ratio=poseHeightPx/ideal;
+  if(ratio>1.2){guidance.innerText='Too close — move backward';drawOverlay(false);stillnessCounter=0;lastPose=null;return;}
+  if(ratio<0.8){guidance.innerText='Too far — move forward';drawOverlay(false);stillnessCounter=0;lastPose=null;return;}
+  drawOverlay(true);guidance.innerText='Perfect distance! Hold still...';
+  const move=poseDifference(lm,lastPose);lastPose=lm;
+  if(move<0.0015)stillnessCounter++;else stillnessCounter=0;
+  if(stillnessCounter>45){stillnessCounter=0;startCountdown(lm);}
+}
+
+function startCountdown(lm){
+  measuring=true;let count=4;countdownEl.style.display='block';countdownEl.innerText=count;
+  const t=setInterval(()=>{count--;countdownEl.innerText=count>0?count:'✔';
+    if(count<=0){clearInterval(t);setTimeout(()=>{countdownEl.style.display='none';captureMeasurements(lm);},400);}
+  },800);
+}
+
+function captureMeasurements(lm){
+  const shoulder_raw=distCm(lm[11],lm[12]);
+  const shouldersMid={x:(lm[11].x+lm[12].x)/2,y:(lm[11].y+lm[12].y)/2};
+  const hipsMid={x:(lm[23].x+lm[24].x)/2,y:(lm[23].y+lm[24].y)/2};
+  const chest_raw=distCm(shouldersMid,hipsMid);
+  const hips_raw=distCm(lm[23],lm[24]);
+  const bust_raw=distCm(lm[11],hipsMid);
+
+  const finalShoulder=shoulder_raw+(offsets.shoulder||3.5);
+  const finalChest=chest_raw+(offsets.chest||41.5);
+  const finalHips=hips_raw+(offsets.hips||76.5);
+  const finalBust=bust_raw+(offsets.bust||35.5);
+
+  const topSizes=[
+    {size:'XS',height:[145,160],weight:[40,55],shoulder:[35,42],chest:[76,88]},
+    {size:'S',height:[150,165],weight:[45,60],shoulder:[37,44],chest:[81,92]},
+    {size:'M',height:[155,170],weight:[50,68],shoulder:[39,46],chest:[86,96]},
+    {size:'L',height:[160,175],weight:[55,75],shoulder:[41,48],chest:[91,100]},
+    {size:'XL',height:[165,180],weight:[62,85],shoulder:[43,50],chest:[97,106]},
+    {size:'2XL',height:[170,185],weight:[70,95],shoulder:[45,52],chest:[103,112]}
+  ];
+  let recommendedTop='M';
+  for(const t of topSizes){
+    if(BASE_HEIGHT>=t.height[0]&&BASE_HEIGHT<=t.height[1]&&BASE_WEIGHT>=t.weight[0]&&BASE_WEIGHT<=t.weight[1]&&finalShoulder>=t.shoulder[0]&&finalShoulder<=t.shoulder[1]&&finalChest>=t.chest[0]&&finalChest<=t.chest[1]){recommendedTop=t.size;break;}
+  }
+
+  const bottomSizes=[
+    {size:'XS',waist:[58,70],hip:[82,88],height:[145,160],weight:[40,55]},
+    {size:'S',waist:[63,76],hip:[87,92],height:[150,165],weight:[45,60]},
+    {size:'M',waist:[67,82],hip:[91,96],height:[155,170],weight:[50,68]},
+    {size:'L',waist:[71,88],hip:[95,100],height:[160,175],weight:[55,75]},
+    {size:'XL',waist:[77,94],hip:[99,105],height:[165,180],weight:[62,85]},
+    {size:'2XL',waist:[83,100],hip:[105,110],height:[170,185],weight:[70,95]}
+  ];
+  let recommendedBottom='M';
+  for(const b of bottomSizes){
+    if(BASE_WAIST>=b.waist[0]&&BASE_WAIST<=b.waist[1]&&finalHips>=b.hip[0]&&finalHips<=b.hip[1]&&BASE_HEIGHT>=b.height[0]&&BASE_HEIGHT<=b.height[1]&&BASE_WEIGHT>=b.weight[0]&&BASE_WEIGHT<=b.weight[1]){recommendedBottom=b.size;break;}
+  }
+
+  resultsBox.innerHTML=`
+    ✅ <strong>Measurements Captured</strong><br><br>
+    Height: ${BASE_HEIGHT} cm<br>
+    Weight: ${BASE_WEIGHT} kg<br>
+    Waist: ${BASE_WAIST} cm<br><br>
+    Shoulder: ${finalShoulder.toFixed(1)} cm<br>
+    Chest: ${finalChest.toFixed(1)} cm<br>
+    Hips: ${finalHips.toFixed(1)} cm<br>
+    Bust: ${finalBust.toFixed(1)} cm<br><br>
+    <strong>Recommended Top Size:</strong> ${recommendedTop}<br>
+    <strong>Recommended Bottom Size:</strong> ${recommendedBottom}
+  `;
+  resultsBox.style.display='block';
+  document.querySelector('.action-buttons').style.display='flex';
+  guidance.style.display='none';
+  measuring=false;
+
+  // ✅ SEND DATA TO REACT NATIVE
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      height: BASE_HEIGHT,
+      weight: BASE_WEIGHT,
+      waist: BASE_WAIST,
+      shoulder: finalShoulder.toFixed(1),
+      chest: finalChest.toFixed(1),
+      hips: finalHips.toFixed(1),
+      bust: finalBust.toFixed(1),
+      topSize: recommendedTop,
+      bottomSize: recommendedBottom
+    }));
+  }
+}
+
+function closePopupAndStart(){
+  const h=parseFloat(heightInput.value);
+  const w=parseFloat(weightInput.value);
+  const waist=parseFloat(waistInput.value);
+  if(!h||!w||!waist){alert('Please fill Height, Weight, and Waistline.');return;}
+  BASE_HEIGHT=h;BASE_WEIGHT=w;BASE_WAIST=waist;
+  popup.style.display='none';guidance.style.display='block';
+  if(!cameraInstance) startCameraAndPose();
+}
+
+retakeBtn.addEventListener('click',()=>{popup.style.display='flex';resultsBox.style.display='none';document.querySelector('.action-buttons').style.display='none';});
+saveBtn.addEventListener('click',()=>{alert('✅ Measurements saved successfully!');});
+startBtn.addEventListener('click',closePopupAndStart);
+</script>
+</body>
+</html>

@@ -1,260 +1,138 @@
-import { FontAwesome } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
-import { useState } from 'react';
-import { db, auth } from '../firebase/config';
-import { collection, addDoc } from 'firebase/firestore';
-import { InteractionManager } from 'react-native';
-
+// BodyMeasurement.js
+import React, { useState } from "react";
 import {
-  Modal,
-  Pressable,
-  StyleSheet,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-} from 'react-native';
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { FontAwesome } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
-//colors
-const colors = {
-  bg: "#382a47",
-  purple: "#9747FF",
-  main: "#1f1926",
-  text: "#bba1d4",
-  white: "#EDEDED",
-};
-
-export default function BodyMeasurements() {
+export default function BodyMeasurement() {
   const navigation = useNavigation();
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
+  const [waist, setWaist] = useState("");
 
-  const [formData, setFormData] = useState({
-    height: '',
-    weight: '',
-    waist: '',
-  });
-
-  const [showPopup, setShowPopup] = useState(false);
-
-  const handleChange = (name, value) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async () => {
-    const user = auth.currentUser;
-
-    if (!user) {
-      alert('You must be logged in.');
+  const handleNext = () => {
+    if (!height || !weight || !waist) {
+      alert("Please fill in all fields.");
       return;
     }
-
-    try {
-     
-      const measurementsRef = collection(db, 'measurements');
-      await addDoc(measurementsRef, {
-        ...formData,
-        userId: user.uid,
-      });
-
-      console.log('Measurements saved:', formData);
-      setShowPopup(true);
-    } catch (error) {
-      console.error('Error saving measurements:', error);
-      alert('Something went wrong while saving your data.');
-    }
+    navigation.navigate("BodyTracking", {
+      height,
+      weight,
+      waist,
+    });
   };
 
   return (
-    <LinearGradient colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']}style={{ flex: 1 }}>
-      <View style={styles.container}>
-        <View style={styles.inner}>
-          <TouchableOpacity style={styles.header} onPress={() => navigation.goBack()}>
-            <FontAwesome name="arrow-left" size={16} color="black" />
-            <Text style={styles.title}>Body Measurements</Text>
+    <LinearGradient
+      colors={["hsl(266, 100%, 79%)", "hsl(0, 0%, 100%)"]}
+      style={{ flex: 1 }}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.container}>
+          <TouchableOpacity
+            style={styles.header}
+            onPress={() => navigation.goBack()}
+          >
+            <FontAwesome name="arrow-left" size={18} color="black" />
+            <Text style={styles.title}>Input Basic Measurements</Text>
           </TouchableOpacity>
-
-           <Text style={styles.subtitle}>Measurement Details</Text>
 
           <View style={styles.form}>
             <Text style={styles.label}>Height (cm)</Text>
             <TextInput
               style={styles.input}
-              value={formData.height}
-              onChangeText={value => handleChange('height', value)}
               keyboardType="numeric"
+              value={height}
+              onChangeText={setHeight}
+              placeholder="e.g. 170"
             />
 
-
-            <View style= {styles.inputWrapper}>
             <Text style={styles.label}>Weight (kg)</Text>
             <TextInput
               style={styles.input}
-              value={formData.weight}
-              onChangeText={value => handleChange('weight', value)}
               keyboardType="numeric"
+              value={weight}
+              onChangeText={setWeight}
+              placeholder="e.g. 60"
             />
 
-            <Text style={styles.label}>Waist (cm)</Text>
+            <Text style={styles.label}>Waistline (cm)</Text>
             <TextInput
               style={styles.input}
-              value={formData.waist}
-              onChangeText={value => handleChange('waist', value)}
               keyboardType="numeric"
+              value={waist}
+              onChangeText={setWaist}
+              placeholder="e.g. 80"
             />
-            </View>
 
-            <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-              <Text style={{ color: 'white', fontSize: 16, fontFamily: "KronaOne" }}>Next</Text>
+            <TouchableOpacity style={styles.button} onPress={handleNext}>
+              <Text style={styles.buttonText}>Next</Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        <Modal visible={showPopup} transparent animationType="fade">
-          <View style={styles.popupOverlay}>
-            <Pressable style={styles.overlayTouchable} onPress={() => setShowPopup(false)} />
-            <View style={styles.popupBox}>
-              <Text style={styles.popupText}>Allow the application to access your camera?</Text>
-              <View style={styles.popupButtons}>
-                <TouchableOpacity
-                  style={styles.popupButtonYes}
-                  onPress={() => {
-                    setShowPopup(false);
-                    InteractionManager.runAfterInteractions(() => {
-                      navigation.navigate('BodyTracking');
-                    });
-                  }}
-                >
-                  <Text style={{ color: '#fff',  fontSize: 15}}>Yes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.popupButtonNo}
-                  onPress={() => setShowPopup(false)}
-                >
-                  <Text style={{ color: '#fff', fontSize: 15 }}>No</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
   container: {
-    flex: 1,
-    position: 'relative',
-    paddingHorizontal: 15,
-    paddingTop: 70,
-    fontFamily: 'System',
-  },
-  inner: {
-    maxWidth: 330,
-    alignSelf: 'center',
-    width: '100%',
+    padding: 25,
+    flexGrow: 1,
+    justifyContent: "center",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 17,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 30,
   },
   title: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 5,
-    fontFamily: "KronaOne",
-  },
-  subtitle: {
-    fontSize: 17,
-    marginTop: 40,
-    marginBottom: 5,
-    fontWeight:'600',
-    color: colors.main,
-    textAlign: "left",
-    padding: 20,
-    fontFamily: "KronaOne",
-
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#1f1926",
   },
   form: {
-    width: "100%",
-    paddingHorizontal: 15,
-    marginTop: 10,
+    backgroundColor: "rgba(255,255,255,0.8)",
+    borderRadius: 16,
+    padding: 25,
   },
   label: {
-    color: colors.main,
-    fontSize: 14,
-    textAlign: "left",
+    fontSize: 16,
+    color: "#1f1926",
+    marginBottom: 5,
   },
   input: {
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.bg,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    paddingLeft: 20,
-    borderRadius: 10,
-    fontSize: 16,
-    height: 55,
-    color: colors.bg,
-    marginVertical: 6,
-    marginBottom: 30,
-    color: colors.bg,
-    width: "100%",
-  },
-   inputWrapper: {
-    position: "relative",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    padding: 12,
+    marginBottom: 20,
   },
   button: {
-    backgroundColor: '#9747FF',
-    padding: 20,
+    backgroundColor: "#9747FF",
     borderRadius: 8,
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    width: "100%",
+    padding: 15,
+    alignItems: "center",
     marginTop: 10,
-    fontSize: 30,
   },
-  popupOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'flex-end',
-
-  },
-  popupBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.57)',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 30,
-    alignItems: 'center',
-  },
-  popupText: {
-    fontSize: 17,
-    marginBottom: 35,
-    color: '#333',
-  },
-  popupButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '120%',
-  },
-  popupButtonYes: {
-    backgroundColor: '#9747FF',
-    padding: 14,
-    borderRadius: 6,
-    minWidth: 150,
-    alignItems: 'center',
-  },
-  popupButtonNo: {
-    backgroundColor: '#A9A9A9',
-    padding: 14,
-    borderRadius: 6,
-    minWidth: 150,
-    alignItems: 'center',
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "681286310762",
+    "project_id": "try-on-c05f0",
+    "storage_bucket": "try-on-c05f0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:681286310762:android:8b76d70c1cb4d4747c6313",
+        "android_client_info": {
+          "package_name": "com.example.tryfit_capstone"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzWIy3s311V5YnjSrTUbhtAzClzWSihms"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:681286310762:android:68a54b213e0598927c6313",
+        "android_client_info": {
+          "package_name": "com.tryfit.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzWIy3s311V5YnjSrTUbhtAzClzWSihms"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   Modal,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
@@ -30,11 +31,17 @@ export default function BodyMeasurements() {
     height: '',
     weight: '',
     waist: '',
+    shoulder: '',
+    chest: '',
+    hips: '',
+    bust: '',
   });
 
+  const [recommendedSize, setRecommendedSize] = useState('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  const [docId, setDocId] = useState(null); // Store Firestore document ID
+  const [docId, setDocId] = useState(null);
 
+  // ✅ Fetch user measurements
   useEffect(() => {
     const fetchMeasurements = async () => {
       try {
@@ -45,18 +52,25 @@ export default function BodyMeasurements() {
           collection(db, 'measurements'),
           where('userId', '==', user.uid)
         );
-
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
           const docSnap = querySnapshot.docs[0];
           const docData = docSnap.data();
-          setDocId(docSnap.id); // save the doc ID to update later
+          setDocId(docSnap.id);
+
           setFormData({
             height: docData.height || '',
             weight: docData.weight || '',
             waist: docData.waist || '',
+            shoulder: docData.shoulder || '',
+            chest: docData.chest || '',
+            hips: docData.hips || '',
+            bust: docData.bust || '',
           });
+
+          // Compute size right away if data exists
+          computeRecommendedSize(docData);
         }
       } catch (error) {
         console.error('Error fetching measurements:', error);
@@ -67,9 +81,38 @@ export default function BodyMeasurements() {
   }, []);
 
   const handleChange = (name, value) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const updated = { ...formData, [name]: value };
+    setFormData(updated);
+    computeRecommendedSize(updated);
   };
 
+  // ✅ Simple size recommendation logic
+  const computeRecommendedSize = (data) => {
+    const h = parseFloat(data.height);
+    const w = parseFloat(data.weight);
+    const chest = parseFloat(data.chest);
+    const hips = parseFloat(data.hips);
+    const waist = parseFloat(data.waist);
+
+    if (!h || !w || !chest || !hips || !waist) {
+      setRecommendedSize('');
+      return;
+    }
+
+    // Simple logic (you can refine this later)
+    let size = 'M';
+    const avg = (waist + chest + hips) / 3;
+
+    if (avg < 80) size = 'XS';
+    else if (avg < 90) size = 'S';
+    else if (avg < 100) size = 'M';
+    else if (avg < 110) size = 'L';
+    else size = 'XL';
+
+    setRecommendedSize(size);
+  };
+
+  // ✅ Save / update Firestore
   const handleSave = async () => {
     try {
       const user = auth.currentUser;
@@ -78,22 +121,16 @@ export default function BodyMeasurements() {
         return;
       }
 
+      const saveData = {
+        ...formData,
+        userId: user.uid,
+        recommendedSize,
+      };
+
       if (docId) {
-        // Update existing document
-        await setDoc(
-          doc(db, 'measurements', docId),
-          {
-            ...formData,
-            userId: user.uid,
-          },
-          { merge: true } // merge so it overwrites fields but keeps others if any
-        );
+        await setDoc(doc(db, 'measurements', docId), saveData, { merge: true });
       } else {
-        // Create new document with auto ID
-        await setDoc(doc(collection(db, 'measurements')), {
-          ...formData,
-          userId: user.uid,
-        });
+        await setDoc(doc(collection(db, 'measurements')), saveData);
       }
 
       setShowSuccessPopup(true);
@@ -109,36 +146,42 @@ export default function BodyMeasurements() {
         <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
           <FontAwesome name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Body Measurement</Text>
+        <Text style={styles.headerTitle}>Body Measurements</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {/* Form */}
-      <View style={styles.form}>
-        <Text style={styles.label}>Height (cm)</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.height}
-          onChangeText={value => handleChange('height', value)}
-          keyboardType="numeric"
-        />
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.form}>
+          {[
+            { label: 'Height (cm)', key: 'height' },
+            { label: 'Weight (kg)', key: 'weight' },
+            { label: 'Waist (cm)', key: 'waist' },
+            { label: 'Shoulder (cm)', key: 'shoulder' },
+            { label: 'Chest (cm)', key: 'chest' },
+            { label: 'Hips (cm)', key: 'hips' },
+            { label: 'Bust (cm)', key: 'bust' },
+          ].map((field) => (
+            <View key={field.key}>
+              <Text style={styles.label}>{field.label}</Text>
+              <TextInput
+                style={styles.input}
+                value={formData[field.key]}
+                onChangeText={(value) => handleChange(field.key, value)}
+                keyboardType="numeric"
+              />
+            </View>
+          ))}
 
-        <Text style={styles.label}>Weight (kg)</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.weight}
-          onChangeText={value => handleChange('weight', value)}
-          keyboardType="numeric"
-        />
-
-        <Text style={styles.label}>Waist (cm)</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.waist}
-          onChangeText={value => handleChange('waist', value)}
-          keyboardType="numeric"
-        />
-      </View>
+          {/* Recommended size box */}
+          {recommendedSize ? (
+            <View style={styles.sizeBox}>
+              <Text style={styles.sizeTitle}>Recommended Size</Text>
+              <Text style={styles.sizeValue}>{recommendedSize}</Text>
+            </View>
+          ) : null}
+        </View>
+      </ScrollView>
 
       {/* Save Button */}
       <View style={styles.saveWrapper}>
@@ -166,7 +209,6 @@ export default function BodyMeasurements() {
 }
 
 const styles = StyleSheet.create({
-  /* your existing styles here */
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -177,14 +219,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
   },
   form: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   label: {
     fontSize: 15,
@@ -202,6 +244,26 @@ const styles = StyleSheet.create({
     paddingLeft: 20,
     paddingHorizontal: 15,
     paddingVertical: 14,
+  },
+  sizeBox: {
+    backgroundColor: '#F5F0FF',
+    borderWidth: 1,
+    borderColor: '#C7A6FF',
+    borderRadius: 10,
+    padding: 20,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  sizeTitle: {
+    fontSize: 16,
+    color: '#6A11CB',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  sizeValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#9747FF',
   },
   saveWrapper: {
     position: 'absolute',
