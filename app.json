@@ -16,6 +16,7 @@
     },
 
     "android": {
+      "jsEngine": "hermes",
       "package": "com.tryfit.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {

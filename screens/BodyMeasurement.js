@@ -1,35 +1,16 @@
 // BodyMeasurement.js
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { FontAwesome } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
 export default function BodyMeasurement() {
   const navigation = useNavigation();
-  const [height, setHeight] = useState("");
-  const [weight, setWeight] = useState("");
-  const [waist, setWaist] = useState("");
 
   const handleNext = () => {
-    if (!height || !weight || !waist) {
-      alert("Please fill in all fields.");
-      return;
-    }
-    navigation.navigate("BodyTracking", {
-      height,
-      weight,
-      waist,
-    });
+    // Navigate to BodyTracking.js
+    navigation.navigate("BodyTracking");
   };
 
   return (
@@ -37,61 +18,37 @@ export default function BodyMeasurement() {
       colors={["hsl(266, 100%, 79%)", "hsl(0, 0%, 100%)"]}
       style={{ flex: 1 }}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.container}>
-          <TouchableOpacity
-            style={styles.header}
-            onPress={() => navigation.goBack()}
-          >
-            <FontAwesome name="arrow-left" size={18} color="black" />
-            <Text style={styles.title}>Input Basic Measurements</Text>
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.header} onPress={() => navigation.goBack()}>
+          <FontAwesome name="arrow-left" size={18} color="black" />
+          <Text style={styles.title}>Body Measurements</Text>
+        </TouchableOpacity>
+
+        <View style={styles.card}>
+          <Text style={styles.infoText}>
+            In the next screen, we will use your camera to automatically capture your
+            body measurements including Shoulder-width, Chest-width, Hips, and Bust.
+          </Text>
+
+          <Text style={styles.infoText}>
+            These measurements will be used to recommend the best-fitting clothing sizes
+            for your body, so you get accurate and comfortable fits every time.
+          </Text>
+
+          {/* Next Button */}
+          <TouchableOpacity style={styles.button} onPress={handleNext}>
+            <Text style={styles.buttonText}>Next</Text>
           </TouchableOpacity>
-
-          <View style={styles.form}>
-            <Text style={styles.label}>Height (cm)</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={height}
-              onChangeText={setHeight}
-              placeholder="e.g. 170"
-            />
-
-            <Text style={styles.label}>Weight (kg)</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={weight}
-              onChangeText={setWeight}
-              placeholder="e.g. 60"
-            />
-
-            <Text style={styles.label}>Waistline (cm)</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={waist}
-              onChangeText={setWaist}
-              placeholder="e.g. 80"
-            />
-
-            <TouchableOpacity style={styles.button} onPress={handleNext}>
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+      </View>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     padding: 25,
-    flexGrow: 1,
     justifyContent: "center",
   },
   header: {
@@ -105,23 +62,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1f1926",
   },
-  form: {
-    backgroundColor: "rgba(255,255,255,0.8)",
+  card: {
+    backgroundColor: "rgba(255,255,255,0.85)",
     borderRadius: 16,
     padding: 25,
   },
-  label: {
+  infoText: {
     fontSize: 16,
     color: "#1f1926",
-    marginBottom: 5,
-  },
-  input: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 12,
-    marginBottom: 20,
+    marginBottom: 15,
+    textAlign: "center",
   },
   button: {
     backgroundColor: "#9747FF",
