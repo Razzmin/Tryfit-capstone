@@ -111,7 +111,7 @@ useEffect(() => {
       <View style = {{ flex: 1}}>
       <FlatList
         data={checkoutItems}
-        keyExtractor={(item) => item.id + item.color}
+        keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={{ flexGrow: 1,
             justifyContent:
@@ -134,7 +134,6 @@ useEffect(() => {
         </TouchableOpacity>
         </View>
 
-     <Text style={styles.itemColor}> Color: {item.color}</Text>
     <View style={styles.itemBottomRow}>
       <Text style={styles.itemPrice}>₱{item.price}</Text>
       <Text style={styles.ItemQuantity}> ×{item.quantity}</Text>
@@ -251,8 +250,7 @@ useEffect(() => {
                               productId: item.productId,
                               productName: item.productName,
                               quantity: item.quantity,
-                              price: item.price,
-                              color: item.color || "-",
+                              price: item.price, 
                               size: item.size || "-",
                             })),
                           };
@@ -271,7 +269,6 @@ useEffect(() => {
                           });
 
 
-                          // ✅ Decrease stock for each item ordered
                           for (const item of checkoutItems) {
                             const productRef = doc(db, "products", item.productId);
                             const productSnap = await getDoc(productRef);
@@ -279,23 +276,15 @@ useEffect(() => {
                             if (productSnap.exists()) {
                               const productData = productSnap.data();
                               const currentStock = productData.stock || {};
-
-                              // Access stock[color][size]
-                              const colorStock = currentStock[item.color] || {};
-                              const currentQty = colorStock[item.size] || 0;
-
+                              const currentQty = productData.stock?.[item.size] || 0;
                               const newQty = Math.max(currentQty - item.quantity, 0);
 
-                              // Update Firestore
                               await setDoc(
                                 productRef,
                                 {
                                   stock: {
                                     ...currentStock,
-                                    [item.color]: {
-                                      ...colorStock,
-                                      [item.size]: newQty,
-                                    },
+                                    [item.size]: newQty,
                                   },
                                 },
                                 { merge: true }
@@ -395,11 +384,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     flex: 1,
   },
-  itemColor: {
-    fontSize: 12,
-    color: '#000000ff',
-    marginTop: 5,
-  }, 
   deleteButton: {
     fontSize: 15,
     color: '#000000ff',

@@ -199,9 +199,6 @@ export default function Orders() {
                     <Text style={styles.productQty}>
                       Qty: {item.quantity || 1}
                     </Text>
-                    <Text style={styles.productColor}>
-                      Color: {item.color || '-'}
-                    </Text>
                   </View>
                 </View>
 
@@ -331,11 +328,7 @@ const styles = StyleSheet.create({
   productQty: {
     fontSize: 12,
     color: '#666',
-  },
-  productColor: {
-    fontSize: 12,
-    color: '#666',
-  },
+  }, 
   expectedDelivery: {
     marginTop: 8,
     marginBottom: 4,

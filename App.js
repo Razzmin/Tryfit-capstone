@@ -34,6 +34,8 @@ import Cancelled from './screens/Cancelled';
 import TrackOrder from './screens/TrackOrder';     
 import SplashScreen from './screens/splashscreen';
 import ToRate from './screens/ToRate';
+import TryOnWebAR from './screens/TryOnWebAR';
+
 
               
 
@@ -97,6 +99,8 @@ export default function App() {
         <Stack.Screen name="SearchResults" component={SearchResults} />
         <Stack.Screen name="CheckoutSummary" component={CheckoutSummary} />
         <Stack.Screen name="ToRate" component={ToRate} />
+        <Stack.Screen name="TryOnWebAR" component={TryOnWebAR} />
+
       </Stack.Navigator> 
       )}
     </NavigationContainer>

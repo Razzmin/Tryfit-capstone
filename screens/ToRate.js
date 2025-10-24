@@ -131,8 +131,7 @@ export default function ToRate() {
         await addDoc(collection(db, "productReviews"), {
           productId: item.productId,
           productName: item.productName,
-          size: item.size,
-          color: item.color,
+          size: item.size, 
           rating: userRating,
           comment: commentText, // may be empty string
           username: anonymous ? "Anonymous" : reviewerUsername,
@@ -172,8 +171,7 @@ export default function ToRate() {
           items.map((item) => (
             <View key={item.id} style={styles.itemCard}>
               <Text style={styles.productName}>{item.productName}</Text>
-              <Text style={styles.productDetails}>Size: {item.size}</Text>
-              <Text style={styles.productDetails}>Color: {item.color}</Text>
+              <Text style={styles.productDetails}>Size: {item.size}</Text> 
 
               <Text style={styles.ratingLabel}>Rate your Product:</Text>
 

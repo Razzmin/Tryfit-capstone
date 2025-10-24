@@ -67,7 +67,7 @@ export default function ShoppingCart() {
 
   const toggleSelected = async (id, color) => {
     try {
-      const item = cartItems.find(i => i.id === id && i.color === color);
+      const item = cartItems.find(i => i.id === id);
       if (!item) return;
       const docRef = doc(db, 'cartItems', id);
       await updateDoc(docRef, { selected: !item.selected });
@@ -77,26 +77,31 @@ export default function ShoppingCart() {
     }
   };
 
-  const getAvailableStock = async (productId, color) => {
+  const getAvailableStock = async (productId) => {
     try {
       const productRef = doc(db, "products", productId);
       const productSnap = await getDoc(productRef);
+
       if (productSnap.exists()) {
-        const data = productSnap.data();
-        if (data.stock && data.stock[color]) {
-          return Object.values(data.stock[color]).reduce((a, b) => a + b, 0);
+        const data = productSnap.data(); 
+        
+        if (data.stock) {
+          return Object.values(data.stock).reduce((a, b) => a + b, 0);
         }
+
         return 0;
       }
     } catch (err) {
       console.error("Error fetching stock:", err);
     }
+
     return 0;
   };
 
+
   const increaseQuantity = async (id, color, productId) => {
     try {
-      const item = cartItems.find(i => i.id === id && i.color === color);
+      const item = cartItems.find(i => i.id === id);
       if (!item) return;
 
       const stock = await getAvailableStock(productId, color);
@@ -120,7 +125,7 @@ export default function ShoppingCart() {
 
   const decreaseQuantity = async (id, color) => {
     try {
-      const item = cartItems.find(i => i.id === id && i.color === color);
+      const item = cartItems.find(i => i.id === id);
       if (!item || item.quantity <= 1) return;
       const docRef = doc(db, "cartItems", id);
       await updateDoc(docRef, { quantity: item.quantity - 1 });
@@ -197,19 +202,16 @@ export default function ShoppingCart() {
               <ItemImage source={{ uri: item.productImage || 'https://via.placeholder.com/70' }} />
               <ItemInfo>
                 <ItemName>{item.productName}</ItemName>
-                <Text style={{ fontSize: 12, color: 'black', paddingBottom: 10 }}>
-                  Color: {item.color}
-                </Text>
                 <ItemFooter>
                   <Text style={{ fontSize: 16, fontWeight: 'bold', color:'#9747FF' }}>
                     ₱{item.price}
                   </Text>
                   <QuantityControl>
-                    <QtyButton disabled={item.quantity <= 1} onPress={() => decreaseQuantity(item.id, item.color)}>
+                    <QtyButton disabled={item.quantity <= 1} onPress={() => decreaseQuantity(item.id)}>
                       <Text style={{ fontSize: 18, opacity: item.quantity <= 1 ? 0.3 : 1 }}>−</Text>
                     </QtyButton>
                     <ItemQty>{item.quantity}</ItemQty>
-                    <QtyButton onPress={() => increaseQuantity(item.id, item.color, item.productId)}>
+                    <QtyButton onPress={() => increaseQuantity(item.id, item.productId)}> 
                       <Text style={{ fontSize: 18 }}>＋</Text>
                     </QtyButton>
                   </QuantityControl>

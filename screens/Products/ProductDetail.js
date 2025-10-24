@@ -66,6 +66,7 @@ import {
 
 import AntDesign from '@expo/vector-icons/AntDesign'
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as Linking from 'expo-linking';
 
 const db = getFirestore();
 const auth = getAuth();
@@ -82,9 +83,7 @@ export default function ProductDetail() {
   
 
   const [activeImage, setActiveImage] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(colors[0] || null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalSelectedColor, setModalSelectedColor] = useState(colors[0] || null);
   const [modalQuantity, setModalQuantity] = useState(1); 
   const [selectedSize, setSelectedSize] = useState(null);
 
@@ -92,20 +91,11 @@ export default function ProductDetail() {
   const { addNotification } = useContext(NotificationContent);
   const { addToCart } = useContext(CartContext);
   const [showAllReviews, setShowAllReviews] = useState(false);
-  const [newComment, setNewComment] = useState('');
   const [reviews, setReviews] = useState([]);
   const [visibleMenuId, setVisibleMenuId] = useState(null);
 
   const reviewsRef = collection(db, 'productReviews');
   const cartRef = collection(db, 'cartItems');
-  const colorMap = {
-        Black: '#000000',
-        White: '#FFFFFF',
-        Red: '#FF0000',
-        Yellow: '#FFFF00',
-        Blue: '#0000FF', 
-      };
-
   useEffect(() => {
     const q = query(
       reviewsRef,
@@ -137,35 +127,29 @@ export default function ProductDetail() {
       console.error('Error deleting comment:', err);
     }
   };
-
-  // --- helper to safely get stock ---
+  
   const safeStock = product?.stock || {};
 
-  // check total stock for a color
-  const getColorStock = (color) => {
-    const sizes = safeStock[color] || {};
-    return Object.values(sizes).reduce((sum, qty) => sum + qty, 0);
+
+  const getTotalStock = () => {
+    return Object.values(safeStock || {}).reduce((sum, qty) => sum + (Number(qty) || 0), 0);
   };
 
-  // get stock for specific color + size
-  const getSizeStock = (color, size) => {
-    return safeStock[color]?.[size] ?? 0;
+  
+  const getSizeStock = (size) => {
+    return Number(safeStock?.[size]) || 0;
   };
 
 
   const saveCartItem = async () => {
-  if (!user) {
-    Alert.alert('Error', 'You must be logged in to add to cart.');
-    return;
-  }
-  if (!modalSelectedColor || !selectedSize) {
-    Alert.alert('Error', 'Please select color and size.');
-    return;
-  }
+ if (!selectedSize) {
+  Alert.alert('Error', 'Please select a size.');
+  return;
+}
 
-  const stockAvailable = getSizeStock(modalSelectedColor, selectedSize);
+  const stockAvailable = getSizeStock(selectedSize);
   if (modalQuantity > stockAvailable) {
-    Alert.alert('Error', `Only ${stockAvailable} item(s) available for this option.`);
+    Alert.alert('Error', `Only ${stockAvailable} item(s) available for this size.`);
     return;
   }
 
@@ -178,7 +162,6 @@ export default function ProductDetail() {
     productId: product.id,
     productName: product.name,
     productImage: product.imageUrl,
-    color: modalSelectedColor,
     size: selectedSize,
     quantity: modalQuantity,
     price: product.price,
@@ -189,13 +172,12 @@ export default function ProductDetail() {
     // ✅ Use setDoc to assign our own ID
     await setDoc(doc(cartRef, cartItemCode), cartItem);
 
-   // ✅ Also save notification in "notifications" collection
+  
     await addDoc(collection(db, "notifications"), {
       userId: user.uid,
       title: "Item Added to Cart",
-      message: `${product.name} (${modalSelectedColor}, ${selectedSize}) was added to your cart.`,
+      message: `${product.name} ( ${selectedSize}) was added to your cart.`,
       productName: product.name,
-      color: modalSelectedColor,
       size: selectedSize,
       timestamp: serverTimestamp(),
       read: false, // default unread
@@ -214,17 +196,14 @@ export default function ProductDetail() {
   }
 };
 
-
-
-  
-  const incrementQuantity = () => {
+ const incrementQuantity = () => {
   const stockAvailable = selectedSize
-    ? getSizeStock(modalSelectedColor, selectedSize)
-    : getColorStock(modalSelectedColor);
+  ? getSizeStock(selectedSize)
+  : getTotalStock();
 
-  if (modalQuantity < stockAvailable) {
-    setModalQuantity(modalQuantity + 1);
-  }
+if (modalQuantity < stockAvailable) {
+  setModalQuantity(modalQuantity + 1);
+}
 };
 
 const decrementQuantity = () => {
@@ -233,7 +212,14 @@ const decrementQuantity = () => {
   }
 };
 
+const handleTryOn = () => {
+  if (!product?.arUrl) {
+    Alert.alert("AR not available", "Sorry, this product doesn’t have an AR try-on link yet.");
+    return;
+  }
 
+  navigation.navigate("TryOnWebAR", { arUrl: product.arUrl });
+};
 
   return (
     <>
@@ -290,24 +276,6 @@ const decrementQuantity = () => {
               <ProductPrice>{product.price}</ProductPrice>
               <RatingText> ★★★★☆ {product.rating} | {product.sold} Sold </RatingText>
 
-              <ColorWrapper>
-                <RatingText>Color Variation</RatingText>
-                <ColorRow>
-                  {colors.map((color, i) => (
-                    <ColorCircle
-                      key={i}
-                      style={{
-                        backgroundColor: colorMap[color] || '#ccc', // fallback if color not in map
-                        borderColor: selectedColor === color ? '#9747FF' : '#ccc',
-                        borderWidth: selectedColor === color ? 2 : 1,
-                      }}
-                      onPress={() => setSelectedColor(color)}
-                    />
-                  ))}
-                </ColorRow>
-              </ColorWrapper>
-
-
               <SectionTitle>Product Details</SectionTitle>
               {product.description?.split('\n').map((line, index) => (
                 <Text key={index}>• {line.trim()}</Text>
@@ -349,9 +317,9 @@ const decrementQuantity = () => {
                           )}
                         </View>
 
-                        {/* ✅ show color + size */}
+                      
                         <VariationText>
-                          Size: {item.size} • Color: {item.color}
+                          Size: {item.size}
                         </VariationText>
 
                         {/* ✅ stars */}
@@ -393,9 +361,10 @@ const decrementQuantity = () => {
               <AddCartText>Add to Cart</AddCartText>
             </AddCartBtn>
 
-            <AddCartBtn onPress={() => console.log('Try on')}>
+            <AddCartBtn onPress={handleTryOn}>
               <AddCartText>Try-on</AddCartText>
             </AddCartBtn>
+
           </NavBar>
         </ProductContainer>
       </TouchableWithoutFeedback>
@@ -442,55 +411,13 @@ const decrementQuantity = () => {
                     {product.name}
                   </Text>
 
-                  {/* Color selection */}
-                    <View style={{ marginBottom: 10 }}>
-                      <Text style={{ marginBottom: 6 }}>Choose Color:</Text>
-                      {Object.keys(safeStock).map((color) => {
-                        const totalStock = getColorStock(color);
-
-                        return (
-                          <TouchableOpacity
-                            key={color}
-                            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}
-                            onPress={() => {
-                              setModalSelectedColor(color);
-                              setModalQuantity(1);
-                            }}
-                          >
-                            <View
-                              style={{
-                                width: 20,
-                                height: 20,
-                                borderRadius: 10,
-                                borderWidth: 2,
-                                borderColor: modalSelectedColor === color ? '#9747FF' : '#ccc',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginRight: 8,
-                              }}
-                            >
-                              {modalSelectedColor === color && (
-                                <View
-                                  style={{
-                                    width: 10,
-                                    height: 10,
-                                    borderRadius: 5,
-                                    backgroundColor: '#9747FF',
-                                  }}
-                                />
-                              )}
-                            </View>
-                            <Text style={{ fontSize: 16 }}> {color} </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                  
                     {/* Size selection */}
-                    {modalSelectedColor && (
+                    {safeStock && (
                       <View style={{ marginBottom: 10 }}>
                         <Text style={{ marginBottom: 6 }}>Choose Size:</Text>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                          {Object.entries(safeStock[modalSelectedColor] || {}).map(([size, qty]) => (
+                          {Object.entries(safeStock || {}).map(([size, qty]) => (
                             <TouchableOpacity
                               key={size}
                               disabled={qty === 0}
@@ -510,12 +437,13 @@ const decrementQuantity = () => {
                                 opacity: qty === 0 ? 0.5 : 1,
                               }}
                             >
-                              <Text style={{ fontSize: 16 }}> {size}  </Text>
+                              <Text style={{ fontSize: 16 }}>{size}</Text>
                             </TouchableOpacity>
                           ))}
                         </View>
                       </View>
-                    )} 
+                    )}
+
 
                   {/* Stock, Quantity, and Price + Add Button Row */}
                   <View style={{ marginBottom: 16 }}>
@@ -544,10 +472,10 @@ const decrementQuantity = () => {
                       {/* Increment Button */}
                       <TouchableOpacity
                         onPress={incrementQuantity}
-                        disabled={modalQuantity >= getSizeStock(modalSelectedColor, selectedSize)}
+                        disabled={modalQuantity >= getSizeStock(selectedSize)}
                         style={{
                           backgroundColor:
-                            modalQuantity >= getSizeStock(modalSelectedColor, selectedSize) ? "#ddd" : "#9747FF",
+                            modalQuantity >= getSizeStock(selectedSize) ? "#ddd" : "#9747FF",
                           paddingHorizontal: 8,
                           paddingVertical: 4,
                           borderRadius: 4,
@@ -571,8 +499,8 @@ const decrementQuantity = () => {
                       <Text>
                         Stock:{" "}
                         {selectedSize
-                          ? getSizeStock(modalSelectedColor, selectedSize)
-                          : getColorStock(modalSelectedColor)}
+                          ? getSizeStock(selectedSize)
+                          : getTotalStock()}
                       </Text>
                       <Text style={{ fontWeight: "bold", marginTop: 4 }}>
                         Price: ₱{(product.price * modalQuantity).toLocaleString()}

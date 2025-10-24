@@ -117,7 +117,6 @@ export default function ReCheckout({ route, navigation }) {
                   </TouchableOpacity>
                 </View>
 
-                <Text style={styles.itemColor}>Color: {item.color}</Text>
                 <View style={styles.itemBottomRow}>
                   <Text style={styles.itemPrice}>₱{item.price}</Text>
                   <Text style={styles.ItemQuantity}>×{item.quantity}</Text>
@@ -252,8 +251,7 @@ export default function ReCheckout({ route, navigation }) {
                             productId: item.productId || "",
                             productName: item.productName || "",
                             quantity: item.quantity || 1,
-                            price: item.price || 0,
-                            color: item.color || "-",
+                            price: item.price || 0, 
                             size: item.size || "-",
                         })),
                         };
@@ -279,12 +277,9 @@ export default function ReCheckout({ route, navigation }) {
                               productRef,
                               {
                                 stock: {
-                                  ...currentStock,
-                                  [item.color]: {
-                                    ...colorStock,
-                                    [item.size]: newQty,
-                                  },
-                                },
+                                ...currentStock,
+                                [item.size]: newQty,
+                              },
                               },
                               { merge: true }
                             );

@@ -137,7 +137,6 @@ export default function Completed() {
                     <Text style={styles.productName}>{item.productName || item.name}</Text>
                     <Text style={styles.productSize}>Size: {item.size || '-'}</Text>
                     <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
-                    <Text style={styles.productColor}>Color: {item.color || '-'}</Text>
                   </View>
                 </View>
 
