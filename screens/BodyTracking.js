@@ -1,134 +1,94 @@
-import { FontAwesome } from '@expo/vector-icons';
+// BodyTracking.js
+import React, { useRef, useEffect, useState } from 'react';
+import { StyleSheet, View, Platform, Alert, ActivityIndicator } from 'react-native';
+import { WebView } from 'react-native-webview';
+import { getAuth } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
 
- //colors
-const colors = {
-  bg: "#382a47",
-  purple: "#9747FF",
-  main: "#1f1926",
-  text: "#bba1d4",
-  white: "#EDEDED",
-};
-
-export default function BodyTracking() {
+const BodyTracking = () => {
+  const webviewRef = useRef(null);
+  const [uid, setUid] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
-  const [showSuccess, setShowSuccess] = useState(false);
 
- 
-  const handleConfirm = () => {
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      navigation.navigate('LandingPage')
-    }, 2000); 
+  useEffect(() => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (user) {
+      console.log("✅ Logged in user UID:", user.uid);
+      setUid(user.uid);
+      setLoading(false);
+    } else {
+      Alert.alert('⚠️ User not signed in', 'Please sign in before proceeding.');
+    }
+  }, []);
+
+  const onMessage = (event) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+
+      // Handle proceed to home action
+      if (data.action === 'proceedHome') {
+        navigation.navigate('LandingPage'); // Make sure 'LandingPage' exists in your navigator
+        return;
+      }
+
+      console.log('📩 Received measurements:', data);
+
+      Alert.alert(
+        '✅ Measurements Received',
+        `Height: ${data.height} cm
+Weight: ${data.weight} kg
+Waist: ${data.waist} cm
+Shoulder: ${data.shoulder} cm
+Chest: ${data.chest} cm
+Hips: ${data.hips} cm
+Bust: ${data.bust} cm
+Top Size: ${data.topSize}
+Bottom Size: ${data.bottomSize}`
+      );
+    } catch (error) {
+      console.warn('Invalid message from WebView:', error);
+    }
   };
 
+  if (loading) {
+    return <ActivityIndicator size="large" style={{ marginTop: 50 }} />;
+  }
+
+  // Append UID to the HTML file URL
+  const htmlUri =
+    Platform.OS === 'ios'
+      ? `file:///html/mediapipe.html?uid=${uid}`
+      : `file:///android_asset/html/mediapipe.html?uid=${uid}`;
+
   return (
-    <LinearGradient
-      colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.container}
-    >
-      <TouchableOpacity style={styles.header} onPress={() => navigation.goBack()}>
-        <FontAwesome name="arrow-left" size={16} color="black" />
-        <Text style={styles.title}>Body Tracking</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.description}>
-        Please ensure your whole body is visible in the camera for accurate tracking.
-      </Text>
-
-      <View style={styles.arCanvas} />
-
-      <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-        <Text style={styles.confirmText}>Confirm</Text>
-      </TouchableOpacity>
-
-      {showSuccess && (
-        <View style={styles.successPopup}>
-          <Text style={styles.successText}>Successfully Saved!</Text>
-        </View>
-      )}
-    </LinearGradient>
+    <View style={styles.container}>
+      <WebView
+        ref={webviewRef}
+        originWhitelist={['*']}
+        source={{ uri: htmlUri }}
+        onMessage={onMessage}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        mediaPlaybackRequiresUserAction={false}
+        allowsInlineMediaPlayback={true}
+        startInLoadingState={true}
+        style={styles.webview}
+      />
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 60,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 15,
-  },
-  title: {
-    padding: 10,
-    fontSize: 22,
-    color: '#333',
-    marginLeft: 5,
-    fontWeight: '600',
-  },
-  description: {
-    fontSize: 14,
-    color: colors.bg,
-    marginBottom: 10,
-    textAlign: 'left',
-    padding: 10,
-  },
-  arCanvas: {
-    flex: 1,
     backgroundColor: '#000',
-    borderRadius: 10,
-    marginBottom: 30,
   },
-  confirmButton: {
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    backgroundColor: colors.purple,
-    borderRadius: 8,
-    alignItems: 'center',
-    alignSelf: 'center',
-    width: "100%",
-    maxWidth: 350,
-    marginBottom: 80,
-
-  },
-  confirmText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 17,
-  },
- successPopup: {
-  position: 'absolute',
-  top: '50',
-  left: '50',
-  backgroundColor: '#333',
-  paddingVertical: 12,
-  paddingHorizontal: 24,
-  borderRadius: 10,
-  zIndex: 10,
-  width: 200,
-  height: 80,
-  marginLeft: -100,
-  marginTop: -40,
-
-},
-  successText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    textAlign: 'center',
+  webview: {
+    flex: 1,
   },
 });
+
+export default BodyTracking;

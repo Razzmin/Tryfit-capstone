@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Body Distance & Measurement Guide — Smart Setup</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+
+
+<style>
+:root {
+  --accent: #9747FF;
+  --accent-dark: #9747FF;
+  --card-bg: rgba(0,0,0,0.9);
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: Inter, Arial, Helvetica, sans-serif;
+}
+
+#videoContainer {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #000;
+}
+
+video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+canvas#overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform: scaleX(-1);
+}
+
+#userMessage {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(151, 71, 255, 0.6);
+  padding: 10px 16px;
+  border-radius: 12px;
+  z-index: 40;
+  max-width: 95%;
+  width: 270px;
+  text-align: center;
+  font-size: 15px;
+  color: #fff;
+  line-height: 1.2;
+}
+
+#guidance {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(151, 71, 255, 0.6);
+  padding: 10px 18px;
+  border-radius: 12px;
+  z-index: 40;
+  font-size: 15px;
+  text-align: center;
+  min-width: 220px;
+  color: #fff;
+}
+
+#countdown {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 48;
+  font-size: 140px;    
+  font-weight: 900;
+  color: var(--accent);
+  text-shadow: 0 0 25px rgba(0,0,0,0.8);
+  display: none;
+  letter-spacing: 2px;
+  animation: pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  to { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+}
+
+#results {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  color: #000;
+  padding: 18px;
+  border-radius: 12px;
+  z-index: 46;
+  text-align: center;
+  width: 92%;
+  max-width: 270px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.4);
+  display: none;
+  line-height: 1.5;
+}
+.action-buttons {
+  position: fixed;
+  left: 50%;
+  top: calc(50% + 200px);
+  transform: translateX(-50%);
+  display: none;
+  gap: 12px;
+  z-index: 46;
+}
+.action-buttons button {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+#popup {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.82);
+  z-index: 100;
+}
+#popupCard {
+  position: relative;
+  background: #fff;
+  color: #000;
+  padding: 18px;
+  border-radius: 12px;
+  width: 92%;
+  max-width: 270px;
+  text-align: center;
+  box-shadow: 0 0 15px rgba(0,0,0,0.4);
+}
+#popupCard h2 {
+  margin: 0 0 10px 0;
+  color: var(--accent);
+}
+#popupCard small {
+  display: block;
+  color: #555;
+  margin-bottom: 8px;
+}
+#popupCard input {
+  width: 82%;
+  padding: 8px 10px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 15px;
+  text-align: center;
+}
+#popupCard label {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #333;
+}
+
+#popupCard button, #startBtn, #retakeBtn, #saveBtn {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+#infoBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--accent);
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 3px rgba(0,0,0,0.3);
+}
+#infoPopup {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 150;
+  align-items: center;
+  justify-content: center;
+}
+#infoContent {
+  background: #fff;
+  color: #000;
+  padding: 18px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 270px;
+  text-align: center;
+  box-shadow: 0 0 12px rgba(0,0,0,0.5);
+}
+#infoContent h3 {
+  margin-top: 0;
+  color: var(--accent);
+}
+#closeInfo {
+  margin-top: 12px;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+}
+@media (max-height:700px){
+  #countdown { font-size: 56px; }
+  .action-buttons { top: calc(50% + 150px); }
+}
+</style>
+</head>
+<body>
+<div id="videoContainer">
+  <video id="videoElement" autoplay playsinline muted></video>
+  <canvas id="overlay"></canvas>
+</div>
+
+<div id="userMessage">Let’s measure your shoulder, chest, hips, and bust so we can recommend the best size just for you.</div>
+<div id="guidance">Step back or move forward until you fit the guide.</div>
+<div id="countdown"></div>
+<div id="results"></div>
+
+<div class="action-buttons">
+  <button id="saveBtn">Save</button>
+  <button id="retakeBtn">Retake</button>
+</div>
+
+<div id="popup" style="display:flex;">
+  <div id="popupCard" role="dialog" aria-modal="true" aria-label="Smart setup">
+    <button id="infoBtn">?</button>
+    <h2>Smart Setup</h2>
+    <small>To get the best fit, we’ll use your camera and a few basic measurements.
+      You can skip calibration, but doing it makes your results extra precise!</small>
+
+    <input id="heightInput" type="number" placeholder="Height (cm) — required" min="100" max="250" />
+    <input id="weightInput" type="number" placeholder="Weight (kg) — required" min="30" max="200" />
+    <input id="waistInput" type="number" placeholder="Waistline (cm) — required" min="40" max="150" />
+    <label class="muted">Calibration’s optional, but entering your real sizes helps us measure you accurately!</label>
+    <input id="cal_shoulder" type="number" placeholder="Actual shoulder width (cm)" min="20" max="70" />
+    <input id="cal_chest" type="number" placeholder="Actual chest (cm)" min="60" max="150" />
+    <input id="cal_hips" type="number" placeholder="Actual hips (cm)" min="60" max="150" />
+    <input id="cal_bust" type="number" placeholder="Actual bust (cm)" min="60" max="150" />
+    <button id="startBtn">Start Measurement</button>
+  </div>
+</div>
+
+<div id="infoPopup">
+  <div id="infoContent">
+    <h3>What is Calibration?</h3>
+    <p>Calibration helps your camera learn your body’s real proportions.<br><br>
+    If you enter your actual measurements (like shoulder, chest width, hips, or bust), the system adjusts to your unique size automatically next time.<br><br>
+    You only need to do this once per device for the best accuracy.</p>
+    <button id="closeInfo">Got it</button>
+  </div>
+</div>
+
+<div id="popupNotification" style="
+  position: fixed;
+  inset: 0;
+  display: none;
+  background: rgba(0,0,0,0.8);
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+">
+  <div style="
+    background: #fff;
+    color: #000;
+    padding: 20px 28px;
+    border-radius: 14px;
+    width: 90%;
+    max-width: 240px;
+    text-align: center;
+    box-shadow: 0 0 25px rgba(0,0,0,0.5);
+  ">
+    <div id="popupMessage" style="font-weight:700; font-size:18px; margin-bottom:18px;"></div>
+    <button id="proceedBtn" style="
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: none;
+      background: #9747FF;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    ">Proceed to Home Page</button>
+  </div>
+</div>
+
+<script>
+// ----- Top & Bottom Sizes -----
+const topSizes = [
+  {size: 'S', height: [150, 165], weight: [45, 60], shoulder: [37, 44], chest: [81, 92]},
+  {size: 'M', height: [155, 170], weight: [50, 68], shoulder: [39, 46], chest: [86, 96]},
+  {size: 'L', height: [160, 175], weight: [55, 75], shoulder: [41, 48], chest: [91, 100]},
+  {size: 'XL', height: [165, 180], weight: [62, 85], shoulder: [43, 50], chest: [97, 106]}
+];
+
+const bottomSizes = [
+  {size: 'S', waist: [63, 76], hip: [87, 92], height: [150, 165], weight: [45, 60]},
+  {size: 'M', waist: [67, 82], hip: [91, 96], height: [155, 170], weight: [50, 68]},
+  {size: 'L', waist: [71, 88], hip: [95, 100], height: [160, 175], weight: [55, 75]},
+  {size: 'XL', waist: [77, 94], hip: [99, 105], height: [165, 180], weight: [62, 85]}
+];
+
+// ----- Improved Recommended Sizes -----
+function recommendedTopSizeArray(measurements){
+  let bestMatch=null, bestScore=Infinity;
+  topSizes.forEach(s=>{
+    let score=0;
+    score += measurements.height < s.height[0] ? (s.height[0]-measurements.height)**2
+          : measurements.height > s.height[1] ? (measurements.height-s.height[1])**2 : 0;
+    score += measurements.weight < s.weight[0] ? (s.weight[0]-measurements.weight)**2
+          : measurements.weight > s.weight[1] ? (measurements.weight-s.weight[1])**2 : 0;
+    score += measurements.shoulder < s.shoulder[0] ? (s.shoulder[0]-measurements.shoulder)**2
+          : measurements.shoulder > s.shoulder[1] ? (measurements.shoulder-s.shoulder[1])**2 : 0;
+    score += measurements.chest < s.chest[0] ? (s.chest[0]-measurements.chest)**2
+          : measurements.chest > s.chest[1] ? (measurements.chest-s.chest[1])**2 : 0;
+    if(score<bestScore){ bestScore=score; bestMatch=s.size; }
+  });
+  return bestMatch||'M';
+}
+
+function recommendedBottomSizeArray(measurements){
+  let bestMatch=null, bestScore=Infinity;
+  bottomSizes.forEach(s=>{
+    let score=0;
+    score += measurements.height < s.height[0] ? (s.height[0]-measurements.height)**2
+          : measurements.height > s.height[1] ? (measurements.height-s.height[1])**2 : 0;
+    score += measurements.weight < s.weight[0] ? (s.weight[0]-measurements.weight)**2
+          : measurements.weight > s.weight[1] ? (measurements.weight-s.weight[1])**2 : 0;
+    score += measurements.waist < s.waist[0] ? (s.waist[0]-measurements.waist)**2
+          : measurements.waist > s.waist[1] ? (measurements.waist-s.waist[1])**2 : 0;
+    score += measurements.hip < s.hip[0] ? (s.hip[0]-measurements.hip)**2
+          : measurements.hip > s.hip[1] ? (measurements.hip-s.hip[1])**2 : 0;
+    if(score<bestScore){ bestScore=score; bestMatch=s.size; }
+  });
+  return bestMatch||'M';
+}
+
+const infoBtn = document.getElementById('infoBtn');
+const infoPopup = document.getElementById('infoPopup');
+const closeInfo = document.getElementById('closeInfo');
+infoBtn.addEventListener('click',()=>{infoPopup.style.display='flex';});
+closeInfo.addEventListener('click',()=>{infoPopup.style.display='none';});
+infoPopup.addEventListener('click',e=>{if(e.target===infoPopup)infoPopup.style.display='none';});
+
+const TARGET_FPS=15,CAMERA_WIDTH=480,CAMERA_HEIGHT=360,MODEL_COMPLEXITY=0,MIN_DETECT_CONF=0.6,MIN_TRACK_CONF=0.6;
+const video=document.getElementById('videoElement');
+const overlay=document.getElementById('overlay');
+const octx=overlay.getContext('2d');
+const guidance=document.getElementById('guidance');
+const resultsBox=document.getElementById('results');
+const countdownEl=document.getElementById('countdown');
+const popup=document.getElementById('popup');
+const startBtn=document.getElementById('startBtn');
+const heightInput=document.getElementById('heightInput');
+const weightInput=document.getElementById('weightInput');
+const waistInput=document.getElementById('waistInput');
+const cal_shoulder=document.getElementById('cal_shoulder');
+const cal_chest=document.getElementById('cal_chest');
+const cal_hips=document.getElementById('cal_hips');
+const cal_bust=document.getElementById('cal_bust');
+const retakeBtn=document.getElementById('retakeBtn');
+const saveBtn=document.getElementById('saveBtn');
+
+let BASE_HEIGHT=null,BASE_WEIGHT=null,BASE_WAIST=null,calibrationProvided=false,calibrationValues=null,offsets={shoulder:3.5,chest:41.5,hips:76.5,bust:35.5};
+try{const savedOffsets=JSON.parse(localStorage.getItem('bp_offsets')||'null');if(savedOffsets)offsets=savedOffsets}catch(e){}
+
+function resizeOverlay(){const cr=video.getBoundingClientRect();overlay.width=Math.round(cr.width);overlay.height=Math.round(cr.height);}
+window.addEventListener('resize',resizeOverlay);
+
+let poseInstance=null,cameraInstance=null,lastPoseSend=0,measuring=false,lastPose=null,stillnessCounter=0,poseHeightPx=1;
+async function startCameraAndPose(){
+  try{
+    if(!poseInstance){
+      poseInstance=new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
+      poseInstance.setOptions({modelComplexity:MODEL_COMPLEXITY,smoothLandmarks:true,enableSegmentation:false,minDetectionConfidence:MIN_DETECT_CONF,minTrackingConfidence:MIN_TRACK_CONF});
+      poseInstance.onResults(onResults);
+    }
+    cameraInstance=new Camera(video,{onFrame:async()=>{const now=performance.now();if(now-lastPoseSend>=(1000/TARGET_FPS)){lastPoseSend=now;await poseInstance.send({image:video});}},width:CAMERA_WIDTH,height:CAMERA_HEIGHT});
+    cameraInstance.start();
+    video.addEventListener('loadedmetadata',()=>{resizeOverlay();});
+  }catch(err){console.error('Camera start error',err);alert('Camera failed to start. Use HTTPS or localhost and allow camera permission.');}
+}
+
+function drawOverlay(isPerfect=false){
+  octx.clearRect(0,0,overlay.width,overlay.height);
+  const w=overlay.width*0.55,h=overlay.height*0.78,x=(overlay.width-w)/2,y=(overlay.height-h)/2,r=14;
+  octx.lineWidth=4;
+  octx.strokeStyle=isPerfect?'rgba(0,255,153,0.45)':'rgba(255,255,255,0.22)';
+  octx.beginPath();
+  octx.moveTo(x+r,y);
+  octx.lineTo(x+w-r,y);
+  octx.quadraticCurveTo(x+w,y,x+w,y+r);
+  octx.lineTo(x+w,y+h-r);
+  octx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  octx.lineTo(x+r,y+h);
+  octx.quadraticCurveTo(x,y+h,x,y+h-r);
+  octx.lineTo(x,y+r);
+  octx.quadraticCurveTo(x,y,x+r,y);
+  octx.closePath();
+  octx.stroke();
+}
+
+function poseDifference(p1,p2){if(!p1||!p2)return Infinity;let sum=0,len=Math.min(p1.length,p2.length);for(let i=0;i<len;i++){const dx=p1[i].x-p2[i].x,dy=p1[i].y-p2[i].y;sum+=Math.hypot(dx,dy);}return sum/len;}
+function pxToCm(px){const ratio=(poseHeightPx>1)?(BASE_HEIGHT/poseHeightPx):(BASE_HEIGHT/(overlay.height*0.65));return px*ratio;}
+function distCm(p1,p2){const dx=(p1.x-p2.x)*overlay.width,dy=(p1.y-p2.y)*overlay.height,dpx=Math.hypot(dx,dy);return pxToCm(dpx);}
+
+function onResults(results){
+  resizeOverlay();
+  if(!results.poseLandmarks||measuring){if(!measuring)drawOverlay(false);return;}
+  const lm=results.poseLandmarks;
+  const topY=lm[0].y*overlay.height;
+  const bottomY=Math.max((lm[27]?lm[27].y:0),(lm[28]?lm[28].y:0),(lm[29]?lm[29].y:0),(lm[30]?lm[30].y:0),(lm[23]?lm[23].y:0),(lm[24]?lm[24].y:0))*overlay.height;
+  poseHeightPx=Math.max(1,bottomY-topY);
+  const idealPixelHeight=overlay.height*0.65;
+  const ratio=poseHeightPx/idealPixelHeight;
+  if(ratio>1.2){guidance.innerText='Too close — move backward';drawOverlay(false);stillnessCounter=0;lastPose=null;return;}
+  else if(ratio<0.8){guidance.innerText='Too far — move forward';drawOverlay(false);stillnessCounter=0;lastPose=null;return;}
+  drawOverlay(true);guidance.innerText='Perfect distance! Hold still...';
+  const movement=poseDifference(lm,lastPose);lastPose=lm;
+  if(movement<0.0015)stillnessCounter++;else stillnessCounter=0;
+  if(stillnessCounter>(TARGET_FPS*3)){stillnessCounter=0;startCountdown(lm);}
+}
+
+function startCountdown(lm){
+  measuring=true;let count=4;countdownEl.style.display='block';countdownEl.innerText=count;
+  const t=setInterval(()=>{count--;countdownEl.innerText=count>0?count:'✔';if(count<=0){clearInterval(t);setTimeout(()=>{countdownEl.style.display='none';captureMeasurements(lm);},450);}},800);
+}
+
+function captureMeasurements(lm){
+  const shoulder_raw = distCm(lm[11], lm[12]);
+  const shouldersMid = { x: (lm[11].x + lm[12].x)/2, y: (lm[11].y + lm[12].y)/2 };
+  const hipsMid = { x: (lm[23].x + lm[24].x)/2, y: (lm[23].y + lm[24].y)/2 };
+  const chest_raw = distCm(shouldersMid, hipsMid);
+  const hips_raw = distCm(lm[23], lm[24]);
+  const bust_raw = distCm(lm[11], hipsMid);
+
+  if(calibrationProvided && !localStorage.getItem('bp_offsets_calibrated')){
+    const calOffsets = {
+      shoulder: calibrationValues.shoulder ? calibrationValues.shoulder - shoulder_raw : offsets.shoulder,
+      chest: calibrationValues.chest ? calibrationValues.chest - chest_raw : offsets.chest,
+      hips: calibrationValues.hips ? calibrationValues.hips - hips_raw : offsets.hips,
+      bust: calibrationValues.bust ? calibrationValues.bust - bust_raw : offsets.bust
+    };
+    offsets = calOffsets;
+    try {
+      localStorage.setItem('bp_offsets', JSON.stringify(offsets));
+      localStorage.setItem('bp_offsets_calibrated', '1');
+    } catch(e){}
+  }
+
+  const finalShoulder = shoulder_raw + offsets.shoulder;
+  const finalChest = chest_raw + offsets.chest;
+  const finalHips = hips_raw + offsets.hips;
+  const finalBust = bust_raw + offsets.bust;
+
+  const topSize = recommendedTopSizeArray({
+    height: BASE_HEIGHT,
+    weight: BASE_WEIGHT,
+    shoulder: finalShoulder,
+    chest: finalChest
+  });
+  const bottomSize = recommendedBottomSizeArray({
+    height: BASE_HEIGHT,
+    weight: BASE_WEIGHT,
+    waist: BASE_WAIST,
+    hip: finalHips
+  });
+
+  resultsBox.style.display = 'block';
+  resultsBox.innerHTML = `
+    <div style="font-size:18px; color:#9747FF; font-weight:700; margin-bottom:8px;">Captured Measurements</div>
+    <strong>Height:</strong> ${BASE_HEIGHT.toFixed(1)} cm<br>
+    <strong>Weight:</strong> ${BASE_WEIGHT.toFixed(1)} kg<br>
+    <strong>Waist:</strong> ${BASE_WAIST.toFixed(1)} cm<br><br>
+    <strong>Shoulder:</strong> ${finalShoulder.toFixed(1)} cm<br>
+    <strong>Chest:</strong> ${finalChest.toFixed(1)} cm<br>
+    <strong>Hips:</strong> ${finalHips.toFixed(1)} cm<br>
+    <strong>Bust:</strong> ${finalBust.toFixed(1)} cm<br><br>
+    <strong>Recommended Top Size:</strong> ${topSize}<br>
+    <strong>Recommended Bottom Size:</strong> ${bottomSize}
+  `;
+
+  document.querySelector('.action-buttons').style.display = 'flex';
+  measuring = false;
+}
+
+startBtn.addEventListener('click',()=>{
+  BASE_HEIGHT=parseFloat(heightInput.value);
+  BASE_WEIGHT=parseFloat(weightInput.value);
+  BASE_WAIST=parseFloat(waistInput.value);
+  calibrationValues={
+    shoulder:parseFloat(cal_shoulder.value)||null,
+    chest:parseFloat(cal_chest.value)||null,
+    hips:parseFloat(cal_hips.value)||null,
+    bust:parseFloat(cal_bust.value)||null
+  };
+  calibrationProvided=Object.values(calibrationValues).some(v=>v!==null);
+  if(!BASE_HEIGHT||!BASE_WEIGHT||!BASE_WAIST){alert('Please enter your height, weight, and waist.');return;}
+  popup.style.display='none';
+  startCameraAndPose();
+});
+
+retakeBtn.addEventListener('click',()=>{
+  resultsBox.style.display='none';
+  document.querySelector('.action-buttons').style.display='none';
+  measuring=false;lastPose=null;stillnessCounter=0;
+});
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDoF6Uuunb7dl1bfmqPSbzZNZqWZYNYwEI",
+  authDomain: "try-on-c05f0.firebaseapp.com",
+  projectId: "try-on-c05f0",
+  storageBucket: "try-on-c05f0.firebasestorage.appspot.com",
+  messagingSenderId: "681286310762",
+  appId: "1:681286310762:web:f183b38d64d211357c6313",
+};
+
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    console.log("User logged in:", user.uid);
+  } else {
+    console.warn("No user logged in. Measurement will not be linked.");
+  }
+});
+
+
+const urlParams = new URLSearchParams(window.location.search);
+const passedUid = urlParams.get('uid');
+
+saveBtn.addEventListener('click', async () => {
+  try {
+    const user = auth.currentUser;
+    const uid = user ? user.uid : passedUid;
+
+    if (!uid) {
+      alert('❌ No user ID found. Please sign in first.');
+      console.warn("No userId found in Firebase Auth or query string.");
+      return;
+    }
+
+    const data = {
+      userId: uid,
+      height: BASE_HEIGHT,
+      weight: BASE_WEIGHT,
+      waist: BASE_WAIST,
+      shoulder_width: parseFloat(resultsBox.innerHTML.match(/Shoulder:<\/strong>\s([\d.]+)/)[1]),
+      chest_width: parseFloat(resultsBox.innerHTML.match(/Chest:<\/strong>\s([\d.]+)/)[1]),
+      hips: parseFloat(resultsBox.innerHTML.match(/Hips:<\/strong>\s([\d.]+)/)[1]),
+      bust: parseFloat(resultsBox.innerHTML.match(/Bust:<\/strong>\s([\d.]+)/)[1]),
+      recommendation_top_size: resultsBox.innerHTML.match(/Recommended Top Size:<\/strong>\s([A-Z]+)/)[1],
+      recommendation_bottom_size: resultsBox.innerHTML.match(/Recommended Bottom Size:<\/strong>\s([A-Z]+)/)[1],
+      timestamp: new Date()
+    };
+
+    const docRef = db.collection('measurements').doc(uid); // Use user UID as document ID
+await docRef.set(data, { merge: true }); // merge ensures we don't overwrite accidentally
+
+showNotification('Measurements saved successfully!');
+    console.log("Saved with UID:", uid);
+  } catch (error) {
+    console.error('Error saving data:', error);
+    alert('❌ Failed to save data. Check console for details.');
+  }
+});
+
+function showNotification(message) {
+  const popup = document.getElementById('popupNotification');
+  const msgEl = document.getElementById('popupMessage');
+  const proceedBtn = document.getElementById('proceedBtn');
+
+  msgEl.innerText = message;
+  popup.style.display = 'flex';
+
+  proceedBtn.onclick = () => {
+    popup.style.display = 'none';
+    
+ 
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ action: 'proceedHome' }));
+    }
+  };
+}
+
+
+</script>
+</body>
+</html>
