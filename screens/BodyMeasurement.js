@@ -1,16 +1,39 @@
 // BodyMeasurement.js
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useEffect } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { FontAwesome } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 export default function BodyMeasurement() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { userId, username, email } = route.params || {};
+
+  useEffect(() => {
+    if (!userId || !username || !email) {
+      console.warn("⚠️ Missing user data in BodyMeasurement");
+      Alert.alert(
+        "Missing Information",
+        "Some user information is missing. Please go back and try signing up again.",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
+    } else {
+      console.log("✅ BodyMeasurement received:", { userId, username, email });
+    }
+  }, [userId, username, email]);
 
   const handleNext = () => {
-    // Navigate to BodyTracking.js
-    navigation.navigate("BodyTracking");
+    if (!userId) {
+      Alert.alert("Error", "User ID is missing. Please go back and try again.");
+      return;
+    }
+
+    navigation.navigate("BodyTracking", {
+      userId,
+      username,
+      email,
+    });
   };
 
   return (
@@ -19,11 +42,13 @@ export default function BodyMeasurement() {
       style={{ flex: 1 }}
     >
       <View style={styles.container}>
+        {/* Header */}
         <TouchableOpacity style={styles.header} onPress={() => navigation.goBack()}>
           <FontAwesome name="arrow-left" size={18} color="black" />
           <Text style={styles.title}>Body Measurements</Text>
         </TouchableOpacity>
 
+        {/* Info Card */}
         <View style={styles.card}>
           <Text style={styles.infoText}>
             In the next screen, we will use your camera to automatically capture your
@@ -35,7 +60,6 @@ export default function BodyMeasurement() {
             for your body, so you get accurate and comfortable fits every time.
           </Text>
 
-          {/* Next Button */}
           <TouchableOpacity style={styles.button} onPress={handleNext}>
             <Text style={styles.buttonText}>Next</Text>
           </TouchableOpacity>

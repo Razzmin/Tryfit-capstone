@@ -1,67 +1,60 @@
 // BodyTracking.js
 import React, { useRef, useEffect, useState } from 'react';
-import { StyleSheet, View, Platform, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Platform, ActivityIndicator, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { getAuth } from 'firebase/auth';
-import { useNavigation } from '@react-navigation/native';
 
 const BodyTracking = () => {
   const webviewRef = useRef(null);
-  const [uid, setUid] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const route = useRoute();
   const navigation = useNavigation();
+  const auth = getAuth();
+
+  const [authUid, setAuthUid] = useState(null);
+  const { userId } = route.params || {}; // custom U000x id from signup
 
   useEffect(() => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-
-    if (user) {
-      console.log("✅ Logged in user UID:", user.uid);
-      setUid(user.uid);
-      setLoading(false);
+    const current = auth.currentUser;
+    if (current && current.uid) {
+      setAuthUid(current.uid);
     } else {
-      Alert.alert('⚠️ User not signed in', 'Please sign in before proceeding.');
+      Alert.alert('Auth required', 'No logged-in user found. Please sign in again.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     }
   }, []);
+
+  if (!authUid || !userId) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#9747FF" />
+      </View>
+    );
+  }
+
+  const htmlUri =
+    Platform.OS === 'ios'
+      ? `file:///html/mediapipe.html?uid=${encodeURIComponent(authUid)}&userId=${encodeURIComponent(userId)}`
+      : `file:///android_asset/html/mediapipe.html?uid=${encodeURIComponent(authUid)}&userId=${encodeURIComponent(userId)}`;
 
   const onMessage = (event) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
 
-      // Handle proceed to home action
+      // If mediapipe asks to proceed home
       if (data.action === 'proceedHome') {
-        navigation.navigate('LandingPage'); // Make sure 'LandingPage' exists in your navigator
+        navigation.replace('LandingPage');
         return;
       }
 
-      console.log('📩 Received measurements:', data);
-
-      Alert.alert(
-        '✅ Measurements Received',
-        `Height: ${data.height} cm
-Weight: ${data.weight} kg
-Waist: ${data.waist} cm
-Shoulder: ${data.shoulder} cm
-Chest: ${data.chest} cm
-Hips: ${data.hips} cm
-Bust: ${data.bust} cm
-Top Size: ${data.topSize}
-Bottom Size: ${data.bottomSize}`
-      );
-    } catch (error) {
-      console.warn('Invalid message from WebView:', error);
+      // Otherwise treat as measurement object (log only — no popup)
+      console.log('📩 Measurements received from WebView:', data);
+      // ✅ Removed redundant Alert to prevent double popups
+    } catch (err) {
+      console.warn('Invalid message from WebView', err);
     }
   };
-
-  if (loading) {
-    return <ActivityIndicator size="large" style={{ marginTop: 50 }} />;
-  }
-
-  // Append UID to the HTML file URL
-  const htmlUri =
-    Platform.OS === 'ios'
-      ? `file:///html/mediapipe.html?uid=${uid}`
-      : `file:///android_asset/html/mediapipe.html?uid=${uid}`;
 
   return (
     <View style={styles.container}>
@@ -70,11 +63,12 @@ Bottom Size: ${data.bottomSize}`
         originWhitelist={['*']}
         source={{ uri: htmlUri }}
         onMessage={onMessage}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
+        javaScriptEnabled
+        domStorageEnabled
         mediaPlaybackRequiresUserAction={false}
-        allowsInlineMediaPlayback={true}
-        startInLoadingState={true}
+        allowsInlineMediaPlayback
+        startInLoadingState
+        renderLoading={() => <ActivityIndicator size="large" style={{ marginTop: 50 }} />}
         style={styles.webview}
       />
     </View>
@@ -82,13 +76,8 @@ Bottom Size: ${data.bottomSize}`
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  webview: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: '#000' },
+  webview: { flex: 1 },
 });
 
 export default BodyTracking;

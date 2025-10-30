@@ -39,12 +39,9 @@ import {
   Content,
   ProductName,
   ProductPrice,
-  ColorRow,
-  ColorCircle,
   RatingText,
   SectionTitle,
   RightHeartIcon,
-  ColorWrapper,
   NavBar,
   AddCartBtn,
   AddCartText,
@@ -66,7 +63,6 @@ import {
 
 import AntDesign from '@expo/vector-icons/AntDesign'
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import * as Linking from 'expo-linking';
 
 const db = getFirestore();
 const auth = getAuth();
@@ -79,7 +75,6 @@ export default function ProductDetail() {
   const user = auth.currentUser;
 
   const images = product.images || [product.imageUrl];
-  const colors = product.colors || []; 
   
 
   const [activeImage, setActiveImage] = useState(0);
@@ -93,6 +88,8 @@ export default function ProductDetail() {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [visibleMenuId, setVisibleMenuId] = useState(null);
+  const [recommendedSize, setRecommendedSize] = useState(null);
+
 
   const reviewsRef = collection(db, 'productReviews');
   const cartRef = collection(db, 'cartItems');
@@ -114,6 +111,43 @@ export default function ProductDetail() {
     return () => unsubscribe();
   }, [product.id]);
 
+
+  useEffect(() => {
+  const fetchRecommendedSize = async () => {
+    if (!user) return;
+
+    try {
+      const measurementRef = doc(db, "measurements", user.uid);
+      const measurementSnap = await getDoc(measurementRef);
+
+      if (measurementSnap.exists()) {
+        const data = measurementSnap.data();
+        let size = null;
+
+        if (product.categoryMain === "Top") {
+          size = data.recommendation_top_size;
+        } else if (product.categoryMain === "Bottom") {
+          size = data.recommendation_bottom_size;
+        }
+
+        setRecommendedSize(size || "Not available");
+      } else {
+        setRecommendedSize("Not available");
+      }
+    } catch (error) {
+      console.error("Error fetching recommended size:", error);
+      setRecommendedSize("Not available");
+    }
+  };
+
+  fetchRecommendedSize();
+}, [user, product.categoryMain]);
+
+  useEffect(() => { 
+    if (modalVisible && recommendedSize && safeStock[recommendedSize] > 0) {
+      setSelectedSize(recommendedSize);
+    }
+  }, [modalVisible, recommendedSize]);
 
   const toggleMenu = (id) => {
     setVisibleMenuId((prev) => (prev === id ? null : id));
@@ -140,6 +174,7 @@ export default function ProductDetail() {
     return Number(safeStock?.[size]) || 0;
   };
 
+  const sizeOrder = product.sizes || [];
 
   const saveCartItem = async () => {
  if (!selectedSize) {
@@ -221,6 +256,7 @@ const handleTryOn = () => {
   navigation.navigate("TryOnWebAR", { arUrl: product.arUrl });
 };
 
+
   return (
     <>
       <TouchableWithoutFeedback
@@ -266,20 +302,37 @@ const handleTryOn = () => {
             </SliderIndicatorWrapper>
 
             <Content>
+              
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <ProductName>{product.name}</ProductName>
-                <RightHeartIcon TouchableOpacity onPress={() => console.log('Heart')}>
-                  <AntDesign name="hearto" size={20} color="black" />
+                <RightHeartIcon onPress={() => console.log('Heart')}>
+                 <AntDesign name="heart" size={20} color="black" />
                 </RightHeartIcon>
               </View>
-
+                <SectionTitle>Product Details</SectionTitle>
               <ProductPrice>{product.price}</ProductPrice>
               <RatingText> ★★★★☆ {product.rating} | {product.sold} Sold </RatingText>
 
-              <SectionTitle>Product Details</SectionTitle>
+              
               {product.description?.split('\n').map((line, index) => (
                 <Text key={index}>• {line.trim()}</Text>
               ))}
+
+              <View
+                  style={{
+                    backgroundColor: '#F9F9F9',
+                    padding: 10,
+                    borderRadius: 8,
+                    marginTop: 10,
+                    marginBottom: 20,
+                  }}
+                >
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#333' }}>
+                    Your recommended size is:{" "}
+                    <Text style={{ color: '#9747FF' }}>{recommendedSize || "Loading..."}</Text>
+                  </Text>
+                </View>
+
 
               <SectionTitle>Reviews</SectionTitle>
                 <ReviewContainer>
@@ -411,35 +464,45 @@ const handleTryOn = () => {
                     {product.name}
                   </Text>
 
-                  
-                    {/* Size selection */}
+                  {/* Size selection */}
                     {safeStock && (
                       <View style={{ marginBottom: 10 }}>
                         <Text style={{ marginBottom: 6 }}>Choose Size:</Text>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                          {Object.entries(safeStock || {}).map(([size, qty]) => (
-                            <TouchableOpacity
-                              key={size}
-                              disabled={qty === 0}
-                              onPress={() => {
-                                setSelectedSize(size);
-                                setModalQuantity(1);
-                              }}
-                              style={{
-                                paddingHorizontal: 12,
-                                paddingVertical: 8,
-                                borderRadius: 6,
-                                borderWidth: 1,
-                                borderColor: selectedSize === size ? '#9747FF' : '#ccc',
-                                backgroundColor: qty === 0 ? '#f2f2f2' : '#fff',
-                                marginRight: 8,
-                                marginBottom: 8,
-                                opacity: qty === 0 ? 0.5 : 1,
-                              }}
-                            >
-                              <Text style={{ fontSize: 16 }}>{size}</Text>
-                            </TouchableOpacity>
-                          ))}
+                          {sizeOrder.map((size) => {
+                            const qty = safeStock[size] || 0;
+                            return (
+                              <TouchableOpacity
+                                key={size}
+                                disabled={qty === 0}
+                                onPress={() => {
+                                  setSelectedSize(size);
+                                  setModalQuantity(1);
+                                }}
+                                style={{
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 8,
+                                  borderRadius: 6,
+                                  borderWidth: 1,
+                                  borderColor: selectedSize === size ? '#9747FF' : '#ccc',
+                                  backgroundColor:
+                                    qty === 0
+                                      ? '#f2f2f2'
+                                      : recommendedSize === size
+                                      ? '#F3E5F5'
+                                      : '#fff',
+                                  marginRight: 8,
+                                  marginBottom: 8,
+                                  opacity: qty === 0 ? 0.5 : 1,
+                                }}
+                              >
+                                <Text style={{ fontSize: 16 }}>
+                                  {size}
+                                  {recommendedSize === size && ' ☑️'}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
                         </View>
                       </View>
                     )}
