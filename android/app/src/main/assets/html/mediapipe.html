@@ -355,8 +355,16 @@ saveBtn.addEventListener('click', async () => {
     const topSize = resultsBox.innerHTML.match(/Recommended Top Size:<\/strong>\s([A-Z]+)/)[1];
     const bottomSize = resultsBox.innerHTML.match(/Recommended Bottom Size:<\/strong>\s([A-Z]+)/)[1];
 
-    const data = {
+    function generateMeasurementID() {
+    const datePart = new Date().toISOString().slice(0,10).replace(/-/g, ''); 
+    const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase(); 
+    return `MID${datePart}${randomPart}`;
+    }
+
+      const data = {
+      measurementID: generateMeasurementID(),
       userId: passedUserId || null,
+      timestamp: new Date(),
       height: BASE_HEIGHT,
       weight: BASE_WEIGHT,
       waist: BASE_WAIST,
@@ -365,9 +373,9 @@ saveBtn.addEventListener('click', async () => {
       hips: hips_val,
       bust: bust_val,
       recommendation_top_size: topSize,
-      recommendation_bottom_size: bottomSize,
-      timestamp: new Date()
+      recommendation_bottom_size: bottomSize
     };
+
 
     const docRef = db.collection('measurements').doc(uid);
     await docRef.set(data, { merge: true });
