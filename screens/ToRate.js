@@ -8,9 +8,10 @@ import {
   TextInput,
   Alert,
   Switch,
+  Image,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome, Feather } from "@expo/vector-icons";
 import {
   getFirestore,
   doc,
@@ -22,6 +23,9 @@ import {
   where,
   getDocs,
 } from "firebase/firestore";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import{ Header } from '../components/styles';
+
 
 const db = getFirestore();
 
@@ -152,15 +156,22 @@ export default function ToRate() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Rate Your Items</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <SafeAreaView style={styles.container}>
+        <Header style = {{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                paddingHorizontal: 16,
+                                paddingBottom: 20,
+                                backgroundColor: '#fff',
+                              }}>
+                                <TouchableOpacity onPress={() => navigation.goBack()}
+                                style={{position: 'absolute', left: 2, top: -4}}>
+                                  <Feather name="arrow-left" size={27} color="black"  />
+                                </TouchableOpacity>
+                  
+                                 <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PROFILE</Text>
+                              </Header>
 
       <ScrollView>
         {items.length === 0 ? (
@@ -170,11 +181,23 @@ export default function ToRate() {
         ) : (
           items.map((item) => (
             <View key={item.id} style={styles.itemCard}>
-              <Text style={styles.productName}>{item.productName}</Text>
-              <Text style={styles.productDetails}>Size: {item.size}</Text> 
 
-              <Text style={styles.ratingLabel}>Rate your Product:</Text>
 
+               <View style={styles.productRow}>
+                               <Image
+                                 source={{ uri: item.imageUrl || 'https://placehold.co/100x100' }}
+                                 style={styles.productImage}
+                               />
+                               <View style={styles.productInfo}>
+                                 <Text style={styles.productName}>{item.productName}</Text>
+                                 <Text style={styles.productSize}>
+                                   Size: {item.size || 'N/A'}
+                                 </Text>
+                                 </View>
+                                 </View>
+
+              <View style= {{flexDirection: 'row', alignItems: 'center', marginBottom: -10}}>
+              <Text style={[styles.ratingLabel, {marginRight: 10}]}>Rate your Product:</Text>
               <View style={styles.starRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <TouchableOpacity
@@ -183,12 +206,13 @@ export default function ToRate() {
                   >
                     <FontAwesome
                       name={ratings[item.id] && ratings[item.id] >= star ? "star" : "star-o"}
-                      size={34}
+                      size={30}
                       color="#9747FF"
                       style={{ marginHorizontal: 3 }}
                     />
                   </TouchableOpacity>
                 ))}
+              </View>
               </View>
 
               <TextInput
@@ -198,6 +222,7 @@ export default function ToRate() {
                 value={comments[item.id] || ""}
                 onChangeText={(text) => handleCommentChange(item.id, text)}
                 multiline
+                maxLength={200}
               />
             </View>
           ))
@@ -231,23 +256,73 @@ export default function ToRate() {
           </TouchableOpacity>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", paddingTop: 60, paddingHorizontal: 20 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  headerTitle: { fontSize: 20, fontWeight: "600" },
-  itemCard: { backgroundColor: "#F7F7F7", borderRadius: 10, padding: 15, marginBottom: 20 },
-  productName: { fontSize: 16, fontWeight: "600", marginBottom: 6, color: "#333" },
-  productDetails: { fontSize: 13, color: "#555", marginBottom: 2 },
-  ratingLabel: { fontSize: 15, fontWeight: "500", color: "#333", marginBottom: 6, marginTop: 10 },
-  starRow: { flexDirection: "row", marginTop: 10, marginBottom: 10 },
+  container: {
+     flex: 1,
+      backgroundColor: "#fff",
+       paddingTop: 30, 
+       paddingHorizontal: 20
+       },
+  itemCard: { 
+    backgroundColor: "#F7F7F7", 
+    borderRadius: 10,
+     padding: 15,
+      marginBottom: 20
+     },
+    productInfo: {
+    marginLeft: 10,
+    justifyContent: 'center',
+  },
+  productName: {
+    fontSize: 17,
+    fontWeight: '500',
+    marginTop: -10,
+    marginBottom: 10,
+  },
+  productSize: {
+    fontSize: 12,
+    color: '#666',
+  },
+  productRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#ccc',
+  }, 
+  productDetails: {
+     fontSize: 13,
+      color: "#555",
+       marginBottom: 2 
+      },
+  ratingLabel: {
+     fontSize: 15,
+      fontWeight: "500",
+       color: "#333",
+        marginBottom: 40,
+         marginTop: 10 
+        },
+  starRow: {
+     flexDirection: "row",
+      marginTop: 10,
+       marginBottom: 40
+       },
   commentInput: {
-    borderWidth: 1, borderColor: "#9747FF", borderRadius: 8,
-    padding: 10, fontSize: 14, textAlignVertical: "top",
-    minHeight: 60, color: "#333",
+    borderWidth: 1, 
+    borderColor: "#9747FF",
+     borderRadius: 8,
+    padding: 15, 
+    fontSize: 14,
+     textAlignVertical: "top",
+    minHeight: 90,
+     color: "#333",
   },
   anonymousRow: {
     flexDirection: "row",
@@ -256,11 +331,21 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 10,
   },
-  anonymousText: { fontSize: 14, color: "#333" },
-  submitButton: {
-    backgroundColor: "#9747FF", paddingVertical: 12,
-    borderRadius: 8, alignItems: "center",
-    marginTop: 10, marginBottom: 40,
+  anonymousText: { 
+    fontSize: 14, 
+    color: "#333" 
   },
-  submitButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  submitButton: {
+    backgroundColor: "#9747FF",
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 10, 
+    marginBottom: 40,
+  },
+  submitButtonText: { 
+    color: "#fff",
+     fontSize: 14, 
+      fontFamily: "KronaOne",
+    },
 });

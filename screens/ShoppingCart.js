@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { TouchableOpacity, Text, View, ScrollView, Alert } from "react-native";
+import Swipeable from 'react-native-gesture-handler/Swipeable';
+
 import {
-  BackBtn,
-  CartContainer,
   CartEmpty,
   CartItem,
   CheckoutBtn,
@@ -11,7 +11,6 @@ import {
   Header,
   ItemImage,
   ItemName,
-  ShoppingCartTitle,
   TotalPrice,
   ItemFooter,
   ItemInfo,
@@ -19,8 +18,10 @@ import {
   QtyButton,
   ItemQty,
   CartFooter,
+  ProductContainer,
+  ItemSize,
 } from '../components/styles';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Feather } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
 import {
   getFirestore,
@@ -42,13 +43,16 @@ export default function ShoppingCart() {
   const navigation = useNavigation();
   const user = auth.currentUser;
   const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
       setCartItems([]);
+      setLoading(false);
       return;
     }
-    const q = query(collection(db, 'cartItems'), where('userId', '==', user.uid));
+    const q = query(collection(db, 'cartItems'),
+     where('userId', '==', user.uid));
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -57,6 +61,7 @@ export default function ShoppingCart() {
           items.push({ id: doc.id, ...doc.data() });
         });
         setCartItems(items);
+        setLoading(false);
       },
       (error) => {
         console.error('Error fetching cart items:', error);
@@ -77,7 +82,7 @@ export default function ShoppingCart() {
     }
   };
 
-  const getAvailableStock = async (productId) => {
+  const getAvailableStock = async (productId, size) => {
     try {
       const productRef = doc(db, "products", productId);
       const productSnap = await getDoc(productRef);
@@ -85,8 +90,8 @@ export default function ShoppingCart() {
       if (productSnap.exists()) {
         const data = productSnap.data(); 
         
-        if (data.stock) {
-          return Object.values(data.stock).reduce((a, b) => a + b, 0);
+        if (data.stock && data.stock[size] != null) {
+          return data.stock[size];
         }
 
         return 0;
@@ -99,12 +104,12 @@ export default function ShoppingCart() {
   };
 
 
-  const increaseQuantity = async (id, color, productId) => {
+  const increaseQuantity = async (id, size, productId) => {
     try {
       const item = cartItems.find(i => i.id === id);
       if (!item) return;
 
-      const stock = await getAvailableStock(productId, color);
+      const stock = await getAvailableStock(productId, size);
 
       if (item.quantity >= 20) {
         Alert.alert("Limit reached", "You can only add up to 20 units of this item.");
@@ -123,7 +128,7 @@ export default function ShoppingCart() {
     }
   };
 
-  const decreaseQuantity = async (id, color) => {
+  const decreaseQuantity = async (id, size) => {
     try {
       const item = cartItems.find(i => i.id === id);
       if (!item || item.quantity <= 1) return;
@@ -162,27 +167,65 @@ export default function ShoppingCart() {
   const finalTotal = totalPrice;
 
   return (
-    <CartContainer>
-      <Header>
-        <BackBtn onPress={() => navigation.navigate('LandingPage')}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </BackBtn>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <ShoppingCartTitle>
-            Shopping Cart ({cartItems.length})
-          </ShoppingCartTitle>
-        </View>
-        <View style={{ width: 24 }} />
-      </Header>
+    <ProductContainer style={{ flex: 1}}>
+                <Header style = {{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 16,
+                  paddingBottom: 10,
+                  backgroundColor: '#fff',
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#ddd',
+                }}>
+                  <TouchableOpacity onPress={() => navigation.goBack()}
+                  style={{position: 'absolute', left: 16, top: -4}}>
+                    <Feather name="arrow-left" size={27} color="black"  />
+                  </TouchableOpacity>
+    
+                   <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Shopping Cart</Text>
+                </Header>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 150 }}>
-        {cartItems.length === 0 ? (
+      {loading ? (
+        <Text style={{textAlign: 'center', marginTop: 30}}>Loading your cart..</Text>
+      ) : cartItems.length === 0 ? (
           <CartEmpty>Your cart is Empty.</CartEmpty>
         ) : (
           cartItems.map(item => (
-            <CartItem key={item.id + item.color}>
+            <Swipeable
+            key={item.id + item.size}
+            overshootRight = {false}
+            friction={2}
+            rightThreshold={40}
+            renderRightActions={()  => (
+              <View style={{
+                height: '90%',
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderRadius: 16,
+                overflow: 'hidden',
+              }}
+              >
+              <TouchableOpacity onPress={() => confirmRemoveFromCart(item.id)}
+              style={{
+                backgroundColor:'#ff5c5c',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: 80,
+                height: '95%',
+                borderRadius: 16,
+                alignSelf: 'center',
+              }}>
+                <Feather name="trash" size={26} color="#fff">
+                </Feather>
+              </TouchableOpacity>
+              </View>
+            )}
+            >
+              <CartItem>
               <TouchableOpacity
-                onPress={() => toggleSelected(item.id, item.color)}
+                onPress={() => toggleSelected(item.id)}
                 style={{ marginRight: 10, marginTop: 5 }}
               >
                 <FontAwesome
@@ -194,30 +237,43 @@ export default function ShoppingCart() {
 
               <TouchableOpacity
                 onPress={() => confirmRemoveFromCart(item.id)}
-                style={{ position: 'absolute', top: 10, right: 10 }}
-              >
-                <FontAwesome name="trash" size={20} color='#000000' />
+                style={{ position: 'absolute', top: 10, right: 10 }}>
               </TouchableOpacity>
 
+              
               <ItemImage source={{ uri: item.productImage || 'https://via.placeholder.com/70' }} />
+
+
               <ItemInfo>
                 <ItemName>{item.productName}</ItemName>
+                <ItemSize>Size: {item.size}</ItemSize>   
+
                 <ItemFooter>
-                  <Text style={{ fontSize: 16, fontWeight: 'bold', color:'#9747FF' }}>
+                  <Text style={{ fontSize: 17, fontWeight: 'bold', color:'#9747FF' }}>
                     ₱{item.price}
                   </Text>
+
+
                   <QuantityControl>
-                    <QtyButton disabled={item.quantity <= 1} onPress={() => decreaseQuantity(item.id)}>
-                      <Text style={{ fontSize: 18, opacity: item.quantity <= 1 ? 0.3 : 1 }}>−</Text>
+                    <QtyButton 
+                    disabled={item.quantity <= 1} 
+                    onPress={() => decreaseQuantity(item.id, item.size)}
+                    >
+                      <Text style={{fontSize: 20, opacity: item.quantity <= 1 ? 0.3 : 1 }}>−</Text>
                     </QtyButton>
-                    <ItemQty>{item.quantity}</ItemQty>
-                    <QtyButton onPress={() => increaseQuantity(item.id, item.productId)}> 
-                      <Text style={{ fontSize: 18 }}>＋</Text>
+
+                    <ItemQty>  {item.quantity}  </ItemQty>
+
+                    <QtyButton 
+                    disabled={item.quantity >= item.stock} 
+                    onPress={() => increaseQuantity(item.id, item.size, item.productId)}> 
+                      <Text style={{ fontSize: 18  }}>＋</Text>
                     </QtyButton>
                   </QuantityControl>
                 </ItemFooter>
-              </ItemInfo>
+             </ItemInfo>
             </CartItem>
+            </Swipeable>
           ))
         )}
       </ScrollView>
@@ -226,8 +282,6 @@ export default function ShoppingCart() {
         <CartFooter>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
             <TotalPrice>Selected Items: {totalSelectedQuantity}</TotalPrice>
-          </View> 
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
             <TotalPrice>Total: ₱{finalTotal}</TotalPrice>
           </View>
           <View style={{ alignItems: 'center' }}>
@@ -295,6 +349,6 @@ export default function ShoppingCart() {
           </View>
         </CartFooter>
       )}
-    </CartContainer>
+    </ProductContainer>
   );
 }

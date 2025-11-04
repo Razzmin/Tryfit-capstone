@@ -1,10 +1,9 @@
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { getAuth } from "firebase/auth";
 import { getFirestore, collection, query, where, onSnapshot, doc, getDoc  } from "firebase/firestore";
 
@@ -68,7 +67,7 @@ useEffect(() => {
       case "ready":
         return <Ionicons name="checkmark-done-circle" size={20} color="#FF9800" />;
       default:
-        return <AntDesign name="bells" size={20} color="#888" />;
+        return <Ionicons name="notifications-outline" size={20}  color="#888" />;
     }
   };
 

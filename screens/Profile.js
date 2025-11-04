@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Modal,
 } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import{ Header } from '../components/styles';
+import { FontAwesome, Feather, MaterialIcons, MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { auth } from '../firebase/config';
 import { signOut, deleteUser } from 'firebase/auth';
@@ -25,6 +26,8 @@ import {
 export default function EditProfile() {
   const navigation = useNavigation();
   const [showModal, setShowModal] = useState(false);
+  const [pressedItem, setPressedItem] = useState(null);
+  
 
   const handleDeleteAccount = async () => {
     const user = auth.currentUser;
@@ -85,51 +88,101 @@ export default function EditProfile() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('LandingPage')}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Profile</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <SafeAreaView style={styles.container}>
+      <Header style = {{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingHorizontal: 16,
+                        paddingBottom: 20,
+                        backgroundColor: '#fff',
+                      }}>
+                        <TouchableOpacity onPress={() => navigation.goBack()}
+                        style={{position: 'absolute', left: 2, top: -4}}>
+                          <Feather name="arrow-left" size={27} color="black"  />
+                        </TouchableOpacity>
+          
+                         <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PROFILE</Text>
+                      </Header>
 
       <View style={styles.profileSection}>
-        <Image
-          source={{ uri: 'https://placehold.co/100x100?text=User' }}
-          style={styles.avatar}
-        />
+        <MaterialIcons name="account-circle" size={80} color="#9747FF"
+        style={{
+          marginBottom: 10,
+        }} />
         <Text style={styles.profileName}>Your Name</Text>
       </View>
 
       <View style={styles.menuList}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('EditProfile')}>
-          <FontAwesome name="user" size={20} color="#9747FF" style={styles.menuIcon} />
+        <TouchableOpacity
+        activeOpacity={0.9}
+        onPressIn={() => setPressedItem('EditProfile')}
+        onPressOut={() => setPressedItem(null)}
+         style={[styles.menuItem,
+         pressedItem === 'EditProfile' && { borderColor: '#9747ff', borderWidth: 2},
+         ]} 
+         onPress={() => navigation.navigate('EditProfile')}
+         >
+          <MaterialCommunityIcons name="account-box-edit-outline" size={24} color="#9747FF" style={styles.menuIcon} />
           <Text style={styles.menuText}>Edit Profile</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('EditBodyMeasurement')}>
+        <TouchableOpacity activeOpacity={0.9}
+        onPressIn={() => setPressedItem('EditBodyMeasurement')}
+        onPressOut={() => setPressedItem(null)}
+         style={[styles.menuItem,
+         pressedItem === 'EditBodyMeasurement' && { borderColor: '#9747ff', borderWidth: 2},
+         ]} 
+         onPress={() => navigation.navigate('EditBodyMeasurement')}>
           <FontAwesome name="edit" size={20} color="#9747FF" style={styles.menuIcon} />
           <Text style={styles.menuText}>Edit Body Measurement</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Notification')}>
-          <FontAwesome name="bell" size={20} color="#9747FF" style={styles.menuIcon} />
+        <TouchableOpacity
+        activeOpacity={0.9}
+        onPressIn={() => setPressedItem('Notification')}
+        onPressOut={() => setPressedItem(null)}
+         style={[styles.menuItem,
+         pressedItem === 'Notification' && { borderColor: '#9747ff', borderWidth: 2},
+         ]} 
+         onPress={() => navigation.navigate('Notification')}>
+         <Ionicons name="notifications-outline" size={24} color="#9747FF" style={styles.menuIcon} />
           <Text style={styles.menuText}>Notification</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShippingLocation')}>
-          <FontAwesome name="map-marker" size={20} color="#9747FF" style={styles.menuIcon} />
-          <Text style={styles.menuText}>Shipping Location</Text>
+        <TouchableOpacity
+        activeOpacity={0.9}
+        onPressIn={() => setPressedItem('ShippingLocation')}
+        onPressOut={() => setPressedItem(null)}
+         style={[styles.menuItem,
+         pressedItem === 'ShippingLocation' && { borderColor: '#9747ff', borderWidth: 2},
+         ]} 
+         onPress={() => navigation.navigate('ShippingLocation')}>
+          <MaterialIcons name="edit-location-alt" size={24} color="#9747FF" style={styles.menuIcon} />
+          <Text style={styles.menuText}>Edit Shipping Location</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Password')}>
-          <FontAwesome name="lock" size={20} color="#9747FF" style={styles.menuIcon} />
+        <TouchableOpacity
+         activeOpacity={0.9}
+        onPressIn={() => setPressedItem('Password')}
+        onPressOut={() => setPressedItem(null)}
+         style={[styles.menuItem,
+         pressedItem === 'Password' && { borderColor: '#9747ff', borderWidth: 2},
+         ]} 
+         onPress={() => navigation.navigate('Password')}>
+          <MaterialIcons name="password" size={24} color="#9747FF" style={styles.menuIcon} />
           <Text style={styles.menuText}>Change Password</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => setShowModal(true)}>
-          <FontAwesome name="trash" size={20} color="#9747FF" style={styles.menuIcon} />
+        <TouchableOpacity
+        activeOpacity={0.9}
+        onPressIn={() => setPressedItem('DeleteAccount')}
+        onPressOut={() => setPressedItem(null)}
+         style={[styles.menuItem,
+         pressedItem === 'DeleteAccount' && { borderColor: '#9747ff', borderWidth: 2},
+         ]} 
+         onPress={() => setShowModal(true)}>
+          <AntDesign name="user-delete" size={24} color="#9747FF" style={styles.menuIcon} />
           <Text style={styles.menuText}>Delete Account</Text>
         </TouchableOpacity>
       </View>
@@ -177,31 +230,20 @@ export default function EditProfile() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    paddingTop: 30,
     paddingHorizontal: 20,
     backgroundColor: '#fff',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
   profileSection: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 40,
   },
   avatar: {
     width: 100,
@@ -210,9 +252,10 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   profileName: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 14,
+    fontFamily: "KronaOne",
     color: '#333',
+    textTransform: 'uppercase',
   },
   menuList: {
     gap: 10,
@@ -226,13 +269,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   menuIcon: {
-    marginRight: 15,
+    marginLeft: 10,
   },
   menuText: {
     fontSize: 16,
     fontWeight: '400',
     color: '#333',
-    letterSpacing: 1,
+
+    marginLeft: 15,
   },
   modalOverlay: {
     flex: 1,

@@ -8,8 +8,10 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import{ Header } from '../components/styles';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome, Feather } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { getAuth } from 'firebase/auth';
 import {
@@ -137,15 +139,22 @@ export default function ToReceive() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('LandingPage')}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Purchases</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <SafeAreaView style={styles.container}>
+      <Header style = {{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            paddingHorizontal: 16,
+                            paddingBottom: 20,
+                            backgroundColor: '#fff',
+                          }}>
+                            <TouchableOpacity onPress={() => navigation.goBack()}
+                            style={{position: 'absolute', left: 10, top: -4}}>
+                              <Feather name="arrow-left" size={27} color="black"  />
+                            </TouchableOpacity>
+              
+                             <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PURCHASES</Text>
+                          </Header>
 
       {/* Nav Tabs */}
       <ScrollView
@@ -188,14 +197,17 @@ export default function ToReceive() {
             return (
               <View key={order.id} style={styles.orderCard}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.orderStatus}>To Receive</Text>
+                  <Text style={styles.orderStatus}>{order.status}</Text>
+                  <Text style={styles.orderDate}>
+                  {order.createdAt?.toDate().toLocaleString() || 'N/A'}
+                  </Text>
                 </View>
 
                 <View style={styles.productRow}>
                   <Image source={{ uri: imageUri }} style={styles.productImage} />
                   <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{productName}</Text>
-                    <Text style={styles.productSize}>{size}</Text>
+                    <Text style={styles.productName}>{item.productName}</Text>
+                    <Text style={styles.productSize}>Size: {item.size}</Text>
                     <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
                     <View style={styles.totalRow}>
                       <Text style={styles.productTotal}>Total Payment:</Text>
@@ -228,7 +240,7 @@ export default function ToReceive() {
           })
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -236,22 +248,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    paddingTop: 30,
+    paddingHorizontal: 10,
   },
   tabContainer: {
     flexDirection: 'row',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   tabWrap: {
     alignItems: 'center',
@@ -278,7 +280,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
     padding: 15,
-    marginBottom: 30,
+    marginBottom: 10,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -288,6 +290,9 @@ const styles = StyleSheet.create({
   orderStatus: {
     fontWeight: 'bold',
     color: '#9747FF',
+    textTransform: 'uppercase',
+    fontSize: 13,
+    marginLeft: 1,
   },
   productRow: {
     flexDirection: 'row',
@@ -337,13 +342,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 1,
   },
   waitingMessage: {
     fontSize: 12,
     color: '#555',
     fontStyle: 'italic',
   },
+
   shippingBtn: {
     backgroundColor: '#9747FF',
     borderRadius: 6,
@@ -368,5 +374,9 @@ const styles = StyleSheet.create({
   orderIdText: {
     fontSize: 13,
     color: '#333',
+  },
+  orderDate: {
+    fontSize: 12,
+    color: '#666',
   },
 });

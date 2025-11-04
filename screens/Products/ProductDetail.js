@@ -11,6 +11,8 @@ import {
   ScrollView,
   Image,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 
 
@@ -29,19 +31,18 @@ import {
   setDoc,
   deleteDoc,
   serverTimestamp,
+  updateDoc,
+  getDocs
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 import {
-  PageScroll,
-  ImageSlider,
   ProductImage,
   Content,
   ProductName,
   ProductPrice,
   RatingText,
   SectionTitle,
-  RightHeartIcon,
   NavBar,
   AddCartBtn,
   AddCartText,
@@ -58,11 +59,10 @@ import {
   ReviewerName,
   Header,
   ProductContainer,
-  BackBtnPro,
 } from '../../components/styles';
 
-import AntDesign from '@expo/vector-icons/AntDesign'
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import {AntDesign, Feather, MaterialIcons, FontAwesome} from '@expo/vector-icons';
+
 
 const db = getFirestore();
 const auth = getAuth();
@@ -96,7 +96,7 @@ export default function ProductDetail() {
   useEffect(() => {
     const q = query(
       reviewsRef,
-      where("productId", "==", product.id),
+      where("productId", "==", product.productID),
       orderBy("createdAt", "desc") // ✅ match your Firestore field
     );
 
@@ -204,10 +204,35 @@ export default function ProductDetail() {
   };
 
   try {
-    // ✅ Use setDoc to assign our own ID
-    await setDoc(doc(cartRef, cartItemCode), cartItem);
 
-  
+    const existingQuery = query(
+      cartRef,
+      where('userId', '==', user.uid),
+      where('productId', '==', product.id),
+      where('size', '==', selectedSize),
+    )
+
+    const existingSnapshot = await getDocs(existingQuery);
+
+    if(!existingSnapshot.empty) {
+      //if item already exist, it just add to the quantity
+      const existingDoc = existingSnapshot.docs[0];
+      const existingQty = existingDoc.data().quantity || 0;
+
+      const stockAvailable = getSizeStock(selectedSize);
+      if (existingQty + modalQuantity > stockAvailable) {
+        Alert.alert('Error', 'Only ${stockAvailable} item(s) available for this size');
+        return;
+      }
+      await updateDoc(existingDoc.ref, {
+        quantity: existingQty + modalQuantity
+      });
+
+    } else {
+    //if item don't exists create new
+    await setDoc(doc(cartRef, cartItemCode), cartItem);
+  }
+
     await addDoc(collection(db, "notifications"), {
       userId: user.uid,
       title: "Item Added to Cart",
@@ -220,7 +245,8 @@ export default function ProductDetail() {
 
 
     addNotification(`${product.name} added to cart`);
-    Alert.alert("Success", "Item is added to your cart");
+    Alert.alert("Success","Item is added to your cart");
+    
 
     setModalVisible(false);
     setModalQuantity(1);
@@ -259,64 +285,94 @@ const handleTryOn = () => {
 
   return (
     <>
-      <TouchableWithoutFeedback
-        onPress={() => {
-          if (visibleMenuId !== null) {
-            setVisibleMenuId(null);
-          } else {
-            Keyboard.dismiss();
-          }
-        }}
+      <KeyboardAvoidingView style={{ flex: 1}}
+      behavior={Platform.OS === 'android' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'android' ? 90: 0}>
+
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <ScrollView
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{flexGrow: 1, backgroundColor: '#fff', paddingBottom: 150,}}
       >
-        <ProductContainer>
-          <PageScroll contentContainerStyle={{  flexGrow: 1, paddingBottom: 150 }}>
-            <Header>
-              <BackBtnPro onPress={() => navigation.goBack()}>
-                <FontAwesome name="arrow-left" size={24} color="black" />
-              </BackBtnPro>
+
+        <ProductContainer style={{ flex: 1}}>
+            <Header style = {{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 16,
+              paddingBottom: 10,
+              backgroundColor: '#fff',
+              borderBottomWidth: 1,
+              borderBottomColor: '#ddd',
+            }}>
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Feather name="arrow-left" size={27} color="black" />
+              </TouchableOpacity>
+
+               <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase'}}>Cloth Details</Text>
+
+              <TouchableOpacity onPress={() => navigation.navigate('ShoppingCart')}>
+              <Feather name="shopping-bag" size={24} color="black" />
+              </TouchableOpacity>
             </Header>
 
-            <ImageSlider
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={(e) => {
-                const slide = Math.round(
-                  e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width
-                );
-                setActiveImage(slide);
-              }}
-              scrollEventThrottle={16}
-            >
-              {images.map((img, index) => (
-                <TouchableOpacity key={index} onPress={() => setActiveImage(index)}>
-                  <ProductImage source={{ uri: img }} />
-                </TouchableOpacity>
-              ))}
-            </ImageSlider>
+             <View 
+            pointerEvents="box-none"
+            style = {{
+              width: '100%',
+              aspectRatio: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginTop: -31,
+            }}>
+              <Image source = {{
+                uri: images && images [0] ? images[0] : null }}
+                style={{
+                  width: '99%',
+                  height: '99%',
+                  resizeMode: 'contain',
+                  marginTop: 40,
+                }}
+             />
+            </View>
 
-            <SliderIndicatorWrapper>
-              {images.map((_, index) => (
-                <Dash key={index} $active={activeImage === index} />
-              ))}
+            <SliderIndicatorWrapper style={{
+              justifyContent: 'center', marginTop: 25
+            }}>
+            <Dash $active={true} />
             </SliderIndicatorWrapper>
 
-            <Content>
-              
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <ProductName>{product.name}</ProductName>
-                <RightHeartIcon onPress={() => console.log('Heart')}>
-                 <AntDesign name="heart" size={20} color="black" />
-                </RightHeartIcon>
-              </View>
-                <SectionTitle>Product Details</SectionTitle>
-              <ProductPrice>{product.price}</ProductPrice>
-              <RatingText> ★★★★☆ {product.rating} | {product.sold} Sold </RatingText>
+            <Content style={{ paddingHorizontal: 21}}>
+                <ProductName style = {{
+              textTransform: 'uppercase',
+              marginTop: 13,
+              marginBottom: 11,
+              letterSpacing: 2,
+             }}
+                >{product.name} example </ProductName>
+                
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+               <ProductPrice style = {{ lineHeight: 40, fontSize: 38 }}>₱{product.price}</ProductPrice>
 
+              <View style = {{ flexDirection: 'row', alignItems: 'center', marginLeft: 15}}>
+              <AntDesign name= "star" size={17} color="#EFBF04" />
+               <RatingText> {product.rating} | </RatingText>
+              <Text style= {{ fontSize: 13, color: '#888', marginLeft: 2}}> {product.sold} Sold  </Text>
+              </View>
+              </View>
               
-              {product.description?.split('\n').map((line, index) => (
+              <View style = {{
+                height: 1.3,
+                backgroundColor: '#ddd',
+                marginVertical: 5,
+              }}></View>
+          
+                <SectionTitle>Description</SectionTitle>
+                {product.description?.split('\n').map((line, index) => (
                 <Text key={index}>• {line.trim()}</Text>
-              ))}
+              ))} 
 
               <View
                   style={{
@@ -333,18 +389,50 @@ const handleTryOn = () => {
                   </Text>
                 </View>
 
-
-              <SectionTitle>Reviews</SectionTitle>
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+               <MaterialIcons name="reviews" size={20} color="black" style={{ paddingHorizontal: 5 }}/>
+                <SectionTitle>Reviews</SectionTitle>
+              </View>
+              
                 <ReviewContainer>
                   {(showAllReviews ? reviews : reviews.slice(0, 3)).map((item) => (
-                    <ReviewItems key={item.id} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                    <ReviewItems 
+                    key={item.id}
+                      style={{ flexDirection: 'row', 
+                      alignItems: 'flex-start',
+                      backgroundColor: '#F9F9F9',
+                      borderRadius: 10,
+                      padding: 16,
+                      marginBottom: 12,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1},
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                      elevation: 2  }}>
+
                       <Avatar style={{ backgroundColor: item.avatarColor || '#9747FF' }}>
-                        <AvatarText>{item.username?.[0]?.toUpperCase() || 'A'}</AvatarText>
+                      <AvatarText>{item.userName?.[0]?.toUpperCase() || 'A'}</AvatarText>
                       </Avatar>
 
                       <ReviewContent style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                          <ReviewerName>{item.username}</ReviewerName>
+                        <View style={{ flexDirection: 'row',
+                         justifyContent: 'space-between', 
+                         alignItems: 'center',
+                          marginBottom: 4 }}>
+                          <ReviewerName>{item.userName}</ReviewerName>
+
+                          <StarRatings>
+                          {[...Array(5)].map((_, i) => (
+                            <FontAwesome
+                              key={i}
+                              name={i < item.rating ? 'star' : 'star-o'}
+                              size={14}
+                              color="#F7C700"
+                              style={{ marginRight: 2 }}
+                            />
+                          ))}
+                        </StarRatings>
+                    </View>
 
                           {user?.uid === item.userId && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', position: 'relative' }}>
@@ -368,25 +456,13 @@ const handleTryOn = () => {
                               </TouchableOpacity>
                             </View>
                           )}
-                        </View>
+                      
 
                       
                         <VariationText>
                           Size: {item.size}
                         </VariationText>
 
-                        {/* ✅ stars */}
-                        <StarRatings>
-                          {[...Array(5)].map((_, i) => (
-                            <AntDesign
-                              key={i}
-                              name={i < item.rating ? 'star' : 'staro'}
-                              size={14}
-                              color="#F7C700"
-                              style={{ marginRight: 2 }}
-                            />
-                          ))}
-                        </StarRatings>
 
                         {/* ✅ comment */}
                         <CommentText>{item.comment}</CommentText>
@@ -405,9 +481,11 @@ const handleTryOn = () => {
                     </TouchableOpacity>
                   )}
                 </ReviewContainer>
-
             </Content>
-          </PageScroll>
+          </ProductContainer>
+          </ScrollView>
+          </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
 
           <NavBar>
             <AddCartBtn onPress={() => setModalVisible(true)}>
@@ -419,8 +497,6 @@ const handleTryOn = () => {
             </AddCartBtn>
 
           </NavBar>
-        </ProductContainer>
-      </TouchableWithoutFeedback>
 
       {/* Modal for Add to Cart */}
       <Modal
@@ -444,31 +520,45 @@ const handleTryOn = () => {
                 style={{
                   backgroundColor: 'white',
                   borderRadius: 12,
-                  width: '100%',
-                  maxWidth: 400,
+                  width: '95%',
+                  maxWidth: 350,
                   padding: 20,
-                  flexDirection: 'row',
                   alignItems: 'flex-start',
                 }}
               >
                 {/* Left: Small Product Image */}
+                <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 10}}>
                 <Image
                   source={{ uri: product.imageUrl }}
-                  style={{ width: 80, height: 80, borderRadius: 8, marginRight: 16 }}
+                  style={{ width: 80, height: 80, borderRadius: 8, marginRight: 20 }}
                   resizeMode="contain"
                 />
-
                 {/* Right: Details */}
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
-                    {product.name}
-                  </Text>
+                  <Text style={{ fontSize: 15, fontFamily: "KronaOne", marginBottom: 10, }}>{product.name}</Text>
+                   <Text style={{ fontSize: 16,color: '#9747FF', marginTop: 4 }}>
+                        Price: ₱{(product.price * modalQuantity).toLocaleString()}
+                      </Text>
+                  <Text>
+                        Stock:{" "}
+                        {selectedSize
+                          ? getSizeStock(selectedSize)
+                          : getTotalStock()}
+                      </Text>
+                  </View>
+                  </View>
+
+                  <View style = {{
+                height: 1.3,
+                backgroundColor: '#ddd',
+                marginVertical: 5,
+              }}></View>
 
                   {/* Size selection */}
                     {safeStock && (
-                      <View style={{ marginBottom: 10 }}>
-                        <Text style={{ marginBottom: 6 }}>Choose Size:</Text>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                      <View style={{ marginBottom: 10, width: '100%' }}>
+                        <Text style={{ fontSize: 15, marginBottom: 10, fontWeight: '600' }}>Choose Size:</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginLeft: 50 }}>
                           {sizeOrder.map((size) => {
                             const qty = safeStock[size] || 0;
                             return (
@@ -480,8 +570,8 @@ const handleTryOn = () => {
                                   setModalQuantity(1);
                                 }}
                                 style={{
-                                  paddingHorizontal: 12,
-                                  paddingVertical: 8,
+                                  paddingHorizontal: 16,
+                                  paddingVertical: 10,
                                   borderRadius: 6,
                                   borderWidth: 1,
                                   borderColor: selectedSize === size ? '#9747FF' : '#ccc',
@@ -507,24 +597,25 @@ const handleTryOn = () => {
                       </View>
                     )}
 
-
-                  {/* Stock, Quantity, and Price + Add Button Row */}
-                  <View style={{ marginBottom: 16 }}>
-                    <Text style={{ marginBottom: 6, fontWeight: "600" }}>Quantity</Text>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  {/*Quantity*/}
+                  <View style={{ width: '100%', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 15, marginBottom: 6, fontWeight: "600" }}>Quantity:</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: 'space-between' }}>
+                     <Text style={{ fontSize: 12 }}></Text>
+                     <View style={{ flexDirection: "row", alignItems: "center", marginRight: 80 }}>
                       {/* Decrement Button */}
                       <TouchableOpacity
                         onPress={decrementQuantity}
                         disabled={modalQuantity <= 1}
                         style={{
                           backgroundColor: modalQuantity <= 1 ? "#ddd" : "#9747FF",
-                          paddingHorizontal: 10,
-                          paddingVertical: 4,
+                         width: 35,
+                          height: 35,
                           borderRadius: 4,
                           marginLeft: 6,
                         }}
                       >
-                        <Text style={{ color: "white", fontSize: 18 }}>−</Text>
+                        <Text style={{ color: "white", fontSize: 20, alignSelf: 'center'  }}>−</Text>
                       </TouchableOpacity>
 
                       {/* Quantity Display */}
@@ -539,47 +630,32 @@ const handleTryOn = () => {
                         style={{
                           backgroundColor:
                             modalQuantity >= getSizeStock(selectedSize) ? "#ddd" : "#9747FF",
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
+                          width: 35,
+                          height: 35,
                           borderRadius: 4,
                           marginLeft: 6,
                         }}
                       >
-                        <Text style={{ color: "white", fontSize: 18 }}>＋</Text>
+                        <Text style={{ color: "white", fontSize: 20, alignSelf: 'center' }}>＋</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
+              </View>
 
-                  {/* Stock and Price + Add Button */}
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <View>
-                      <Text>
-                        Stock:{" "}
-                        {selectedSize
-                          ? getSizeStock(selectedSize)
-                          : getTotalStock()}
-                      </Text>
-                      <Text style={{ fontWeight: "bold", marginTop: 4 }}>
-                        Price: ₱{(product.price * modalQuantity).toLocaleString()}
-                      </Text>
-                    </View>
-
+              <View style = {{
+                height: 1.3,
+                backgroundColor: '#ddd',
+                marginVertical: 5,
+              }}></View>
+              
+                  {/* Add Button */}
                     <AddCartBtn
                       onPress={saveCartItem}
-                      style={{ paddingHorizontal: 16, paddingVertical: 8 }}
+                      style={{ paddingHorizontal: 10, paddingVertical: 20, marginBottom: 5, minWidth: 290, fontSize: 20}}
                     >
                       <AddCartText>Add to Cart</AddCartText>
                     </AddCartBtn>
                   </View>
-
-                </View>
-              </View>
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>

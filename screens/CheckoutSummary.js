@@ -6,6 +6,7 @@ import { View,
     TouchableOpacity,
     Image,
  } from "react-native";
+ import LottieView from 'lottie-react-native';
 
  //icons
  import Entypo from '@expo/vector-icons/Entypo';
@@ -20,14 +21,17 @@ export default function CheckoutSummary() {
         <View style = {styles.header}>  
         </View>
         <View style = {styles.topSection}>
-        <Image source={require('./../assets/confetti7.png')}
-        style={styles.confettiImage}
-        resizeMode="contain"
+        <LottieView
+        source={require('.././assets/animations/Loading_car.json')}
+        autoPlay loop={false}
+        style={{ width: 190, height: 190, marginBottom: 30}}
         />
         </View>
+
+
         <View style = {{alignItems: "center", justifyContent:"center"}}>
-        <Text style = {styles.orderText}>Order Completed!</Text>
-        <Text style = {styles.orderNumber}>Order number: #110V3U</Text>
+        <Text style = {styles.orderText}>Order Completed</Text>
+        <Text style = {styles.orderNumber}>Thank you for purchasing!</Text>
        </View>
 
         <View style = { styles.summaryContainer}> 
@@ -55,10 +59,6 @@ export default function CheckoutSummary() {
         <TouchableOpacity style = {styles.continueButton} onPress={() => navigation.navigate('LandingPage')}>
         <Text style = {styles.continueText}>Continue Shopping</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity style = {styles.orderButton}>
-        <Text style = {styles.continueText}>ewan pa</Text>  
-        </TouchableOpacity>
       </View>
     </View>
 
@@ -85,16 +85,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'column',
   },
-  confettiImage: {
-    width: 130,
-    height: 130,
-    marginVertical: 50,
-    marginBottom: 40,
-  },
   orderText: {
-    fontSize: 21,
-    fontWeight: 'bold',
+    fontSize: 19,
+    fontFamily: "KronaOne",
     color: '#000000ff',
+    textTransform: 'uppercase'
   },
   orderNumber: {
     fontSize: 13,
@@ -122,8 +117,8 @@ const styles = StyleSheet.create({
   },
   itemText: {
     color:  '#000000ff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 13,
+    fontFamily: "KronaOne",
   },
   itemTotal: {
     color:  '#000000ff',
@@ -137,13 +132,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 15,
+    
   },
   continueText: {
     color: '#fff',
     textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 17,
+    fontSize: 14,
     color: '#ffffffff',
+    fontFamily: "KronaOne",
   },
   orderButton: {
     backgroundColor: '#A9A9A9',

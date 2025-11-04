@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FlatList, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { FlatList, View, Text, TouchableOpacity, ActivityIndicator, ImageBackground } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -107,7 +107,11 @@ const CategoryProductsScreen = () => {
 
 
  return (
-  <GradientBackground>
+   <ImageBackground
+          source={require('../assets/bg.png')}
+          resizeMode="cover"  
+          style={{flex: 1}}
+          >
     <StyledContainer style={{ flex: 1, justifyContent: "flex-start" }}>
       <StatusBar style="dark" />
       <InnerContainer style={{ flex: 1, justifyContent: "flex-start" }}>
@@ -115,27 +119,30 @@ const CategoryProductsScreen = () => {
         {/* Header */}
         <View
           style={{
-            width: "100%",
+            width: "124%",
             height: 50,
             justifyContent: "center",
             alignItems: "center",
             position: "relative",
-            marginTop: 10, // optional: push it slightly down from the very top
+            marginTop: 12,
+            paddingHorizontal: 20,
           }}
         >
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{ position: "absolute", left: 10, padding: 8 }}
+            style={{ position: "absolute", left: 20, padding: 4 }}
           >
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
 
           <Text
             style={{
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: "bold",
               color: "black",
+              fontFamily: "KronaOne",
               textTransform: "uppercase",
+              alignSelf: 'center',
             }}
           >
             {currentCategory.label}
@@ -146,28 +153,40 @@ const CategoryProductsScreen = () => {
         <FilterScroll
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ marginVertical: 10 }}
+          contentContainerStyle= {{
+          paddingHorizontal: 10,
+          alignItems: 'center',
+          }}
+          style={{ marginVertical: 10, alignSelf: 'center', width: '120%' }}
         >
-          {categories.map((cat) => (
+          {categories.map((cat) => {
+            const isActive = cat.key === currentCategory.key;
+            return (
             <FilterButton
               key={cat.key}
               onPress={() =>
                 navigation.navigate("CategoryProducts", { categoryKey: cat.key })
               }
               style={{
-                backgroundColor:
-                  cat.key === currentCategory.key ? Colors.brand : "transparent",
+                backgroundColor: "transparent",
+                borderWidth: 1,
+                borderColor: isActive ? '#9747FF' : '#000',
+                paddingVertical: 10,
+                minWidth: 80,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               <FilterButtonText
                 style={{
-                  color: cat.key === currentCategory.key ? "white" : "black",
+                 color: 'black', fontSize: 14
                 }}
               >
                 {cat.label}
               </FilterButtonText>
             </FilterButton>
-          ))}
+          );
+          })}
         </FilterScroll>
 
         {/* Product List */}
@@ -190,7 +209,7 @@ const CategoryProductsScreen = () => {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{
                 paddingHorizontal: 8,
-                paddingBottom: 20, // give space at bottom
+                paddingBottom: 20, 
               }}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -234,7 +253,7 @@ const CategoryProductsScreen = () => {
         )}
       </InnerContainer>
     </StyledContainer>
-  </GradientBackground>
+  </ImageBackground>
 );
 
 };

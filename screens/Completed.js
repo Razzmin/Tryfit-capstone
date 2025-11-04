@@ -7,8 +7,10 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import{ Header } from '../components/styles';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome } from '@expo/vector-icons';
+import {  Feather } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
 import {
   getFirestore,
@@ -83,18 +85,28 @@ export default function Completed() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('LandingPage')}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Purchases</Text>
-        <View style={{ width: 24 }} />
-      </View>
+     <Header style = {{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                paddingHorizontal: 16,
+                                paddingBottom: 20,
+                                backgroundColor: '#fff',
+                              }}>
+                                <TouchableOpacity onPress={() => navigation.goBack()}
+                                style={{position: 'absolute', left: 10, top: -4}}>
+                                  <Feather name="arrow-left" size={27} color="black"  />
+                                </TouchableOpacity>
+                  
+                                 <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PURCHASES</Text>
+                              </Header>
 
       {/* Nav Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabContainer}>
+      <ScrollView 
+      horizontal showsHorizontalScrollIndicator={false} 
+      style={styles.tabContainer}>
         {Object.keys(tabRoutes).map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -112,7 +124,7 @@ export default function Completed() {
       </ScrollView>
 
       {/* Orders List */}
-      <ScrollView>
+      <ScrollView style= {{marginTop: -60}}>
         {orders.length === 0 ? (
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
             No completed orders found.
@@ -125,7 +137,10 @@ export default function Completed() {
             return (
               <View key={order.id} style={styles.orderCard}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.orderStatus}>Completed</Text>
+                  <Text style={styles.orderStatus}>{order.status}</Text>
+                  <Text style={styles.orderDate}>
+                  {order.createdAt?.toDate().toLocaleString() || 'N/A'}
+                  </Text>
                 </View>
 
                 <View style={styles.productRow}>
@@ -146,7 +161,9 @@ export default function Completed() {
 
                 <View style={styles.expectedDelivery}>
                   <Text style={styles.expectedText}>Expected Delivery:</Text>
-                  <Text style={styles.deliveryDate}>{order.expectedDelivery}</Text>
+                  <Text style={styles.deliveryDate}>
+                    {order.expectedDelivery || 'TBD'}
+                  </Text>
                 </View>
 
                 <View style={styles.totalRow}>
@@ -170,6 +187,7 @@ export default function Completed() {
                     style={styles.actionButton}
                     onPress={() =>
                       navigation.navigate("ReCheckout", {
+                        productImage: item.productImage,
                         selectedItems: order.items,      
                         total: order.total,               
                         address: order.address,  
@@ -184,18 +202,18 @@ export default function Completed() {
           })
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
-// ✅ Keep your existing styles
+// re-use styles
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingHorizontal: 10,
   },
   header: {
     flexDirection: 'row',
@@ -208,14 +226,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  /* ✅ Fixed Nav Tabs */
+  /* Fixed Nav Tabs */
   tabContainer: {
     flexDirection: 'row',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   tabWrap: {
     alignItems: 'center',
-    marginRight: 30, // consistent spacing between tabs
+    marginRight: 40, 
   },
   tabText: {
     fontSize: 14,
@@ -240,7 +258,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
     padding: 15,
-    marginBottom: 30, // ✅ was 450, reduced for normal spacing
+    marginBottom: 10, 
   },
   cardHeader: {
     flexDirection: 'row',
@@ -250,8 +268,20 @@ const styles = StyleSheet.create({
   orderStatus: {
     fontWeight: 'bold',
     color: '#9747FF',
+     fontSize: 13,
+    marginLeft: 1,
+    textTransform: 'uppercase',
   },
-
+   orderDate: {
+    fontSize: 12,
+    color: '#666',
+  },
+  deliveryDate: {
+    fontSize: 13,
+    color: '#9747FF',
+    fontWeight: '500',
+    letterSpacing: 1,
+  },
   /* Product */
   productRow: {
     flexDirection: 'row',
@@ -266,11 +296,12 @@ const styles = StyleSheet.create({
   productInfo: {
     marginLeft: 10,
     justifyContent: 'center',
+
   },
   productName: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: 11,
   },
   productSize: {
     fontSize: 12,
@@ -286,15 +317,20 @@ const styles = StyleSheet.create({
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 2,
     marginBottom: 10,
+    marginRight: 50,
+
   },
   totalLabel: {
     fontWeight: '500',
+    fontSize: 13,
   },
   totalPrice: {
     fontWeight: '700',
     color: '#9747FF',
+    fontSize: 15,
+     marginRight: 150,
   },
 
   /* Buttons */
@@ -307,7 +343,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#9747FF',
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 6,
+    borderRadius: 10,
     alignItems: 'center',
   },
   actionButtonText: {
@@ -320,13 +356,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#9747FF',
     paddingVertical: 10,
-    paddingHorizontal: 30, // ✅ reduced from 40 for balance
-    borderRadius: 6,
+    paddingHorizontal: 30, 
+    borderRadius: 10,
     alignItems: 'center',
   },
   secondaryButtonText: {
     color: '#9747FF',
     fontSize: 14,
     fontWeight: '500',
+  },
+  expectedDelivery: {
+    marginTop: 10,
+    marginBottom: 9,
+  },
+  expectedText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#444',
+    marginBottom: 2,
   },
 });

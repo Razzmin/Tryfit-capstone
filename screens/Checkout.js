@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View,
    Text, 
    FlatList, 
    StyleSheet, 
    Image, 
    TouchableOpacity,
-   SafeAreaView,
    Modal,
   } from 'react-native';
-
+import {
+  ProductContainer,
+  Header,
+} from '../components/styles';
+import { SafeAreaView } from 'react-native-safe-area-context';
 //icons
-import { FontAwesome } from '@expo/vector-icons';
-import Entypo from '@expo/vector-icons/Entypo';
+import { Entypo, MaterialIcons, Feather } from '@expo/vector-icons';
 
 //animation
 import LottieView from 'lottie-react-native';
@@ -33,6 +35,7 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 import { deleteDoc } from "firebase/firestore";
+import { useIsFocused } from '@react-navigation/native';
 
 
 export default function Checkout({ route, navigation }) {
@@ -42,10 +45,14 @@ export default function Checkout({ route, navigation }) {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [shippingLocation, setShippingLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isFocused = useIsFocused();
   const auth = getAuth();
   const db = getFirestore();
 
 useEffect(() => {
+
+  if(!isFocused) return; 
+
   const fetchShippingLocation = async () => {
     try {
       const user = auth.currentUser;
@@ -88,7 +95,7 @@ useEffect(() => {
   };
 
   fetchShippingLocation();
-}, []);
+}, [isFocused]);
 
 
   const handleDelete = (itemId) => {
@@ -98,17 +105,26 @@ useEffect(() => {
   };
 
   return (
-   <SafeAreaView style = {styles.container}> 
    
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('ShoppingCart')}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
-        <View style={{ width: 24 }} />
-      </View>
+       <ProductContainer style={{ flex: 1}}>
+                      <Header style = {{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingHorizontal: 16,
+                        paddingBottom: 10,
+                        backgroundColor: '#fff',
+                      }}>
+                      <TouchableOpacity onPress={() => navigation.goBack()}
+                      style={{position: 'absolute', left: 16, top: -4}}>
+                      <Feather name="arrow-left" size={27} color="black"  />
+                      </TouchableOpacity>
+                         <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>CHECKOUT</Text>
+                      </Header>
 
-      <View style = {{ flex: 1}}>
+       <SafeAreaView style = {styles.container}> 
+
+      <View style = {{ flex: 1, marginTop: -10}}>
       <FlatList
         data={checkoutItems}
         keyExtractor={(item) => item.id}
@@ -116,7 +132,7 @@ useEffect(() => {
         contentContainerStyle={{ flexGrow: 1,
             justifyContent:
             checkoutItems.length > 2 ? 'flex-start' : 'space-between',
-            paddingBottom: 150,}}
+            paddingBottom: 180}}
         
       renderItem={({ item }) => ( 
           <View style={styles.itemContainer}>
@@ -134,6 +150,8 @@ useEffect(() => {
         </TouchableOpacity>
         </View>
 
+        <Text style={styles.itemSize}>Size: {item.size}</Text>
+
     <View style={styles.itemBottomRow}>
       <Text style={styles.itemPrice}>₱{item.price}</Text>
       <Text style={styles.ItemQuantity}> ×{item.quantity}</Text>
@@ -143,15 +161,17 @@ useEffect(() => {
  )}
  ListFooterComponent={
   <View style = {styles.footerContainer}>
-   <Text style={styles.total}>Total: ₱{total}</Text>
-
   <TouchableOpacity style = {styles.addressSection} onPress={() => navigation.navigate('ShippingLocation')} >
+    <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 8}}>
+    <Entypo name="location-pin" size={24} color="black" />
     <Text style ={styles.sectionTitle}>Shipping Address</Text>
+    </View>
   <View 
   style={{ flexDirection: 'row', 
   justifyContent: 'space-between',
-  alignItems: 'center' }}>  
+  alignItems: 'center' }}> 
   <View>
+  
     {shippingLocation ? (
         <>
           <Text style={styles.sectionText}>
@@ -160,6 +180,7 @@ useEffect(() => {
           <Text style={styles.sectionText}>{shippingLocation.house}</Text>
           <Text style={styles.sectionText}>{shippingLocation.fullAddress}</Text>
         </>
+       
       ) : (
         <>
           <Text style={styles.sectionText}>No shipping address saved.</Text>
@@ -174,7 +195,11 @@ useEffect(() => {
 </TouchableOpacity>
 
   <View style = {styles.deliverySection}> 
+  <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 8}}>
+  <MaterialIcons name="delivery-dining" size={24} color="black" />
   <Text style={styles.sectionTitle}> Delivery Method</Text>
+  
+    </View>
   <Text style ={styles.sectionText}>LOCAL STANDARD SHIPPING: ₱58</Text>
   <Text style ={styles.deliveryNote}>Order placed now are expected to be 
   delivered within 2-3 days</Text>
@@ -183,9 +208,20 @@ useEffect(() => {
  }
   />
    </View>
-<View style = {styles.bottomBar}>
-<Text style={styles.totalAfter}>Total: ₱{total + 58}</Text>
- <TouchableOpacity style={styles.button} onPress={() => setShowPopup(true)} >
+    <View style = {styles.bottomBar}>
+    <View style={{
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 2,
+    }}>
+    <View style={{flexDirection: 'column'}}>
+  <Text style={styles.total}>SubTotal: ₱{total}</Text>
+ <Text style={styles.total}>Shipping Fee: ₱58</Text>
+ <Text style={styles.totalAfter}>Total: ₱{total + 58}</Text>
+ </View>
+      </View>
+    <TouchableOpacity style={styles.button} onPress={() => setShowPopup(true)} >
     <Text style= {styles.buttonText}> PROCEED</Text>
     </TouchableOpacity>
 
@@ -253,7 +289,7 @@ useEffect(() => {
                               price: item.price, 
                               size: item.size || "-",
                             })),
-                          };
+                          }
 
                        // Save order and get a reference back
                           const orderRef = await addDoc(collection(db, "orders"), orderData);
@@ -324,45 +360,38 @@ useEffect(() => {
                )}
             </Modal>
  </View>
-</SafeAreaView>
+ </SafeAreaView>
+ </ProductContainer>
+
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
     backgroundColor: '#fff',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    paddingHorizontal: 14,
   },
   itemContainer: {
     flexDirection: 'row',
-    padding: 15,
+    padding: 14,
     marginBottom: 15,
-    borderRadius: 12,
-    backgroundColor: '#EDEDED',
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
     overflow: 'hidden',
+    elevation: 2,
   },
   itemImage: {
     width: 80,
     height: 80,
     borderRadius: 10,
-    marginRight: 15,
+    marginRight: 20,
   },
   itemInfo: {
     flex: 1,
-    justifyContent: 'space-between',
+    marginLeft: 10,
+    justifyContent: 'center',
+
   },
   itemTopRow: {
     flexDirection: 'row',
@@ -373,24 +402,30 @@ const styles = StyleSheet.create({
   itemBottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 2,
+    marginTop: 5,
     alignItems: 'baseline',
     gap: 10,
 
   },
   itemName: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '600',
     flexShrink: 1,
     flex: 1,
   },
+  itemSize: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 3,
+    marginLef: 2,
+  },
   deleteButton: {
-    fontSize: 15,
+    fontSize: 20,
     color: '#000000ff',
     paddingHorizontal: 1,
   },
   itemPrice: {
-    fontSize: 17,
+    fontSize: 18,
     color: '#9747FF',
     marginTop: 15,
   },
@@ -400,19 +435,25 @@ const styles = StyleSheet.create({
   },
   addressSection: {
     paddingVertical: 10,
+    paddingHorizontal: 10,
   },
   deliverySection: {
-    paddingVertical: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    marginBottom: -10,
   },
   sectionTitle: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: 12,
+    fontFamily: "KronaOne",
+    marginBottom: 1,
+    marginLeft: 10,
+    textTransform: 'uppercase',
   },
   sectionText: {
     fontSize: 14,
     marginBottom: 2,
     paddingRight: 10,
+    marginLeft: 20,
   },
   deliveryRow: {
     paddingVertical: 20,
@@ -424,19 +465,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#000000ff',
     marginTop: 4,
+    marginLeft: 20,
   },
   total: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 5,
-    textAlign: 'right',
+    fontSize: 14,
+    marginTop: 10,
+    marginLeft: 5,
+    fontWeight: '600'
   },
   totalAfter: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    textAlign: 'right',
+    marginLeft: 5,
     marginBottom: 20,
     marginTop: 10,
+    color:  '#9747FF',
   },
   footerContainer: {
   backgroundColor: '#fff',
@@ -454,9 +497,10 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-     fontSize: 16,
-     fontWeight: 'bold',
+     fontSize: 15,
+    fontFamily: "KronaOne",
      textAlign: 'center',
+
   },
   bottomBar: {
   position: 'absolute',
@@ -465,10 +509,10 @@ const styles = StyleSheet.create({
   right: 0,
   backgroundColor: '#fff',
   paddingHorizontal: 20,
-  paddingTop: 10,
   paddingBottom: 25,
-  borderTopWidth: 1,
-  borderColor: '#ddd',
+  elevation: 10,
+  shadowRadius: 10,
+  borderRadius: 20,
 },
 popupOverlay: {
     flex: 1,
@@ -477,9 +521,9 @@ popupOverlay: {
      alignItems: 'center',
   },
   popupBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.79)',
+    backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 40,
+    padding: 45,
     alignItems: 'center',
     width: '80%',
   },
@@ -496,7 +540,7 @@ popupOverlay: {
   },
   popupButtonYes: {
     backgroundColor: '#9747FF',
-    padding: 14,
+    padding: 16,
     borderRadius: 6,
     minWidth: 120,
     alignItems: 'center',
@@ -509,8 +553,8 @@ popupOverlay: {
     alignItems: 'center',
   },
   animationStyle: {
-    width: 120,
-    height: 120,
+    width: 170,
+    height: 170,
     marginBottom: 20,
   },
   animationContainer: {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View,
   TextInput,
@@ -9,6 +10,8 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Modal,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -154,6 +157,13 @@ const ChatSupportScreen = () => {
   };
 
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff'}}>
+    <KeyboardAvoidingView
+    style={{ flex: 1}}
+     behavior={Platform.OS === 'android' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'android' ? 80: 20}>
+
+
     <TouchableWithoutFeedback onPress={() => { Keyboard.dismiss(); closeModal(); }}>
       <View style={styles.container}>
         {/* Header */}
@@ -241,6 +251,8 @@ const ChatSupportScreen = () => {
         )}
       </View>
     </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
