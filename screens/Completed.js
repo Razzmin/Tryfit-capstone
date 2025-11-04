@@ -124,7 +124,7 @@ export default function Completed() {
       </ScrollView>
 
       {/* Orders List */}
-      <ScrollView style= {{marginTop: -60}}>
+      <ScrollView style= {{marginBottom: 40}}>
         {orders.length === 0 ? (
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
             No completed orders found.

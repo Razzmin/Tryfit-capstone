@@ -206,7 +206,7 @@ Alert.alert(
       </ScrollView>
 
       {/* Content */}
-      <ScrollView style={{marginTop: -30}}>
+      <ScrollView style={{marginBottom: 40}}>
         {orders.length === 0 ? (
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
             No "To Ship" orders found.
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   tabWrap: {
     alignItems: 'center',
