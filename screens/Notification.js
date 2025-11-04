@@ -1,10 +1,10 @@
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, AntDesign, MaterialIcons  } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAuth } from "firebase/auth";
+import{Header } from '../components/styles';
 import { getFirestore, collection, query, where, onSnapshot, doc, getDoc  } from "firebase/firestore";
 
 export default function Notification() {
@@ -72,15 +72,23 @@ useEffect(() => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notification</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <Header style = {{
+                     flexDirection: 'row',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     paddingHorizontal: 16,
+                     paddingBottom: 10,
+                     backgroundColor: '#fff',
+                   }}>
+                     <TouchableOpacity onPress={() => navigation.goBack()}
+                     style={{position: 'absolute', left: 10, top: -4}}>
+                       <Feather name="arrow-left" size={27} color="black"  />
+                     </TouchableOpacity>
+       
+                      <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Notifications</Text>
+                   </Header>
 
       {/* Notifications List */}
       {notifications.length === 0 ? (
@@ -91,7 +99,7 @@ useEffect(() => {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.notificationBox}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3}}>
                 {getIcon(item.type)}
                 <Text style={styles.message}>{item.message}</Text>
               </View>
@@ -104,7 +112,7 @@ useEffect(() => {
           )}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -112,7 +120,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 60,
+    paddingTop: 30,
     paddingHorizontal: 20,
   },
   header: {
@@ -126,14 +134,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   notificationBox: {
-    padding: 15,
+    padding: 18,
     backgroundColor: '#F5F5F5',
     borderRadius: 10,
     marginBottom: 15,
   },
   message: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
+    marginLeft: 10,
+    marginBottom: 10,
   },
   timestamp: {
     fontSize: 12,

@@ -119,7 +119,7 @@ export default function EditProfile() {
         onPressIn={() => setPressedItem('EditProfile')}
         onPressOut={() => setPressedItem(null)}
          style={[styles.menuItem,
-         pressedItem === 'EditProfile' && { borderColor: '#9747ff', borderWidth: 2},
+         pressedItem === 'EditProfile' && { borderColor: '#9747ff', borderWidth: 1},
          ]} 
          onPress={() => navigation.navigate('EditProfile')}
          >
@@ -131,7 +131,7 @@ export default function EditProfile() {
         onPressIn={() => setPressedItem('EditBodyMeasurement')}
         onPressOut={() => setPressedItem(null)}
          style={[styles.menuItem,
-         pressedItem === 'EditBodyMeasurement' && { borderColor: '#9747ff', borderWidth: 2},
+         pressedItem === 'EditBodyMeasurement' && { borderColor: '#9747ff', borderWidth: 1},
          ]} 
          onPress={() => navigation.navigate('EditBodyMeasurement')}>
           <FontAwesome name="edit" size={20} color="#9747FF" style={styles.menuIcon} />
@@ -143,7 +143,7 @@ export default function EditProfile() {
         onPressIn={() => setPressedItem('Notification')}
         onPressOut={() => setPressedItem(null)}
          style={[styles.menuItem,
-         pressedItem === 'Notification' && { borderColor: '#9747ff', borderWidth: 2},
+         pressedItem === 'Notification' && { borderColor: '#9747ff', borderWidth: 1},
          ]} 
          onPress={() => navigation.navigate('Notification')}>
          <Ionicons name="notifications-outline" size={24} color="#9747FF" style={styles.menuIcon} />
@@ -155,7 +155,7 @@ export default function EditProfile() {
         onPressIn={() => setPressedItem('ShippingLocation')}
         onPressOut={() => setPressedItem(null)}
          style={[styles.menuItem,
-         pressedItem === 'ShippingLocation' && { borderColor: '#9747ff', borderWidth: 2},
+         pressedItem === 'ShippingLocation' && { borderColor: '#9747ff', borderWidth: 1},
          ]} 
          onPress={() => navigation.navigate('ShippingLocation')}>
           <MaterialIcons name="edit-location-alt" size={24} color="#9747FF" style={styles.menuIcon} />
@@ -167,7 +167,7 @@ export default function EditProfile() {
         onPressIn={() => setPressedItem('Password')}
         onPressOut={() => setPressedItem(null)}
          style={[styles.menuItem,
-         pressedItem === 'Password' && { borderColor: '#9747ff', borderWidth: 2},
+         pressedItem === 'Password' && { borderColor: '#9747ff', borderWidth: 1},
          ]} 
          onPress={() => navigation.navigate('Password')}>
           <MaterialIcons name="password" size={24} color="#9747FF" style={styles.menuIcon} />
@@ -179,7 +179,7 @@ export default function EditProfile() {
         onPressIn={() => setPressedItem('DeleteAccount')}
         onPressOut={() => setPressedItem(null)}
          style={[styles.menuItem,
-         pressedItem === 'DeleteAccount' && { borderColor: '#9747ff', borderWidth: 2},
+         pressedItem === 'DeleteAccount' && { borderColor: '#9747ff', borderWidth: 1},
          ]} 
          onPress={() => setShowModal(true)}>
           <AntDesign name="user-delete" size={24} color="#9747FF" style={styles.menuIcon} />
@@ -353,11 +353,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
     marginBottom: 100,
+    
   },
   signOutText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '400',
     letterSpacing: 2,
+    fontFamily: "KronaOne",
   },
 });
