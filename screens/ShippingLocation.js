@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,15 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Switch,
+  KeyboardAvoidingView,
+  ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard
 } from 'react-native';
 import{Header, StyledFormArea } from '../components/styles';
 import { Picker } from '@react-native-picker/picker';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-
 import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc,setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
@@ -208,6 +210,15 @@ export default function ShippingLocation() {
 };
 
   return (
+    <KeyboardAvoidingView
+         behavior = "height" style= {{ flex: 1 }}
+         >
+         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    
+         <ScrollView
+            contentContainerStyle={{ flexGrow: 1}}
+            keyboardShouldPersistTaps="handled">
+
     <View style={styles.container}>
    <Header style = {{
                      flexDirection: 'row',
@@ -237,6 +248,7 @@ export default function ShippingLocation() {
         placeholder="e.g. Juan Dela Cruz"
         onFocus={() => setFocusedField('name')}
         onBlur={() => setFocusedField('')}
+        maxLength={40}
        />
 
       <Text style={styles.label}>Phone Number:</Text>
@@ -277,6 +289,7 @@ export default function ShippingLocation() {
         placeholder="e.g., Kamanggahan, Care"
         onFocus={() => setFocusedField('house')}
           onBlur={() => setFocusedField('')}
+          maxLength={150}
       />
 
       <Text style={styles.label}>Address:</Text>
@@ -315,6 +328,9 @@ export default function ShippingLocation() {
         <Text style={styles.saveText}>Save</Text>
       </TouchableOpacity>
     </View>
+    </ScrollView>
+    </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -335,8 +351,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   label: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     marginTop: 10,
     marginBottom: 5,
     color: '#333',
@@ -348,7 +364,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#1f1926",
+    borderColor:  '#ccc',
 
   },
   pickerWrapper: {
@@ -357,7 +373,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#1f1926",
+    borderColor:  '#ccc',
     height: 55,
   },
   picker: {

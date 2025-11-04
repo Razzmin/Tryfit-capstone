@@ -6,11 +6,11 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  ImageBackground,
 } from 'react-native';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/130x180.png?text=No+Image';
 const KNOWN_LABELS = ['t-shirt', 'longsleeve', 'shorts', 'pants'];
@@ -93,14 +93,46 @@ export default function SearchResults({ route, navigation }) {
   };
 
   return (
-    <LinearGradient
-      colors={['hsl(266, 100%, 78%)', 'hsl(0, 0%, 100%)']}
-      style={{ flex: 1 }}
-    >
+     <ImageBackground
+        source={require('../assets/bg.png')}
+        style={{ flex: 1}}
+        resizeMode="cover">
+
       <View style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <FontAwesome name="arrow-left" size={24} color="black" />
-        </TouchableOpacity>
+
+       {/* Header */}
+        <View
+          style={{
+            width: "124%",
+            height: 50,
+            justifyContent: "center",
+            alignItems: "center",
+            position: "relative",
+            marginTop: 12,
+            paddingHorizontal: 20,
+            marginBottom: 30
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ position: "absolute", left: 20, padding: 4 }}
+          >
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+
+          <Text
+            style={{
+              fontSize: 17,
+              color: "black",
+              fontFamily: "KronaOne",
+              textTransform: "uppercase",
+              alignSelf: 'center',
+              marginRight: 70,
+            }}
+          >
+            {query}
+          </Text>
+        </View>
 
         <Text style={styles.title}>Search Results for "{query}"</Text>
         {message !== '' && <Text style={styles.message}>{message}</Text>}
@@ -138,31 +170,33 @@ export default function SearchResults({ route, navigation }) {
           )}
         </ScrollView>
       </View>
-    </LinearGradient>
+  </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
+    paddingTop: 30,
   },
   backButton: {
     marginLeft: 20,
     marginBottom: 10,
   },
   title: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '600',
     paddingHorizontal: 20,
     paddingBottom: 5,
   },
   message: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#555',
     paddingHorizontal: 20,
-    marginBottom: 10,
+    marginBottom: 160,
     fontStyle: 'italic',
+    alignSelf: 'center',
+    justifyContent: 'center',
   },
   grid: {
     flexDirection: 'row',
