@@ -65,7 +65,6 @@ useEffect(() => {
 
       const customUserId = userSnap.data().userId;
 
-      // Query shippingLocations using customUserId
       const q = query(
         collection(db, "shippingLocations"),
         where("userId", "==", customUserId)
@@ -136,11 +135,12 @@ useEffect(() => {
         
       renderItem={({ item }) => ( 
           <View style={styles.itemContainer}>
-          <Image
-         source={{ uri: item.productImage }} 
-         style={styles.itemImage} 
-        resizeMode="cover" 
+         <Image
+          source={{ uri: item.imageUrl || 'https://via.placeholder.com/70' }}
+          style={styles.itemImage}
+          resizeMode="cover"
         />
+
   
       <View style={styles.itemInfo}>
      <View style={styles.itemTopRow}>
@@ -247,106 +247,147 @@ useEffect(() => {
                   <View style = {styles.popupBox}>
                   <Text style={styles.popupText}>You’re about to place your order. Proceed to checkout?</Text>
                   <View style={styles.popupButtons}> 
-                    <TouchableOpacity
-                      style={styles.popupButtonYes}
-                      onPress={async () => {
-                        if (isSubmitting) return;
-                        setIsSubmitting(true);
-                        try {
-                          const user = auth.currentUser;
-                          if (!user) return;
+                   <TouchableOpacity
+                    style={styles.popupButtonYes}
+                    onPress={async () => {
+  if (isSubmitting) return;
+  setIsSubmitting(true);
 
-                          const userDocRef = doc(db, "users", user.uid);
-                          const userSnap = await getDoc(userDocRef);
-                          if (!userSnap.exists()) return;
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("You must be logged in to place an order.");
+      setIsSubmitting(false);
+      return;
+    }
 
-                          const uniqueUserId = userSnap.data().userId;
+    // 🔹 Get custom userId
+    const userDocRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userDocRef);
+    if (!userSnap.exists()) {
+      alert("User not found in the database.");
+      setIsSubmitting(false);
+      return;
+    }
+    const customUserId = userSnap.data().userId;
 
-                          // Calculate subtotal
-                          const subtotal = checkoutItems.reduce(
-                            (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
-                            0
-                          );
+    if (!shippingLocation) {
+      alert("Please add a shipping address before placing an order.");
+      setIsSubmitting(false);
+      return;
+    }
 
-                          // Add delivery fee
-                          const total = subtotal + 58;
+    const deliveryFee = 58;
 
+    // 🔹 Group checkout items by productId + size
+    const groupedItemsMap = new Map();
+    checkoutItems.forEach((item) => {
+      const key = `${item.productId}_${item.size}`;
+      if (groupedItemsMap.has(key)) {
+        const existing = groupedItemsMap.get(key);
+        existing.quantity += item.quantity;
+      } else {
+        groupedItemsMap.set(key, { ...item });
+      }
+    });
 
-                          const orderData = {
-                            userId: uniqueUserId,
-                            address: shippingLocation
-                              ? `${shippingLocation.house}, ${shippingLocation.fullAddress}`
-                              : null,
-                            deliveryFee: 58,
-                            total,  
-                            createdAt: serverTimestamp(),
-                            status: "Pending",
-                            items: checkoutItems.map(item => ({
-                              id: item.id,
-                              productId: item.productId,
-                              productName: item.productName,
-                              quantity: item.quantity,
-                              price: item.price, 
-                              size: item.size || "-",
-                            })),
-                          }
+    // 🔹 Loop through grouped items to create individual orders
+    for (const groupedItem of groupedItemsMap.values()) {
+      const subtotal = (groupedItem.price || 0) * (groupedItem.quantity || 1);
+      const total = subtotal + deliveryFee;
+      const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-                       // Save order and get a reference back
-                          const orderRef = await addDoc(collection(db, "orders"), orderData);
+      const orderData = {
+        orderId,
+        userId: customUserId,
+        name: shippingLocation.name || "",
+        address: `${shippingLocation.house || ""}, ${shippingLocation.fullAddress || ""}`,
+        productID: groupedItem.productId || null,
+        deliveryFee,
+        total,
+        delivery: groupedItem.delivery,
+        createdAt: serverTimestamp(),
+        status: "Pending",
+        items: [
+          {
+            imageUrl: groupedItem.imageUrl || "",
+            productId: groupedItem.productId || "",
+            productName: groupedItem.productName || "",
+            quantity: groupedItem.quantity || 1,
+            price: groupedItem.price || 0,
+            size: groupedItem.size || "-",
+          },
+        ],
+      };
 
-                          // Save notification
-                          await addDoc(collection(db, "notifications"), {
-                            userId: uniqueUserId,
-                            title: "Order Placed",
-                            message: `Your order with total ₱${total} has been placed.`,
-                            orderId: orderRef.id, // ✅ now works
-                            timestamp: serverTimestamp(),
-                            read: false,
-                          });
+      if (!orderData.productID) {
+        console.warn("⚠️ Skipping item with undefined productID:", groupedItem);
+        continue;
+      }
 
+      // 🔹 Save order to Firestore
+      await addDoc(collection(db, "orders"), orderData);
 
-                          for (const item of checkoutItems) {
-                            const productRef = doc(db, "products", item.productId);
-                            const productSnap = await getDoc(productRef);
+      // 🔹 Send notification
+      await addDoc(collection(db, "notifications"), {
+        notifID: `NCK-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        userId: customUserId,
+        title: "Order Placed",
+        message: `Your order ${orderId} with total ₱${total.toLocaleString()} has been placed.`,
+        orderId,
+        timestamp: serverTimestamp(),
+        read: false,
+      });
 
-                            if (productSnap.exists()) {
-                              const productData = productSnap.data();
-                              const currentStock = productData.stock || {};
-                              const currentQty = productData.stock?.[item.size] || 0;
-                              const newQty = Math.max(currentQty - item.quantity, 0);
+      // 🔹 Update product stock
+      const productRef = doc(db, "products", groupedItem.productId);
+      const productSnap = await getDoc(productRef);
 
-                              await setDoc(
-                                productRef,
-                                {
-                                  stock: {
-                                    ...currentStock,
-                                    [item.size]: newQty,
-                                  },
-                                },
-                                { merge: true }
-                              );
-                            }
-                          }
+      if (productSnap.exists()) {
+        const productData = productSnap.data();
+        const currentStock = productData.stock || {};
+        const currentQty = currentStock[groupedItem.size] || 0;
+        const newQty = Math.max(currentQty - groupedItem.quantity, 0);
 
-                          // delete ordered items from cart
-                          const cartSnap = await getDocs(
-                            query(collection(db, "cartItems"), where("userId", "==", user.uid))
-                          );
-                          const deletePromises = cartSnap.docs.map(async (docSnap) => {
-                            const isOrdered = checkoutItems.some(item => item.id === docSnap.id);
-                            if (isOrdered) await deleteDoc(docSnap.ref);
-                          });
-                          await Promise.all(deletePromises);
+        await setDoc(
+          productRef,
+          {
+            stock: {
+              ...currentStock,
+              [groupedItem.size]: newQty,
+            },
+          },
+          { merge: true }
+        );
+      }
+    }
 
-                          setOrderPlaced(true);
-                        } catch (err) {
-                          console.error("Error saving order:", err);
-                        } finally {
-                          setIsSubmitting(false);
-                        }
-                      }}  >
-                      <Text style={{ color: "#fff", fontSize: 15 }}>Yes, proceed</Text>
-                    </TouchableOpacity>
+    // 🔹 Delete ordered items from user's cart
+    const cartRef = collection(db, "cartItems");
+    const cartSnap = await getDocs(query(cartRef, where("userId", "==", customUserId)));
+
+    const deletePromises = cartSnap.docs.map(async (docSnap) => {
+      const cartData = docSnap.data();
+      const isOrdered = checkoutItems.some(
+        (item) =>
+          item.productId === cartData.productId && item.size === cartData.size
+      );
+      if (isOrdered) await deleteDoc(docSnap.ref);
+    });
+
+    await Promise.all(deletePromises);
+
+                        setOrderPlaced(true);
+                      } catch (err) {
+                        console.error("Error saving order:", err);
+                      } finally {
+                        setIsSubmitting(false);
+                      }
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 15 }}>Yes, proceed</Text>
+                  </TouchableOpacity>
+
                     
                     <TouchableOpacity
                       style={styles.popupButtonNo}

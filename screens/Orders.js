@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import{ Header } from '../components/styles';
@@ -18,6 +19,10 @@ import {
   onSnapshot,
   doc,
   getDoc,
+  setDoc, 
+  updateDoc,
+  deleteDoc, 
+  addDoc
 } from 'firebase/firestore';
 
 const db = getFirestore();
@@ -114,6 +119,97 @@ export default function Orders() {
 
     return () => unsubscribe();
   }, [customUserId]);
+
+ const handleCancelOrder = async (order) => {
+  Alert.alert(
+    "Cancel Order",
+    "Are you sure you want to cancel this order?",
+    [
+      { text: "No", style: "cancel" },
+      {
+        text: "Yes",
+        onPress: async () => {
+          try {
+            // ✅ Step 1: Create cancelled order object
+            const cancelledOrder = {
+              cancelledID: `CN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              address: order.address || "",
+              createdAt: order.createdAt || new Date(),
+              deliveryFee: order.deliveryFee || 0,
+              items: order.items.map((item) => ({
+                productId: item.productId || "",
+                productName: item.productName || "",
+                imageUrl: item.imageUrl || "", // ✅ fixed: get from item
+                quantity: item.quantity || 0,
+                size: item.size || "-",
+                price: item.price || 0,
+                status: "Cancelled",
+              })),
+              name: order.name || "",
+              orderId: order.orderId || "",
+              status: "Cancelled",
+              total: order.total || 0,
+              userId: order.userId || "",
+              cancelledAt: new Date(),
+            };
+
+            // ✅ Step 2: Save cancelled order in Firestore
+            const cancelledRef = doc(collection(db, "cancelled"));
+            await setDoc(cancelledRef, cancelledOrder);
+
+            // ✅ Step 3: Restore stock per item
+            for (const item of order.items) {
+              const productRef = doc(db, "products", item.productId);
+              const productSnap = await getDoc(productRef);
+              if (!productSnap.exists()) continue;
+
+              const productData = productSnap.data();
+              const updatedStock = {
+                ...productData.stock,
+                [item.size]: (productData.stock?.[item.size] || 0) + item.quantity,
+              };
+              const totalStock = Object.values(updatedStock).reduce(
+                (sum, val) => sum + val,
+                0
+              );
+
+              await updateDoc(productRef, {
+                stock: updatedStock,
+                totalStock,
+              });
+            }
+
+            // ✅ Step 4: Delete original order
+            const orderRef = doc(db, "orders", order.id);
+            await deleteDoc(orderRef);
+
+            // ✅ Step 5: Add notification
+            await addDoc(collection(db, "notifications"), {
+              notifID: `NTC-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              userId: order.userId || "",
+              title: "Order Cancelled",
+              message: `Your order (${order.orderId || "N/A"}) has been cancelled.`,
+              orderId: order.orderId || "",
+              timestamp: new Date(),
+              read: false,
+            });
+
+            // ✅ Success
+            Alert.alert("Success", "Your order has been cancelled successfully.");
+          } catch (err) {
+            console.error("Error cancelling order:", err);
+            Alert.alert("Error", "Failed to cancel your order. Please try again.");
+          }
+        },
+      },
+    ]
+  );
+};
+
+  const handleCopy = (orderId) => {
+    Clipboard.setStringAsync(orderId);
+    Alert.alert('Copied', 'Order ID copied to clipboard');
+  };
 
   const tabRoutes = {
       
@@ -231,16 +327,28 @@ export default function Orders() {
                   <Text style={styles.totalLabel}>Total Payment:</Text>
                   <Text style={styles.totalPrice}>₱{order.total || 0}</Text>
                 </View>
+                
+               
 
-                {/* Track Order */}
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() =>
-                    navigation.navigate('TrackOrder', { orderId: order.id })
-                  }
-                >
-                  <Text style={styles.actionButtonText}>Track Order</Text>
-                </TouchableOpacity>
+               {/* ✅ Cancel Order Button */}
+                {order.status !== 'Cancelled' && (
+                 <TouchableOpacity
+                    style={[styles.actionButton, { borderColor: "red" }]}
+                    onPress={() => handleCancelOrder(order)}
+                  >
+                    <Text style={[styles.actionButtonText, { color: "red" }]}>
+                      Cancel Order
+                    </Text>
+                  </TouchableOpacity>
+
+                )}
+
+                  <View style={styles.orderIdRow}>
+                    <Text style={styles.orderIdText}>Order ID: {order.id}</Text>
+                    <TouchableOpacity onPress={() => handleCopy(order.id)}>
+                      <Feather name="copy" size={18} color="#9747FF" />
+                    </TouchableOpacity>
+                  </View>
               </View>
             );
           })
@@ -300,6 +408,15 @@ const styles = StyleSheet.create({
     color: '#9747FF',
     fontSize: 14,
     textTransform: 'uppercase',
+  },
+   orderIdRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  orderIdText: {
+    fontSize: 13,
+    color: '#333',
   },
   orderDate: {
     fontSize: 12,

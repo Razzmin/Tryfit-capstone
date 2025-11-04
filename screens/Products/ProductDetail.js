@@ -37,11 +37,9 @@ import {
 import { getAuth } from 'firebase/auth';
 
 import {
-  ProductImage,
   Content,
   ProductName,
   ProductPrice,
-  RatingText,
   SectionTitle,
   NavBar,
   AddCartBtn,
@@ -60,7 +58,7 @@ import {
   Header,
   ProductContainer,
 } from '../../components/styles';
-
+import Entypo from '@expo/vector-icons/Entypo';
 import {AntDesign, Feather, MaterialIcons, FontAwesome} from '@expo/vector-icons';
 
 
@@ -75,9 +73,6 @@ export default function ProductDetail() {
   const user = auth.currentUser;
 
   const images = product.images || [product.imageUrl];
-  
-
-  const [activeImage, setActiveImage] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalQuantity, setModalQuantity] = useState(1); 
   const [selectedSize, setSelectedSize] = useState(null);
@@ -94,22 +89,26 @@ export default function ProductDetail() {
   const reviewsRef = collection(db, 'productReviews');
   const cartRef = collection(db, 'cartItems');
   useEffect(() => {
-    const q = query(
-      reviewsRef,
+    if (!product?.productID) return;
+
+    const reviewsQuery = query(
+      collection(db, "productReviews"),
       where("productId", "==", product.productID),
-      orderBy("createdAt", "desc") // ✅ match your Firestore field
+      orderBy("createdAt", "desc")
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = [];
-      snapshot.forEach((docSnap) => {
-        list.push({ id: docSnap.id, ...docSnap.data() });
+    const unsubscribe = onSnapshot(reviewsQuery, (snapshot) => {
+      const fetchedReviews = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        // Add avatar color for display
+        const avatarColor = avatarColors[Math.floor(Math.random() * avatarColors.length)];
+        return { id: docSnap.id, avatarColor, ...data };
       });
-      setReviews(list);
+      setReviews(fetchedReviews);
     });
 
     return () => unsubscribe();
-  }, [product.id]);
+  }, [product?.productID]);
 
 
   useEffect(() => {
@@ -176,96 +175,90 @@ export default function ProductDetail() {
 
   const sizeOrder = product.sizes || [];
 
-  const saveCartItem = async () => {
- if (!selectedSize) {
-  Alert.alert('Error', 'Please select a size.');
-  return;
-}
+ const saveCartItem = async () => {
+    if (!selectedSize) {
+      Alert.alert('Error', 'Please select a size.');
+      return;
+    }
 
-  const stockAvailable = getSizeStock(selectedSize);
-  if (modalQuantity > stockAvailable) {
-    Alert.alert('Error', `Only ${stockAvailable} item(s) available for this size.`);
-    return;
-  }
+    const stockAvailable = getSizeStock(selectedSize);
+    if (modalQuantity > stockAvailable) {
+      Alert.alert('Error', `Only ${stockAvailable} item(s) available for this size.`);
+      return;
+    }
 
-  // ✅ Generate Firestore-style unique cart item ID
-  const cartItemCode = doc(collection(db, "tmp")).id;
-
-  const cartItem = {
-    cartItemCode,       // unique identifier for this cart item
-    userId: user.uid,
-    productId: product.id,
-    productName: product.name,
-    productImage: product.imageUrl,
-    size: selectedSize,
-    quantity: modalQuantity,
-    price: product.price,
-    timestamp: serverTimestamp(),
-  };
-
-  try {
-
-    const existingQuery = query(
-      cartRef,
-      where('userId', '==', user.uid),
-      where('productId', '==', product.id),
-      where('size', '==', selectedSize),
-    )
-
-    const existingSnapshot = await getDocs(existingQuery);
-
-    if(!existingSnapshot.empty) {
-      //if item already exist, it just add to the quantity
-      const existingDoc = existingSnapshot.docs[0];
-      const existingQty = existingDoc.data().quantity || 0;
-
-      const stockAvailable = getSizeStock(selectedSize);
-      if (existingQty + modalQuantity > stockAvailable) {
-        Alert.alert('Error', 'Only ${stockAvailable} item(s) available for this size');
+    try {
+      // 🔹 Get current user
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Error', 'You need to be logged in to add items to the cart.');
         return;
       }
-      await updateDoc(existingDoc.ref, {
-        quantity: existingQty + modalQuantity
+
+      // 🔹 Get custom userId from Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (!userDocSnap.exists()) {
+        Alert.alert('Error', 'User data not found.');
+        return;
+      }
+      const customUserId = userDocSnap.data().userId;
+
+      // ✅ Generate Firestore-style unique cart item ID
+      const cartItemCode = doc(collection(db, "cartItems")).id;
+
+      const cartItem = {
+        cartItemCode,
+        userId: customUserId, // use custom userId
+        productId: product.id,
+        productID: product.productID, // optional
+        productName: product.productName,
+        imageUrl: product.imageUrl,
+        size: selectedSize,
+        quantity: modalQuantity,
+        price: product.price,
+        delivery: product.delivery,
+        timestamp: serverTimestamp(),
+      };
+
+      // 🔹 Always create a new cart item (no merging)
+      await setDoc(doc(cartRef, cartItemCode), cartItem);
+
+      // 🔹 Add notification
+      await addDoc(collection(db, "notifications"), {
+        notifID: `CRT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        userId: customUserId,
+        title: "Item Added to Cart",
+        message: `${product.productName} (${selectedSize}) was added to your cart.`,
+        productID: product.productID,
+        productName: product.productName,
+        size: selectedSize,
+        timestamp: serverTimestamp(),
+        read: false,
       });
 
-    } else {
-    //if item don't exists create new
-    await setDoc(doc(cartRef, cartItemCode), cartItem);
-  }
+      addNotification(`${product.productName} added to cart`);
+      Alert.alert("Success", "Item is added to your cart");
 
-    await addDoc(collection(db, "notifications"), {
-      userId: user.uid,
-      title: "Item Added to Cart",
-      message: `${product.name} ( ${selectedSize}) was added to your cart.`,
-      productName: product.name,
-      size: selectedSize,
-      timestamp: serverTimestamp(),
-      read: false, // default unread
-    });
+      setModalVisible(false);
+      setModalQuantity(1);
+      setSelectedSize(null);
 
-
-    addNotification(`${product.name} added to cart`);
-    Alert.alert("Success","Item is added to your cart");
-    
-
-    setModalVisible(false);
-    setModalQuantity(1);
-    setSelectedSize(null);
-  } catch (error) {
-    Alert.alert('Error', 'Failed to add item to cart.');
-    console.error('Add to cart error:', error);
-  }
-};
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item to cart.');
+      console.error('Add to cart error:', error);
+    }
+  };
 
  const incrementQuantity = () => {
-  const stockAvailable = selectedSize
-  ? getSizeStock(selectedSize)
-  : getTotalStock();
+    const stockAvailable = selectedSize
+    ? getSizeStock(selectedSize)
+    : getTotalStock();
 
-if (modalQuantity < stockAvailable) {
-  setModalQuantity(modalQuantity + 1);
-}
-};
+  if (modalQuantity < stockAvailable) {
+    setModalQuantity(modalQuantity + 1);
+  }
+  };
 
 const decrementQuantity = () => {
   if (modalQuantity > 1) {
@@ -351,18 +344,29 @@ const handleTryOn = () => {
               marginBottom: 11,
               letterSpacing: 2,
              }}
-                >{product.name} example </ProductName>
+                >{product.productName}</ProductName>
                 
-                <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
-               <ProductPrice style = {{ lineHeight: 40, fontSize: 38 }}>₱{product.price}</ProductPrice>
+             <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+              <ProductPrice style={{ lineHeight: 40, fontSize: 32 }}>₱{product.price}</ProductPrice>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {/* ⭐ Loop through 5 stars */}
+                {Array.from({ length: 5 }, (_, i) => (
+                  <Entypo
+                    key={i}
+                    name={i < Math.floor(product.rating) ? 'star' : 'star-outlined'} // filled or empty
+                    size={17}
+                    color="#EFBF04"
+                    style={{ marginRight: 2 }}
+                  />
+                ))}
 
-              <View style = {{ flexDirection: 'row', alignItems: 'center', marginLeft: 15}}>
-              <AntDesign name= "star" size={17} color="#EFBF04" />
-               <RatingText> {product.rating} | </RatingText>
-              <Text style= {{ fontSize: 13, color: '#888', marginLeft: 2}}> {product.sold} Sold  </Text>
+                {/* rating + sold text */}
+                <Text style={{ fontSize: 13, color: '#888', marginLeft: 5 }}>
+                  {product.rating.toFixed(1)} | {product.sold} Sold
+                </Text>
               </View>
-              </View>
-              
+                          
               <View style = {{
                 height: 1.3,
                 backgroundColor: '#ddd',
@@ -370,9 +374,8 @@ const handleTryOn = () => {
               }}></View>
           
                 <SectionTitle>Description</SectionTitle>
-                {product.description?.split('\n').map((line, index) => (
-                <Text key={index}>• {line.trim()}</Text>
-              ))} 
+               <Text>{product.description || ""}</Text>
+
 
               <View
                   style={{
@@ -394,93 +397,44 @@ const handleTryOn = () => {
                 <SectionTitle>Reviews</SectionTitle>
               </View>
               
-                <ReviewContainer>
-                  {(showAllReviews ? reviews : reviews.slice(0, 3)).map((item) => (
-                    <ReviewItems 
-                    key={item.id}
-                      style={{ flexDirection: 'row', 
-                      alignItems: 'flex-start',
-                      backgroundColor: '#F9F9F9',
-                      borderRadius: 10,
-                      padding: 16,
-                      marginBottom: 12,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1},
-                      shadowOpacity: 0.1,
-                      shadowRadius: 2,
-                      elevation: 2  }}>
+               <ReviewContainer>
+  {(showAllReviews ? reviews : reviews.slice(0, 3)).map((item) => (
+    <ReviewItems key={item.id}>
+      <Avatar style={{ backgroundColor: item.avatarColor || "#9747FF" }}>
+        <AvatarText>{item.userName?.[0]?.toUpperCase() || "A"}</AvatarText>
+      </Avatar>
 
-                      <Avatar style={{ backgroundColor: item.avatarColor || '#9747FF' }}>
-                      <AvatarText>{item.userName?.[0]?.toUpperCase() || 'A'}</AvatarText>
-                      </Avatar>
+      <ReviewContent>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <ReviewerName>{item.userName}</ReviewerName>
+          <StarRatings>
+            {[...Array(5)].map((_, i) => (
+              <FontAwesome
+                key={i}
+                name={i < item.rating ? "star" : "star-o"}
+                size={14}
+                color="#F7C700"
+                style={{ marginRight: 2 }}
+              />
+            ))}
+          </StarRatings>
+        </View>
 
-                      <ReviewContent style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row',
-                         justifyContent: 'space-between', 
-                         alignItems: 'center',
-                          marginBottom: 4 }}>
-                          <ReviewerName>{item.userName}</ReviewerName>
+        <VariationText>Size: {item.size}</VariationText>
+        <CommentText>{item.comment}</CommentText>
+      </ReviewContent>
+    </ReviewItems>
+  ))}
 
-                          <StarRatings>
-                          {[...Array(5)].map((_, i) => (
-                            <FontAwesome
-                              key={i}
-                              name={i < item.rating ? 'star' : 'star-o'}
-                              size={14}
-                              color="#F7C700"
-                              style={{ marginRight: 2 }}
-                            />
-                          ))}
-                        </StarRatings>
-                    </View>
+  {reviews.length > 3 && (
+    <TouchableOpacity onPress={() => setShowAllReviews(!showAllReviews)} style={{ marginTop: 10, alignSelf: "center" }}>
+      <Text style={{ color: "#9747FF", fontWeight: "600" }}>
+        {showAllReviews ? "Hide Reviews" : "Show More Reviews"}
+      </Text>
+    </TouchableOpacity>
+  )}
+</ReviewContainer>
 
-                          {user?.uid === item.userId && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', position: 'relative' }}>
-                              {visibleMenuId === item.id && (
-                                <TouchableOpacity
-                                  onPress={() => deleteComment(item.id)}
-                                  style={{
-                                    marginRight: 10,
-                                    backgroundColor: '#E0E0E0',
-                                    paddingHorizontal: 12,
-                                    borderRadius: 6,
-                                    zIndex: 999,
-                                  }}
-                                >
-                                  <Text style={{ color: 'black', fontWeight: 'bold' }}>Delete</Text>
-                                </TouchableOpacity>
-                              )}
-
-                              <TouchableOpacity onPress={() => toggleMenu(item.id)}>
-                                <AntDesign name="ellipsis1" size={18} color="#333" />
-                              </TouchableOpacity>
-                            </View>
-                          )}
-                      
-
-                      
-                        <VariationText>
-                          Size: {item.size}
-                        </VariationText>
-
-
-                        {/* ✅ comment */}
-                        <CommentText>{item.comment}</CommentText>
-                      </ReviewContent>
-                    </ReviewItems>
-                  ))}
-
-                  {reviews.length > 3 && (
-                    <TouchableOpacity
-                      onPress={() => setShowAllReviews(!showAllReviews)}
-                      style={{ marginTop: 10, alignSelf: 'center' }}
-                    >
-                      <Text style={{ color: '#9747FF', fontWeight: '600' }}>
-                        {showAllReviews ? 'Hide Reviews' : 'Show More Reviews'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </ReviewContainer>
             </Content>
           </ProductContainer>
           </ScrollView>
@@ -535,7 +489,7 @@ const handleTryOn = () => {
                 />
                 {/* Right: Details */}
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontFamily: "KronaOne", marginBottom: 10, }}>{product.name}</Text>
+                  <Text style={{ fontSize: 15, fontFamily: "KronaOne", marginBottom: 10, }}>{product.productName}</Text>
                    <Text style={{ fontSize: 16,color: '#9747FF', marginTop: 4 }}>
                         Price: ₱{(product.price * modalQuantity).toLocaleString()}
                       </Text>
@@ -588,8 +542,9 @@ const handleTryOn = () => {
                               >
                                 <Text style={{ fontSize: 16 }}>
                                   {size}
-                                  {recommendedSize === size && ' ☑️'}
+                                  {recommendedSize === size && <Text> ☑️</Text>}
                                 </Text>
+
                               </TouchableOpacity>
                             );
                           })}

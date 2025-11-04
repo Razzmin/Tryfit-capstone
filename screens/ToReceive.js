@@ -24,6 +24,7 @@ import {
   getDoc,
   deleteDoc,
   setDoc,
+  addDoc
 } from 'firebase/firestore';
 
 const db = getFirestore();
@@ -99,36 +100,74 @@ export default function ToReceive() {
   };
 
   const handleReceiveOrder = (order) => {
-    Alert.alert(
-      'Confirm Receive',
-      'Have you received this order successfully?',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, received',
-          onPress: async () => {
-            try {
-              
-              const completedRef = doc(collection(db, 'completed')); // 
-                await setDoc(completedRef, {
-                  ...order,
-                  status: 'Completed',
-                  completedAt: new Date(),
-                });
+  Alert.alert(
+    'Confirm Receive',
+    'Have you received this order successfully?',
+    [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes, received',
+        onPress: async () => {
+          try {
+            // Build completed order object
+            const completedOrder = {
+              toshipID: order.toshipID,         
+              toreceiveID: order.toreceiveID,
+              productID: order.productID,
+              completedID: `CP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              address: order.address,
+              createdAt: order.createdAt,
+              deliveryFee: order.deliveryFee,
+              delivery: order.delivery,
+              items: order.items.map(item => ({
+                imageUrl: item.imageUrl,
+                productId: item.productId,
+                productName: item.productName,
+                quantity: item.quantity,
+                size: item.size,
+                price: item.price,     
+              })),
+              name: order.name,
+              orderId: order.orderId,
+              packedAt: order.packedAt,
+              shippedAt: order.shippedAt,
+              receivedAt: new Date(), 
+              status: 'Completed',
+              total: order.total,
+              userId: order.userId,
+            };
 
-              await deleteDoc(doc(db, 'toReceive', order.docId));
+            // Save to "completed" collection
+            const completedRef = doc(collection(db, 'completed'));
+            await setDoc(completedRef, completedOrder);
 
+            // Delete from "toReceive"
+            await deleteDoc(doc(db, 'toReceive', order.docId));
 
-              Alert.alert('Success', 'Your order has been marked as completed.');
-            } catch (err) {
-              console.error('Error moving order to completed:', err);
-              Alert.alert('Error', 'Failed to complete the order.');
-            }
-          },
+            // Add notification
+            await addDoc(collection(db, "notifications"), {
+              notifID: `NTC-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              userId: order.userId,
+              title: "Order Received",
+              message: "Orders is received",
+              orderId: order.orderId,
+              timestamp: new Date(),
+              read: false,
+            });
+
+            // Optionally switch to Completed tab
+            // setActiveTab('Completed'); // Uncomment if you manage tabs
+
+            Alert.alert('Success', 'Your order has been marked as completed.');
+          } catch (err) {
+            console.error('Error marking order as received:', err);
+            Alert.alert('Error', 'Failed to mark order as received. Try again.');
+          }
         },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
 
   const tabRoutes = {
     'Orders': 'Orders',
@@ -190,9 +229,10 @@ export default function ToReceive() {
             const item = order.items && order.items.length > 0 ? order.items[0] : null;
             if (!item) return null;
 
-            const size = randomSizes[Math.floor(Math.random() * randomSizes.length)];
-            const productName = item.productName || 'Product';
-            const imageUri = item.image || item.productImage || 'https://placehold.co/100x100';
+            const imageUri = item.imageUrl && item.imageUrl !== '' 
+            ? item.imageUrl 
+            : 'https://placehold.co/100x100';
+
 
             return (
               <View key={order.id} style={styles.orderCard}>

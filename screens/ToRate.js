@@ -16,7 +16,6 @@ import {
   getFirestore,
   doc,
   updateDoc,
-  getDoc,
   collection,
   addDoc,
   query,
@@ -70,108 +69,93 @@ export default function ToRate() {
     }
     return "Guest";
   };
+const handleSubmit = async () => {
+  if (!allRated) {
+    Alert.alert("Error", "Please provide a star rating for all items before submitting.");
+    return;
+  }
 
-  const handleSubmit = async () => {
-    try {
-      if (!allRated) {
-        Alert.alert("Error", "Please provide a star rating for all items before submitting.");
-        return;
-      }
+  try {
+    setSubmitting(true);
 
-      setSubmitting(true);
-
-      // decide which custom userId to use (prefer passedUserId, fallback to first item.userId)
-      const lookupUserId = passedUserId || items?.[0]?.userId || null;
-
-      // fetch reviewer username once (unless anonymous)
-      let reviewerUsername = "Guest";
-      if (anonymous) {
-        reviewerUsername = "Anonymous";
-      } else if (lookupUserId) {
-        reviewerUsername = await fetchUsernameByCustomId(lookupUserId);
-      }
-
-      // iterate and save updates
-      for (const item of items) {
-        const userRating = ratings[item.id]; // guaranteed to exist due to allRated
-        const commentText = (comments[item.id] || "").trim();
-
-        // Update product rating fields (ratecount, totalrate, rating)
-        const productRef = doc(db, "products", item.productId);
-        const productSnap = await getDoc(productRef);
-
-        let updatedAverage = 0;
-        if (productSnap.exists()) {
-          const productData = productSnap.data();
-          const currentRateCount = productData.ratecount || 0;
-          const currentTotalRate = productData.totalrate || 0;
-
-          // inside handleSubmit, where you compute updatedAverage
-          const newRateCount = currentRateCount + 1;
-          const newTotalRate = currentTotalRate + userRating;
-          updatedAverage = newTotalRate / newRateCount;
-
-          // ✅ round to 2 decimals but keep as number
-          updatedAverage = Math.round(updatedAverage * 100) / 100;
-
-          await updateDoc(productRef, {
-            ratecount: newRateCount,
-            totalrate: newTotalRate,
-            rating: updatedAverage,
-          });
-
-        } else {
-          // if product doc doesn't exist (unlikely), still try to set some fields
-          updatedAverage = Math.round(userRating * 100) / 100;
-          await updateDoc(productRef, {
-            ratecount: 1,
-            totalrate: userRating,
-            rating: updatedAverage,
-          });
-
-        }
-
-        // Save review entry (comment optional, rating required)
-        await addDoc(collection(db, "productReviews"), {
-          productId: item.productId,
-          productName: item.productName,
-          size: item.size, 
-          rating: userRating,
-          comment: commentText, // may be empty string
-          username: anonymous ? "Anonymous" : reviewerUsername,
-          userId: lookupUserId || null,
-          productRating: updatedAverage, // snapshot of product avg after this rating
-          createdAt: new Date(),
-        });
-      }
-
-      Alert.alert("Success", "Your ratings have been submitted. Thank you!");
-      navigation.goBack();
-    } catch (err) {
-      console.error("Error saving rating:", err);
-      Alert.alert("Error", "Failed to submit rating. Please try again.");
-    } finally {
-      setSubmitting(false);
+    // determine reviewer username
+    let reviewerUsername = anonymous ? "Anonymous" : "Guest";
+    if (!anonymous && passedUserId) {
+      reviewerUsername = await fetchUsernameByCustomId(passedUserId);
     }
-  };
+
+    const reviewsCollection = collection(db, "productReviews");
+
+    for (const item of items) {
+      const userRating = ratings[item.id]; // guaranteed to exist
+      const commentText = (comments[item.id] || "").trim();
+
+      // Save review entry
+      await addDoc(reviewsCollection, {
+        reviewID: `RV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        productID: item.productID || item.id,
+        productName: item.productName,
+        size: item.size,
+        rating: userRating,
+        comment: commentText,
+        username: reviewerUsername,
+        createdAt: new Date(),
+      });
+
+      // Fetch all reviews for this product
+      const reviewsQuery = query(reviewsCollection, where("productID", "==", item.productId));
+      const reviewSnap = await getDocs(reviewsQuery);
+
+      let totalRating = 0;
+      let count = 0;
+
+      reviewSnap.forEach((doc) => {
+        const data = doc.data();
+        if (data.rating !== undefined) {
+          totalRating += data.rating;
+          count++;
+        }
+      });
+
+      const avgRating = count > 0 ? totalRating / count : 0;
+
+      // Update the product's average rating
+      const productsQuery = query(collection(db, "products"), where("productID", "==", item.productId));
+      const productSnap = await getDocs(productsQuery);
+
+      for (const productDoc of productSnap.docs) {
+        const productRef = doc(db, "products", productDoc.id);
+        await updateDoc(productRef, { rating: avgRating });
+      }
+    }
+
+    Alert.alert("Success", "Your ratings have been submitted. Thank you!");
+    navigation.goBack();
+  } catch (err) {
+    console.error("Error submitting ratings:", err);
+    Alert.alert("Error", "Failed to submit rating. Please try again.");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
         <Header style = {{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                paddingHorizontal: 16,
-                                paddingBottom: 20,
-                                backgroundColor: '#fff',
-                              }}>
-                                <TouchableOpacity onPress={() => navigation.goBack()}
-                                style={{position: 'absolute', left: 2, top: -4}}>
-                                  <Feather name="arrow-left" size={27} color="black"  />
-                                </TouchableOpacity>
-                  
-                                 <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PROFILE</Text>
-                              </Header>
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+        backgroundColor: '#fff',
+      }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}
+        style={{position: 'absolute', left: 2, top: -4}}>
+          <Feather name="arrow-left" size={27} color="black"  />
+        </TouchableOpacity>
+
+          <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PROFILE</Text>
+      </Header>
 
       <ScrollView>
         {items.length === 0 ? (

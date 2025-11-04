@@ -108,7 +108,7 @@ export default function LandingPage() {
           newProducts.push({
             id,
             productID: data.productID,
-            name: data.name,
+            productName: data.productName,
             price: data.price,
             rating: data.rating,
             sold: data.sold,
@@ -118,7 +118,8 @@ export default function LandingPage() {
             sizes: data.sizes,
             stock: data.stock,
             colors: data.colors,
-            images: [data.imageUrl], // can add more images if available
+            imageUrl: data.imageUrl,
+            description: data.description,
           });
         }
       }
@@ -266,9 +267,10 @@ export default function LandingPage() {
                 onPress={() => navigation.navigate('ProductDetail', { product })}
               >
                 <Image source={{ uri: product.imageUrl || PLACEHOLDER_IMAGE }} style={styles.newImage} />
-                <View style={styles.newLabel}>
-                  
-                </View>
+               <View style={styles.newLabel}>
+                <Text style={styles.newLabelText}>NEW</Text>
+              </View>
+
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -318,7 +320,7 @@ export default function LandingPage() {
                   source={{ uri: product.imageUrl || PLACEHOLDER_IMAGE }}
                   style={styles.image}
                 />
-                <Text style={styles.name}>{product.name}</Text>
+                <Text style={styles.name}>{product.productName}</Text>
                 <Text style={styles.price}>{product.price}</Text>
                 <Text style={styles.meta}>⭐ {product.rating} • {product.sold} Sold</Text>
                 <Text style={styles.delivery}>🚚 {product.delivery}</Text>
@@ -418,14 +420,21 @@ const styles = StyleSheet.create({
     left: 8,
     backgroundColor: '#FF3D00',
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingVertical: 3,
+    borderRadius: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 1, height: 1 },
+    shadowRadius: 2,
+    elevation: 3,
   },
   newLabelText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
+    letterSpacing: 1,
   },
+
   popularRow: {
     paddingHorizontal: 20,
     marginBottom: 15,

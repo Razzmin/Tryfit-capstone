@@ -30,8 +30,7 @@ import Orders from './screens/Orders';
 import ToShip from './screens/ToShip';
 import ToReceive from './screens/ToReceive';
 import Completed from './screens/Completed';
-import Cancelled from './screens/Cancelled';
-import TrackOrder from './screens/TrackOrder';     
+import Cancelled from './screens/Cancelled';    
 import SplashScreen from './screens/splashscreen';
 import ToRate from './screens/ToRate';
 import TryOnWebAR from './screens/TryOnWebAR';
@@ -89,8 +88,7 @@ export default function App() {
         <Stack.Screen name="ToShip" component={ToShip} />
         <Stack.Screen name="ToReceive" component={ToReceive} />
         <Stack.Screen name="Completed" component={Completed} />
-        <Stack.Screen name="Cancelled" component={Cancelled} />
-        <Stack.Screen name="TrackOrder" component={TrackOrder} />
+        <Stack.Screen name="Cancelled" component={Cancelled} /> 
         <Stack.Screen name="Checkout" component={Checkout} />
         <Stack.Screen name="ReCheckout" component={ReCheckout} />
         <Stack.Screen name="ShoppingCart" component={ShoppingCart} />

@@ -51,24 +51,62 @@ export default function ShoppingCart() {
       setLoading(false);
       return;
     }
-    const q = query(collection(db, 'cartItems'),
-     where('userId', '==', user.uid));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const items = [];
-        snapshot.forEach((doc) => {
-          items.push({ id: doc.id, ...doc.data() });
-        });
-        setCartItems(items);
+
+    const fetchCartItems = async () => {
+      try {
+        // Get custom userId
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (!userDocSnap.exists()) {
+          console.warn("User data not found in Firestore.");
+          setCartItems([]);
+          setLoading(false);
+          return;
+        }
+
+        const customUserId = userDocSnap.data().userId;
+
+        if (!customUserId) {
+          console.warn("Custom userId missing in user data.");
+          setCartItems([]);
+          setLoading(false);
+          return;
+        }
+
+        const q = query(collection(db, 'cartItems'), where('userId', '==', customUserId));
+        const unsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            const items = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+              selected: doc.data().selected || false,
+              quantity: doc.data().quantity || 1,
+            }));
+            setCartItems(items);
+            setLoading(false);
+          },
+          (error) => {
+            console.error('Error fetching cart items:', error);
+            setLoading(false);
+          }
+        );
+
+        return unsubscribe;
+      } catch (err) {
+        console.error('Error fetching custom userId:', err);
         setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching cart items:', error);
       }
-    );
-    return () => unsubscribe();
+    };
+
+    const unsubscribePromise = fetchCartItems();
+
+    return () => {
+      unsubscribePromise && unsubscribePromise instanceof Function && unsubscribePromise();
+    };
   }, [user]);
+
 
   const toggleSelected = async (id, color) => {
     try {
@@ -241,7 +279,7 @@ export default function ShoppingCart() {
               </TouchableOpacity>
 
               
-              <ItemImage source={{ uri: item.productImage || 'https://via.placeholder.com/70' }} />
+              <ItemImage source={{ uri: item.imageUrl || 'https://via.placeholder.com/70' }} />
 
 
               <ItemInfo>

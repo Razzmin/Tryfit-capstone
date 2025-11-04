@@ -27,6 +27,8 @@ export default function Completed() {
   const navigation = useNavigation();
   const user = auth.currentUser;
   const activeTab = 'Completed';
+  const item = order.items && order.items.length > 0 ? order.items[0] : null;
+
 
   const [orders, setOrders] = useState([]);
   const [customUserId, setCustomUserId] = useState(null);
@@ -145,7 +147,7 @@ export default function Completed() {
 
                 <View style={styles.productRow}>
                   <Image
-                    source={{ uri: item.image || 'https://placehold.co/100x100' }}
+                    source={{ uri: item.imageUrl || 'https://placehold.co/100x100' }}
                     style={styles.productImage}
                   />
                   <View style={styles.productInfo}>
@@ -160,11 +162,9 @@ export default function Completed() {
                 </Text>
 
                 <View style={styles.expectedDelivery}>
-                  <Text style={styles.expectedText}>Expected Delivery:</Text>
-                  <Text style={styles.deliveryDate}>
-                    {order.expectedDelivery || 'TBD'}
-                  </Text>
+                  <Text style={styles.expectedText}>Delivery: {order.delivery || 'TBD'}</Text>
                 </View>
+
 
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Total Payment:</Text>
@@ -175,10 +175,10 @@ export default function Completed() {
                   <TouchableOpacity
                     style={[styles.secondaryButton, { marginRight: 10 }]}
                     onPress={() =>
-                      navigation.navigate("ToRate", {
-                        orderData: order,
-                        items: order.items,
-                        userId: order.userId
+                     navigation.navigate("ToRate", {
+                      orderData: order,
+                      items: order.items,
+                      userId: order.userId
                       }) } >
                     <Text style={styles.secondaryButtonText}>Rate</Text>
                   </TouchableOpacity>

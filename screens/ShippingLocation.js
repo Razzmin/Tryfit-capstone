@@ -88,24 +88,24 @@ export default function ShippingLocation() {
   };
 
   fetchShippingLocation();
-}, []);
+  }, []);
 
-  const handlePickerChange = (value) => {
-    if (stage === 'municipality') {
-      setMunicipality(value);
-      setStage('barangay');
-    } else if (stage === 'barangay') {
-      setBarangay(value);
-      const composed = `${value}, ${municipality}, Tarlac`;
-      setFinalAddress(composed);
-      setStage('final');
-    } else if (stage === 'final') {
-      setMunicipality('');
-      setBarangay('');
-      setFinalAddress('');
-      setStage('municipality');
-    }
-  };
+    const handlePickerChange = (value) => {
+      if (stage === 'municipality') {
+        setMunicipality(value);
+        setStage('barangay');
+      } else if (stage === 'barangay') {
+        setBarangay(value);
+        const composed = `${value}, ${municipality}, Tarlac`;
+        setFinalAddress(composed);
+        setStage('final');
+      } else if (stage === 'final') {
+        setMunicipality('');
+        setBarangay('');
+        setFinalAddress('');
+        setStage('municipality');
+      }
+    };
 
   const getPickerItems = () => {
     if (stage === 'municipality') {
@@ -145,18 +145,18 @@ export default function ShippingLocation() {
     if (!cleanedPhone || !/^(09\d{9}|(\+639)\d{9})$/.test(cleanedPhone)) {
        return Alert.alert('Validation Error', 'Please enter a valid mobile number(e.g., 09xxx).');
     }
- if (!cleanedHouse || cleanedHouse.length < 5) {
-    return Alert.alert('Validation Error', 'Please enter a more complete house/street/building information');
- }
- if (!municipality) {
-  return Alert.alert('Validation Error', 'Please select a municipality.');
- }
-  if (!barangay) {
-    return Alert.alert('Validation Error', 'Please select a barangay.');
-  }
- if (!cleanedPostal || !/^\d{4}$/.test(cleanedPostal)) {
-   return Alert.alert('Validation Error', 'Please enter a valid 4-digit postal code.');
- }
+    if (!cleanedHouse || cleanedHouse.length < 5) {
+      return Alert.alert('Validation Error', 'Please enter a more complete house/street/building information');
+    }
+    if (!municipality) {
+    return Alert.alert('Validation Error', 'Please select a municipality.');
+    }
+    if (!barangay) {
+      return Alert.alert('Validation Error', 'Please select a barangay.');
+    }
+    if (!cleanedPostal || !/^\d{4}$/.test(cleanedPostal)) {
+      return Alert.alert('Validation Error', 'Please enter a valid 4-digit postal code.');
+    }
   
   try {
     const user = auth.currentUser;

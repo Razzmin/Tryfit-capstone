@@ -236,7 +236,7 @@ const CategoryProductsScreen = () => {
                     )}
 
                     <ProductName style={{ marginTop: 10 }}>
-                      {item.name || "Unnamed"}
+                      {item.productName || "Unnamed"}
                     </ProductName>
                     <ProductPrice>₱{item.price ?? "N/A"}</ProductPrice>
                     <ProductMeta>

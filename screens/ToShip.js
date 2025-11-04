@@ -7,7 +7,8 @@ import {
   ScrollView,
   Image,
   Alert,
-  Platform,
+  Modal,      
+  Pressable,   
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -40,6 +41,9 @@ export default function ToShip() {
 
   const [orders, setOrders] = useState([]);
   const [customUserId, setCustomUserId] = useState(null);
+  const [shippingModalVisible, setShippingModalVisible] = useState(false);
+  const [shippingDetails, setShippingDetails] = useState(null);
+
 
   // 1) resolve the customUserId from users collection
   useEffect(() => {
@@ -155,6 +159,24 @@ Alert.alert(
     );
   };
 
+   // ✅ Open modal with shipping details
+  const handleViewShippingDetails = async (order) => {
+    try {
+      const itemsWithDelivery = await Promise.all(
+        order.items.map(async (item) => ({
+          ...item,
+          expectedDelivery: 'TBD', // You can replace this with fetched delivery data if available
+        }))
+      );
+
+      setShippingDetails({ ...order, items: itemsWithDelivery });
+      setShippingModalVisible(true);
+    } catch (err) {
+      console.error('Error fetching shipping details:', err);
+      Alert.alert('Error', 'Failed to fetch shipping details.');
+    }
+  };
+
   const tabRoutes = {
     'Orders': 'Orders',
     'To Ship': 'ToShip',
@@ -219,7 +241,7 @@ Alert.alert(
             const size = randomSizes[Math.floor(Math.random() * randomSizes.length)];
             const productName = item.productName || 'Product';
             const imageUri =
-              item.image || item.productImage || 'https://placehold.co/100x100';
+              item.image || item.imageUrl|| 'https://placehold.co/100x100';
 
             return (
               <View key={order.id} style={styles.orderCard}>
@@ -249,9 +271,13 @@ Alert.alert(
                   <Text style={styles.waitingMessage}>
                     Waiting for courier to confirm{'\n'}shipment
                   </Text>
-                  <TouchableOpacity style={styles.shippingBtn}>
+                  <TouchableOpacity
+                    style={styles.shippingBtn}
+                    onPress={() => handleViewShippingDetails(order)}
+                  >
                     <Text style={styles.shippingBtnText}>View Shipping Details</Text>
                   </TouchableOpacity>
+
                 </View>
 
                 <View style={styles.divider} />
@@ -273,7 +299,56 @@ Alert.alert(
             );
           })
         )}
+        
       </ScrollView>
+
+       {/* ✅ Shipping Modal should go HERE — after all your scrollable UI */}
+        <Modal
+          visible={shippingModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShippingModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Shipping Details</Text>
+
+              <ScrollView style={{ maxHeight: 350 }}>
+                <Text style={styles.modalText}>
+                  <Text style={{ fontWeight: 'bold' }}>Order ID:</Text> {shippingDetails?.id}
+                </Text>
+
+                <Text style={styles.modalText}>
+                  <Text style={{ fontWeight: 'bold' }}>Status:</Text> {shippingDetails?.status}
+                </Text>
+
+                <Text style={[styles.modalText, { marginTop: 10, fontWeight: 'bold' }]}>
+                  Items Info:
+                </Text>
+
+                {shippingDetails?.items?.map((item, idx) => (
+                  <View key={`${shippingDetails.id}-${idx}`} style={styles.modalItem}>
+                    <Text>Product: {item.productName || 'N/A'}</Text>
+                    <Text>Quantity: {item.quantity || 1}</Text>
+                    <Text>Size: {item.size || 'N/A'}</Text>
+                    <Text>Expected Delivery: {item.expectedDelivery || 'TBD'}</Text>
+                    <Text>Status: Waiting to be shipped...</Text>
+                    <View style={styles.itemDivider} />
+                  </View>
+                ))}
+
+              </ScrollView>
+
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setShippingModalVisible(false)}
+              >
+                <Text style={styles.modalCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+          
     </SafeAreaView>
   );
 }
@@ -437,4 +512,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
+  // ✅ Add these new styles
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 20,
+},
+modalContent: {
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  padding: 20,
+  width: '90%',
+  maxHeight: '80%',
+  shadowColor: '#000',
+  shadowOpacity: 0.25,
+  shadowRadius: 10,
+  elevation: 10,
+},
+modalTitle: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#333',
+  marginBottom: 10,
+  textAlign: 'center',
+},
+modalText: {
+  fontSize: 14,
+  color: '#444',
+  marginBottom: 6,
+},
+modalItem: {
+  marginBottom: 10,
+},
+itemDivider: {
+  height: 1,
+  backgroundColor: '#ddd',
+  marginVertical: 5,
+},
+modalCloseBtn: {
+  marginTop: 15,
+  backgroundColor: '#9747FF',
+  borderRadius: 8,
+  paddingVertical: 10,
+  alignItems: 'center',
+},
+modalCloseText: {
+  color: '#fff',
+  fontSize: 14,
+  fontWeight: '600',
+},
+
 });
