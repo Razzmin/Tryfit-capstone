@@ -8,15 +8,20 @@ import {
   Modal,
   ScrollView,
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome } from '@expo/vector-icons';
-
+import { Feather, } from '@expo/vector-icons';
+import{Header } from '../components/styles';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 export default function EditBodyMeasurement() {
   const navigation = useNavigation();
+  
   const db = getFirestore();
   const auth = getAuth();
   const user = auth.currentUser;
@@ -34,6 +39,7 @@ export default function EditBodyMeasurement() {
   const [recommendedTop, setRecommendedTop] = useState('');
   const [recommendedBottom, setRecommendedBottom] = useState('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [focusedField, setFocusedField] = useState('');
 
   // ---------- Size recommendation logic ----------
   const topSizes = [
@@ -152,16 +158,40 @@ export default function EditBodyMeasurement() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Body Measurements</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <KeyboardAvoidingView
+             behavior = "height" style= {{ flex: 1 }}
+             >
+             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        
+             <ScrollView
+                contentContainerStyle={{ flexGrow: 1}}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.container}>
+      <Header style = {{
+                     flexDirection: 'row',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     paddingHorizontal: 16,
+                     paddingBottom: 5,
+                     backgroundColor: '#fff',
+                   }}>
+                     <TouchableOpacity onPress={() => navigation.goBack()}
+                     style={{position: 'absolute', left: 0, top: -4}}>
+                       <Feather name="arrow-left" size={27} color="black"  />
+                     </TouchableOpacity>
+       
+                      <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>   EDIT BODY MEASUREMENT</Text>
+                   </Header>
+
+           {/* Display Recommended Sizes */}
+          {(recommendedTop || recommendedBottom) && (
+            <View style={styles.sizeBox}>
+              {recommendedTop && <Text>Recommended Top Size: {recommendedTop}</Text>}
+              {recommendedBottom && <Text>Recommended Bottom Size: {recommendedBottom}</Text>}
+            </View>
+          )}
         <View style={styles.form}>
           {[
             { label: 'Height (cm)', key: 'height' },
@@ -175,22 +205,19 @@ export default function EditBodyMeasurement() {
             <View key={field.key}>
               <Text style={styles.label}>{field.label}</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input,
+                focusedField === field.key && {borderColor: '#9747FF'},
+                ]}
                 value={formData[field.key]}
                 onChangeText={value => handleChange(field.key, value)}
                 keyboardType="numeric"
+                onFocus={() => setFocusedField(field.key)}
+                onBlur={() => setFocusedField('')}
               />
             </View>
           ))}
-
-          {/* Display Recommended Sizes */}
-          {(recommendedTop || recommendedBottom) && (
-            <View style={styles.sizeBox}>
-              {recommendedTop && <Text>Recommended Top Size: {recommendedTop}</Text>}
-              {recommendedBottom && <Text>Recommended Bottom Size: {recommendedBottom}</Text>}
-            </View>
-          )}
-
+          
+          <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.recalcButton} onPress={handleRecalculate}>
             <Text style={styles.recalcText}>Recalculate</Text>
           </TouchableOpacity>
@@ -198,8 +225,8 @@ export default function EditBodyMeasurement() {
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
             <Text style={styles.saveText}>Save</Text>
           </TouchableOpacity>
+          </View>
         </View>
-      </ScrollView>
 
       <Modal visible={showSuccessPopup} transparent animationType="fade">
         <View style={styles.popupOverlay}>
@@ -214,25 +241,127 @@ export default function EditBodyMeasurement() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
+    </ScrollView>
+    </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container:{flex:1,backgroundColor:'#fff',paddingTop:60,paddingHorizontal:20},
-  header:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:20},
-  headerTitle:{fontSize:20,fontWeight:'600'},
-  form:{paddingBottom:100},
-  label:{fontSize:15,marginBottom:5,color:'#696969'},
-  input:{fontSize:15,marginBottom:20,borderWidth:1,borderRadius:10,borderColor:'#ccc',height:55,backgroundColor:'#EDEDED',paddingHorizontal:15,paddingVertical:14},
-  sizeBox:{backgroundColor:'#F5F0FF',borderWidth:1,borderColor:'#C7A6FF',borderRadius:10,padding:20,marginTop:10, marginBottom: 10, alignItems:'center'},
-  recalcButton:{backgroundColor:'#9747FF',borderRadius:10,paddingVertical:16,alignItems:'center',marginBottom:10},
-  recalcText:{color:'#fff',fontSize:17,fontWeight:'500'},
-  saveButton:{backgroundColor:'#9747FF',borderRadius:10,paddingVertical:16,alignItems:'center',marginTop:10},
-  saveText:{color:'#fff',fontSize:17,fontWeight:'500'},
-  popupOverlay:{flex:1,backgroundColor:'rgba(0,0,0,0.3)',justifyContent:'center',alignItems:'center'},
-  popupBox:{backgroundColor:'#fff',borderRadius:10,padding:30,width:'80%',alignItems:'center'},
-  popupText:{fontSize:16,color:'#333',textAlign:'center',marginBottom:20},
-  popupButton:{backgroundColor:'#9747FF',paddingVertical:12,paddingHorizontal:30,borderRadius:6},
-  popupButtonText:{color:'#fff',fontWeight:'500'},
+  container:{
+    flex:1,
+    backgroundColor:'#fff',
+    paddingTop:30,
+    paddingHorizontal:20
+  },
+  header:{
+    flexDirection:'row',
+    justifyContent:'space-between',
+    alignItems:'center',
+    marginBottom:20
+  },
+  headerTitle:{
+    fontSize:20,
+    fontWeight:'600'
+  },
+  form:{
+    paddingBottom:50,
+  },
+  label:{
+    fontSize:14,
+    marginBottom:5,
+    color:'#333',
+    marginLeft: 20,
+    fontWeight: '500',
+  },
+  input:{
+    fontSize:15,
+    marginBottom: 15,
+    borderWidth:1,
+    borderRadius:10,
+    borderColor:  '#ccc',
+    height: 40,
+    backgroundColor:'#fff',
+    paddingHorizontal: 20,
+    width: "90%",
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  sizeBox:{
+    backgroundColor:'#F5F0FF',
+    borderWidth:1,
+    borderColor:'#C7A6FF',
+    borderRadius:10,
+    padding:20,
+    marginTop:10,
+    marginBottom: 10,
+    width: "90%",
+    justifyContent: 'center',
+    alignSelf: 'center',
+    alignItems: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignSelf: 'center',
+    width: '90%',
+    marginTop: 10,
+  },
+  recalcButton:{
+    backgroundColor:'#9747FF',
+    borderRadius:10,
+    paddingVertical:17,
+    alignItems:'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  recalcText:{
+    color:'#fff',
+    fontSize:15,
+    fontFamily: "KronaOne"
+  },
+  saveButton:{
+    backgroundColor:'#9747FF',
+    borderRadius:10,
+    paddingVertical:16,
+    alignItems:'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  saveText:{
+    color:'#fff',
+    fontSize:14,
+    fontFamily: "KronaOne"
+  },
+  
+  popupOverlay:{
+    flex:1,
+    backgroundColor:'rgba(0,0,0,0.3)',
+    justifyContent:'center',
+    alignItems:'center'
+  },
+  popupBox:{
+    backgroundColor:'#fff',
+    borderRadius:10,
+    padding:30,
+    width:'80%',
+    alignItems:'center'
+  },
+  popupText:{
+    fontSize:16,
+    color:'#333',
+    textAlign:'center',
+    marginBottom:20
+  },
+  popupButton:{
+    backgroundColor:'#9747FF',
+    paddingVertical:12,
+    paddingHorizontal:30,
+    borderRadius:6
+  },
+  popupButtonText:{
+    color:'#fff',
+    fontWeight:'500'
+  },
 });
