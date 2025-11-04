@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext, useMemo } from 'react';
-import {FontAwesome }  from '@expo/vector-icons';
+import {FontAwesome, EvilIcons, Ionicons }  from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { collection, getDocs, getDoc, doc, query, where, Timestamp } from 'firebase/firestore';
@@ -178,10 +178,22 @@ export default function LandingPage() {
               <FontAwesome name="bars" size={25} color="#000" />
               </TouchableOpacity>
 
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, position: 'relative'}}>
+               <EvilIcons
+               name="search"
+                size={28} 
+                color="black" 
+                  style= {{
+                    position: 'absolute',
+                    left: 10,
+                    top: '45%',
+                    transform: [{ translateY: -10}],
+                    zIndex: 5,
+                  }}
+                />
                 <TextInput
                   placeholder="Search..."
-                  style={styles.searchBar}
+                  style={[styles.searchBar, {paddingLeft: 40}]}
                   placeholderTextColor="#888"
                   value={searchText}
                   onChangeText={handleSearchChange}
@@ -204,7 +216,7 @@ export default function LandingPage() {
 
               
               <TouchableOpacity onPress={() => navigation.navigate('ChatSupport')}>
-                <FontAwesome name="comments" size={27} color="#000" />
+                <Ionicons name="chatbubbles-outline" size={28} color="black" />
               </TouchableOpacity>
             </View>
           </View>
@@ -358,10 +370,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 27,
     textAlign: 'center',
-    letterSpacing: 3,
     marginTop: 30,
     fontFamily: "KronaOne",
-     marginBottom: 10,
+    marginBottom: 10,
+    textTransform: 'uppercase',
   },
   topRow: {
     flexDirection: 'row',

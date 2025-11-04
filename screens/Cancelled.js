@@ -7,8 +7,10 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import{ Header } from '../components/styles';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Feather } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
@@ -83,15 +85,23 @@ export default function Cancelled() {
   
   
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.navigate('LandingPage')}>
-            <FontAwesome name="arrow-left" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Purchases</Text>
-          <View style={{ width: 24 }} />
-        </View>
+         <Header style = {{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        paddingHorizontal: 16,
+                                        paddingBottom: 20,
+                                        backgroundColor: '#fff',
+                                      }}>
+                                        <TouchableOpacity onPress={() => navigation.goBack()}
+                                        style={{position: 'absolute', left: 10, top: -4}}>
+                                          <Feather name="arrow-left" size={27} color="black"  />
+                                        </TouchableOpacity>
+                          
+                                         <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PURCHASES</Text>
+                                      </Header>
   
        {/* Nav Tabs */}
         <ScrollView
@@ -138,8 +148,9 @@ export default function Cancelled() {
             return (
               <View key={order.id} style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.status}>Cancelled</Text>
-                  <Text style={styles.date}>{formattedDate}</Text>
+                  <Text style={styles.status}>
+                 {order.status}</Text>
+                  <Text style={styles.date}>{order.createdAt?.toDate().toLocaleString() || 'N/A'}</Text>
                 </View>
 
                 <View style={styles.productRow}>
@@ -148,12 +159,12 @@ export default function Cancelled() {
                     style={styles.image}
                   />
                   <View style={styles.details}>
-                    <Text style={styles.name}>{item.name}</Text>
-                    <Text style={styles.productSize}>{size}</Text>
+                    <Text style={styles.name}>{item.productName}</Text>
+                    <Text style={styles.productSize}> Size: {item.size || 'N/A'}</Text>
                     <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
                     <View style={styles.totalRow}>
-                      <Text style={[styles.totalLabel, { marginLeft: 95 }]}>Total Payment:</Text>
-                      <Text style={styles.price}>₱{order.total || 'N/A'}</Text>
+                      <Text style={[styles.totalLabel, { marginLeft: 80 }]}>Total Payment:   </Text>
+                      <Text style={styles.price}>₱{order.total || '0'}</Text>
                     </View>
                   </View>
                 </View>
@@ -178,14 +189,14 @@ export default function Cancelled() {
           })
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    paddingTop: 30,
     backgroundColor: '#fff',
     paddingHorizontal: 20,
   },
@@ -205,7 +216,7 @@ const styles = StyleSheet.create({
   },
   tabWrap: {
     alignItems: 'center',
-    marginRight: 30,
+    marginRight: 40,
   },
   tabText: {
     fontSize: 14,
@@ -239,6 +250,9 @@ const styles = StyleSheet.create({
   status: {
     fontWeight: 'bold',
     color: '#9747FF',
+    fontSize: 13,
+    marginLeft: 1,
+    textTransform: 'uppercase',
   },
   date: {
     fontSize: 12,
@@ -270,6 +284,7 @@ const styles = StyleSheet.create({
   price: {
     fontWeight: '600',
     color: '#9747FF',
+    marginRight: 5,
   },
   productSize: {
     fontSize: 12,
@@ -287,7 +302,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: '#F7F7F7',
-    borderRadius: 2,
+    borderRadius: 10,
     paddingHorizontal: 120,
     paddingVertical: 8,
     borderWidth: 1,

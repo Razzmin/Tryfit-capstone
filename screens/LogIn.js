@@ -16,7 +16,14 @@ import { Formik } from "formik";
 //icons
 import {Octicons, Ionicons} from '@expo/vector-icons';
 
-import { View } from "react-native";
+import { View, 
+    KeyboardAvoidingView,
+    ScrollView,
+     TouchableWithoutFeedback,
+    Keyboard,
+    ImageBackground,
+  } from "react-native";
+
 import {
     StyledContainer,
     InnerContainer,
@@ -37,10 +44,10 @@ import {
     SignUpButton,
 } from "./../components/styles";
 import { useState } from 'react';
-import { LinearGradient } from "expo-linear-gradient";
+
 
 //colors
-const {black, main} = Colors;
+const {black, main, gray } = Colors;
 
 
 const Login = () => {
@@ -53,10 +60,37 @@ const Login = () => {
 
    const handleLogin = async (values) => {
     try {
+
+        const email = values.email.trim();
+        const password = values.password.trim();
+
+        
+        if (!email || !password) {
+            setPopupMessage("Please fill in all fields");
+            setPopupVisible(true);
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setPopupMessage("Please enter a valid email address");
+            setPopupVisible(true);
+            return;
+        }
+        if (password.length < 6) {
+        setPopupMessage("Password must be at least 6 characters long");
+        setPopupVisible(true);
+        return;
+}
+        //const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$^&*])[A-Za-z0-9!@#$%^&*]{6,}$/;
+        //if (!passwordRegex.test(password)) {
+            //setPopupMessage("Password must be at least 6 characters long and include at least 1 number and 1 special character");
+            // setPopupVisible(true);
+           // return;
+        //}
         const userCredential = await signInWithEmailAndPassword(
             auth,
-            values.email,
-            values.password
+            email,
+            password
         );
         const user = userCredential.user;
 
@@ -106,12 +140,25 @@ const Login = () => {
 };
 
     return(
-     <LinearGradient colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
+    <ImageBackground
+    source={require('../assets/bg.png')}
+    style={{ flex: 1}}
+    resizeMode="cover">
+
+     <KeyboardAvoidingView
+     behavior = "height" style= {{ flex: 1 }}
+     >
+     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+
+     <ScrollView
+        contentContainerStyle={{ flexGrow: 1}}
+        keyboardShouldPersistTaps="handled">
+
         <StyledContainer>
         <StatusBar style="dark"/>
             <InnerContainer>
                 <PageLogo source={require('./../assets/adaptive-icon.png')} />
-               <PageTitle> Welcome!</PageTitle>
+               <PageTitle> Welcome,</PageTitle>
                <SubTitle>Account Login</SubTitle>
 
                <Formik
@@ -124,8 +171,8 @@ const Login = () => {
                     <MyTextInput
                         label="Email Address:"
                         icon="mail"
-                        placeholder="   "
-                        placeholderTextColor={black}
+                        placeholder="Enter email"
+                        placeholderTextColor={gray}
                         onChangeText={handleChange('email')}
                         onBlur={handleBlur('email')}
                         value={values.email}
@@ -134,8 +181,8 @@ const Login = () => {
                     <MyTextInput
                         label="Password:"
                         icon="lock"
-                        placeholder="    "
-                        placeholderTextColor={black}
+                        placeholder="Enter Password"
+                        placeholderTextColor={gray}
                         onChangeText={handleChange('password')}
                         onBlur={handleBlur('password')}
                         value={values.password}
@@ -159,29 +206,46 @@ const Login = () => {
                </Formik>
             </InnerContainer>
         </StyledContainer>
-
+       </ScrollView>
+        </TouchableWithoutFeedback>
+ </KeyboardAvoidingView>
          <Popup
                 visible={popupVisible}
                 message={popupMessage}
                 onClose={() => setPopupVisible(false)}/>
-</LinearGradient>
+               
+</ImageBackground>
     );
 }
 
 const MyTextInput = ({label, icon,isPassword, hidePassword, setHidePassword ,...props}) => {
+    const [isFocused, setIsFocused] = useState(false);
     return(
         <View style={{width: '100%', marginBottom: 20 }}>
         <LeftIcon>
-            <Octicons name={icon} size={30} color={main} />
+            <Octicons name={icon} size={27} color={main} />
         </LeftIcon>
         <StyleInputLabel>{label}</StyleInputLabel>
-        <StyledTextInput {...props} />
+
+           <StyledTextInput 
+        {...props}
+        isFocused={isFocused}
+        onFocus={(e) => { 
+            setIsFocused(true); 
+        if(props.onFocus) props.onFocus(e);
+        }}
+        onBlur={(e) => {
+            setIsFocused(false);
+            if (props.onBlur) props.onBlur(e);
+        }}
+         />
         {isPassword && (
         <RightIcon onPress={() => setHidePassword(!hidePassword)}>
-            <Ionicons name={hidePassword ? 'eye-off' : 'eye'} size={30} color={black}/>
+            <Ionicons name={hidePassword ? 'eye-off-outline' : 'eye-outline'} size={30} color={black}/>
         </RightIcon>
         )}
         </View>
-    )
-}
+    );
+};
 export default Login;
+

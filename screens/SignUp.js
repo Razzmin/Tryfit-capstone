@@ -2,8 +2,14 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
 import Popup from '../components/Popup';
+import {
+    KeyboardAvoidingView,
+    ScrollView,
+    TouchableWithoutFeedback,
+    Keyboard,
+    ImageBackground,
+} from "react-native";
 
 // Firebase
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -19,7 +25,9 @@ import { Ionicons, Octicons, FontAwesome } from '@expo/vector-icons';
 
 // Custom styled components
 import {
+  CreateAccountTitle,
   SignUpStyleInputLabel,
+  SignupFormArea,
   SignUpTextInput,
   SignInButton,
   SignInButtonText,
@@ -27,8 +35,12 @@ import {
   LogInButton,
   LogInLinkText,
   LogInPlainText,
+  SignHeader,
+  SignBackBtn,
+  SignTitle,
   SignUpLeftIcon,
   SignUpRightIcon,
+  InnerContainer,
 } from "./../components/styles";
 
 // Colors
@@ -38,6 +50,8 @@ const colors = {
   main: "#1f1926",
   text: "#bba1d4",
   white: "#EDEDED",
+  gray: "#717171",
+  whites: "#FFFFFF",
 };
 
 const Signup = () => {
@@ -57,9 +71,43 @@ const Signup = () => {
     }
   }, [isFocused]);
 
+  const [focusedInput, setFocusedInput] = useState(null);
+
   // ✅ Firebase Signup Function
   const handleSignup = async (values, { setFieldValue }) => {
     try {
+
+      values.username = values.username.trim();
+      values.email = values.email.trim();
+
+       if (!values.username || values.username.length < 3) {
+            setPopupMessage("Username must be at least 3 characters long");
+            setPopupVisible(true);
+            return;
+        }
+        if (values.username.length > 50) {
+          setPopupMessage("Username cannot exceed 50 characters");
+            setPopupVisible(true);
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!values.email || !emailRegex.test(values.email)) {
+            setPopupMessage("Please enter a valid email address");
+            setPopupVisible(true);
+            return;
+        }
+        if (values.email.length > 100) {
+          setPopupMessage("Email cannot exceed 100 characters");
+            setPopupVisible(true);
+            return;
+        }
+        const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$^&*])[A-Za-z0-9!@#$%^&*]{6,}$/;
+        if (!passwordRegex.test(values.password)) {
+            setPopupMessage("Password must be at least 6 characters long and include at least 1 number and 1 special character");
+            setPopupVisible(true);
+            return;
+        }
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         values.email,
@@ -132,16 +180,33 @@ const Signup = () => {
   };
 
   return (
-    <LinearGradient colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
+      <ImageBackground
+        source={require('../assets/bg.png')}
+        style={{ flex: 1}}
+        resizeMode="cover">
+
+       <KeyboardAvoidingView
+            behavior = "height" style= {{ flex: 1 }}
+            >
+      
+       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+
+       <ScrollView
+               contentContainerStyle={{ flexGrow: 1}}
+               keyboardShouldPersistTaps="handled">
+
       <View style={styles.container}>
         <StatusBar style="dark" />
         <View style={styles.inner}>
-          <TouchableOpacity style={styles.header} onPress={() => navigation.goBack()}>
-            <FontAwesome name="arrow-left" size={16} color="#1f1926" />
-            <Text style={styles.title}>Create your account</Text>
-          </TouchableOpacity>
+        
+            <Text style={styles.subtitle}>Create your account</Text>
 
-          <Text style={styles.subtitle}>Personal Details</Text>
+            <View style = {{ flexDirection: 'row', justifyContent: 'flex-start', paddingLeft: 20, marginBottom: 30}}>
+                <LogInPlainText>Already have an account?</LogInPlainText>
+                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                  <LogInLinkText> Log In</LogInLinkText>
+                  </TouchableOpacity>
+                </View>
 
           <Formik
             innerRef={formikRef}
@@ -155,10 +220,19 @@ const Signup = () => {
                 <View style={styles.inputWrapper}>
                   <Octicons name="person" size={24} style={styles.leftIcon} />
                   <TextInput
-                    placeholder=""
-                    style={styles.inputArea}
+                    label="Username"
+                    placeholder="Enter username"
+                    placeholderTextColor={colors.gray}
+                    style={[
+                      styles.inputArea,
+                       focusedInput === 'username' && {borderColor: colors.purple},
+                        ]}
+                         onFocus={() => setFocusedInput('username')}
+                        onBlur={(e) => 
+                        {handleBlur('email')(e);
+                        setFocusedInput(null);
+                        }}
                     onChangeText={handleChange('username')}
-                    onBlur={handleBlur('username')}
                     value={values.username}
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -170,10 +244,19 @@ const Signup = () => {
                 <View style={styles.inputWrapper}>
                   <Octicons name="mail" size={24} style={styles.leftIcon} />
                   <TextInput
-                    placeholder=""
-                    style={styles.inputArea}
+                    label ="Email Address"
+                    placeholder="Enter email"
+                    placeholderTextColor={colors.gray}
+                    style={[
+                      styles.inputArea,
+                       focusedInput === 'email' && {borderColor: colors.purple},
+                        ]}
+                        onFocus={() => setFocusedInput('email')}
+                        onBlur={(e) => 
+                        {handleBlur('email')(e);
+                        setFocusedInput(null);
+                        }}
                     onChangeText={handleChange('email')}
-                    onBlur={handleBlur('email')}
                     value={values.email}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -186,23 +269,37 @@ const Signup = () => {
                 <View style={styles.inputWrapper}>
                   <FontAwesome name="lock" size={24} style={styles.leftIcon} />
                   <TextInput
-                    placeholder=""
-                    style={styles.inputArea}
+                    label="Password"
+                    placeholder="Enter password"
+                    placeholderTextColor={colors.gray}
+                    style={[
+                      styles.inputArea,
+                      focusedInput === 'password' && {borderColor: colors.purple},
+                        ]}
+                      onFocus={() => setFocusedInput('password')}
+                        onBlur={(e) => 
+                        {handleBlur('password')(e);
+                        setFocusedInput(null);
+                        }}   
                     onChangeText={handleChange('password')}
-                    onBlur={handleBlur('password')}
                     value={values.password}
                     secureTextEntry={hidePassword}
+                    isPassword={true}
+                    hidePassword={hidePassword}
+                    setHidePassword={setHidePassword}
+                    autoCompleteType="off"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    importantForAutofill="no"
                   />
                   <TouchableOpacity
-                    style={styles.eyeIcon}
+                    style={styles.rightIcon}
                     onPress={() => setHidePassword(!hidePassword)}
                   >
                     <Ionicons
                       name={hidePassword ? 'eye-off' : 'eye'}
-                      size={22}
-                      color={colors.bg}
+                      size={30}
+                      color={colors.main}
                     />
                   </TouchableOpacity>
                 </View>
@@ -217,27 +314,27 @@ const Signup = () => {
                 >
                   <SignInButtonText>Next</SignInButtonText>
                 </SignInButton>
-
-                {/* Login Link */}
-                <SignUpBottomTextWrapper>
-                  <LogInPlainText>Already have an account?</LogInPlainText>
-                  <LogInButton onPress={() => navigation.navigate('Login')}>
-                    <LogInLinkText> Log In</LogInLinkText>
-                  </LogInButton>
-                </SignUpBottomTextWrapper>
               </View>
             )}
           </Formik>
         </View>
+        </View>
+        </ScrollView>
+        </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
 
         {/* Popup message */}
         <Popup
           visible={popupVisible}
           message={popupMessage}
-          onClose={() => setPopupVisible(false)}
+           onClose={() => {
+          setPopupVisible(false);
+          if (popupMessage === "Account created successfully!") {
+            navigation.navigate("BodyMeasurement");
+          }
+        }}
         />
-      </View>
-    </LinearGradient>
+    </ImageBackground>
   );
 };
 
@@ -249,6 +346,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     paddingHorizontal: 15,
     paddingTop: 70,
+    fontFamily: 'System',
   },
   inner: {
     maxWidth: 330,
@@ -258,11 +356,11 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 20,
     gap: 17,
   },
   title: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
     color: colors.main,
     marginLeft: 5,
@@ -270,47 +368,48 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 19,
-    marginTop: 50,
-    marginBottom: 3,
-    fontWeight: '600',
+    marginTop: 90,
+    fontWeight:'600',
     color: colors.main,
     textAlign: "left",
     padding: 20,
     fontFamily: "KronaOne",
   },
   formArea: {
-    width: "100%",
+    width: "99%",
     paddingHorizontal: 15,
-    marginTop: 5,
   },
   inputWrapper: {
     position: "relative",
-    marginBottom: 20,
+    marginBottom: 10,
   },
   leftIcon: {
     position: "absolute",
-    left: 15,
+    left: 17,
     top: 20,
     color: colors.bg,
     zIndex: 1,
   },
-  eyeIcon: {
-    position: 'absolute',
-    right: 15,
-    top: 20,
+  rightIcon: {
+     position: "absolute",
+    right: 17,
+    top: 15,
+    color: colors.bg,
+    zIndex: 1,
   },
   inputArea: {
-    backgroundColor: colors.white,
-    borderWidth: 2,
+    backgroundColor: colors.whites,
+    borderWidth: 1,
     borderColor: colors.bg,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    paddingLeft: 45,
+    paddingLeft: 50,
     borderRadius: 10,
     fontSize: 16,
     height: 55,
-    color: colors.bg,
     marginVertical: 6,
+    marginBottom: 5,
+    color: colors.bg,
     width: "100%",
   },
   label: {
@@ -318,5 +417,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "left",
     marginBottom: 5,
-  },
+  },  
+  button: {
+    color: colors.white,
+    fontSize: 18,
+    textAlign: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  }
+  
 });

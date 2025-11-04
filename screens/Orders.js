@@ -7,8 +7,10 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import{ Header } from '../components/styles';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
 import {
   getFirestore,
@@ -124,18 +126,27 @@ export default function Orders() {
   
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('LandingPage')}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Purchases</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <SafeAreaView
+     style={styles.container}>
+       <Header style = {{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 16,
+                  paddingBottom: 20,
+                  backgroundColor: '#fff',
+                }}>
+                  <TouchableOpacity onPress={() => navigation.goBack()}
+                  style={{position: 'absolute', left: 2, top: -4}}>
+                    <Feather name="arrow-left" size={27} color="black"  />
+                  </TouchableOpacity>
+    
+                   <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PURCHASES</Text>
+                </Header>
 
       {/* Nav Tabs */}
       <ScrollView
+      contentContainerStyle={{ flexGrow: 1, alignItems: 'stretch', paddingBottom: 20}}
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.tabContainer}
@@ -188,7 +199,7 @@ export default function Orders() {
                 {/* Product Info */}
                 <View style={styles.productRow}>
                   <Image
-                    source={{ uri: item.image || 'https://placehold.co/100x100' }}
+                    source={{ uri: item.imageUrl || 'https://placehold.co/100x100' }}
                     style={styles.productImage}
                   />
                   <View style={styles.productInfo}>
@@ -203,7 +214,7 @@ export default function Orders() {
                 </View>
 
                 {/* Address */}
-                <Text style={{ fontSize: 12, color: '#555', marginTop: 5 }}>
+                <Text style={{ fontSize: 13, color: '#555', marginTop: 5, fontWeight: '500' }}>
                   Delivery Address: {order.address}
                 </Text>
 
@@ -235,7 +246,7 @@ export default function Orders() {
           })
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -244,26 +255,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 60,
+    paddingTop: 30,
     paddingHorizontal: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    
   },
   tabContainer: {
     flexDirection: 'row',
-    marginBottom: 15,
+    marginBottom: -300,
+    
   },
   tabWrap: {
     alignItems: 'center',
-    marginRight: 30,
+    marginRight: 40,
   },
   tabText: {
     fontSize: 14,
@@ -271,13 +274,13 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#9747FF',
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   underline: {
     height: 3,
     backgroundColor: 'transparent',
     width: '100%',
-    marginTop: 4,
+    marginTop: -1,
   },
   activeUnderline: {
     backgroundColor: '#9747FF',
@@ -285,17 +288,19 @@ const styles = StyleSheet.create({
   orderCard: {
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
-    padding: 15,
+    padding: 16,
     marginBottom: 30,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   orderStatus: {
     fontWeight: 'bold',
     color: '#9747FF',
+    fontSize: 14,
+    textTransform: 'uppercase',
   },
   orderDate: {
     fontSize: 12,
@@ -318,7 +323,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: 7,
   },
   productSize: {
     fontSize: 12,
@@ -357,15 +362,18 @@ const styles = StyleSheet.create({
   totalPrice: {
     fontWeight: '700',
     color: '#9747FF',
+    marginRight: 10,
+    fontSize: 15,
   },
   actionButton: {
     backgroundColor: '#F7F7F7',
     paddingVertical: 10,
-    borderRadius: 2,
+    borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#9747FF',
     marginTop: 10,
+
   },
   actionButtonText: {
     color: '#9747FF',

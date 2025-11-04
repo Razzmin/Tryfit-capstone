@@ -1,36 +1,55 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, 
+  TouchableOpacity,
+   Image,
+    ScrollView } from 'react-native';
+
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
+import {
+  Header,
+} from '../components/styles';
 
 export default function TrackOrder() {
   const navigation = useNavigation();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Status</Text>
-        <View style={{ width: 24 }} />
-      </View>
+        <Header style = {{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingHorizontal: 16,
+                        paddingBottom: 10,
+                        backgroundColor: '#fff',
+                      }}>
+                      <TouchableOpacity onPress={() => navigation.goBack()}
+                      style={{position: 'absolute', left: 10, top: -4}}>
+                      <Feather name="arrow-left" size={27} color="black"  />
+                      </TouchableOpacity>
+                         <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Track Order</Text>
+                      </Header>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Product Card */}
         <View style={styles.card}>
+        <View style = {{ paddingLeft: 10}}>
           <Image
             source={{ uri: 'https://placehold.co/80x80' }}
             style={styles.cardImage}
           />
+           <Text style={styles.orderId}>Order ID: 154789361</Text>
+          </View>
+
           <View style={styles.cardInfo}>
             <Text style={styles.productName}>Y2K Long Sleeve Top</Text>
-            <Text style={styles.productSize}>small</Text>
+            <Text style={styles.productSize}>Size: S</Text>
             <Text style={styles.productQty}>Qty: 1</Text>
             <Text style={styles.productPrice}>₱180</Text>
-            <Text style={styles.orderId}>Order ID: 154789361</Text>
           </View>
+          
         </View>
 
         {/* Tracking Steps */}
@@ -74,7 +93,7 @@ export default function TrackOrder() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -82,48 +101,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF',
-    paddingTop: 60,
+    paddingTop: 30,
     paddingHorizontal: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
   },
   card: {
     flexDirection: 'row',
     backgroundColor: '#f1f1f1ff',
     borderRadius: 12,
-    padding: 12,
+    padding: 15,
     marginBottom: 30,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    paddingVertical: 10,
   },
   cardImage: {
     width: 90,
     height: 90,
     borderRadius: 10,
     backgroundColor: '#ccc',
+    marginTop: 10,
+    marginBottom: 30,
   },
   cardInfo: {
-    marginLeft: 12,
+    marginLeft: -10,
+    marginBottom: 40,
   },
   productName: {
     fontSize: 14,
     fontWeight: '600',
+    marginBottom: 10,
   },
   productPrice: {
     color: '#9747FF',
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: 7,
   },
   productSize: {
     fontSize: 12,
@@ -135,30 +149,32 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   orderId: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#777',
-    marginTop: 4,
+    marginTop: -2,
+    marginLeft: -10,
+
   },
   trackTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: 20,
   },
   timeline: {
     marginLeft: 10,
     borderLeftWidth: 2,
     borderLeftColor: '#D9D9D9',
-    paddingLeft: 10,
+    paddingLeft: 20,
   },
   step: {
     flexDirection: 'row',
-    marginBottom: 25,
+    marginBottom: 30,
     alignItems: 'flex-start',
   },
   stepDot: {
     width: 15,
     height: 15,
-    borderRadius: 6,
+    borderRadius: 10,
     backgroundColor: '#D9D9D9',
     marginRight: 15,
     marginTop: 4,
@@ -166,7 +182,7 @@ const styles = StyleSheet.create({
   stepDotFilled: {
     width: 15,
     height: 15,
-    borderRadius: 6,
+    borderRadius: 10,
     backgroundColor: '#9747FF',
     marginRight: 15,
     marginTop: 4,

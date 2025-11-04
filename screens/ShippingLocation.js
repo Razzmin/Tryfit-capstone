@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Switch,
 } from 'react-native';
+import{Header, StyledFormArea } from '../components/styles';
 import { Picker } from '@react-native-picker/picker';
-import { FontAwesome } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc,setDoc } from 'firebase/firestore';
@@ -39,11 +41,16 @@ export default function ShippingLocation() {
   const [municipality, setMunicipality] = useState('');
   const [barangay, setBarangay] = useState('');
   const [finalAddress, setFinalAddress] = useState('');
+  
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [house, setHouse] = useState('');
   const [postal, setPostal] = useState('');
+
+  const [isDefault, setIsDefault] = useState(true);
+  const [focusedField, setFocusedField] = useState('');
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
   const fetchShippingLocation = async () => {
@@ -123,13 +130,34 @@ export default function ShippingLocation() {
   };
 
   const handleSave = async () => {
-  if (!name.trim()) return Alert.alert('Validation Error', 'Please enter the receiver name.');
-  if (!phone.trim()) return Alert.alert('Validation Error', 'Please enter the phone number.');
-  if (!house.trim()) return Alert.alert('Validation Error', 'Please enter house/street/building info.');
-  if (!municipality) return Alert.alert('Validation Error', 'Please select a municipality.');
-  if (!barangay) return Alert.alert('Validation Error', 'Please select a barangay.');
-  if (!postal.trim()) return Alert.alert('Validation Error', 'Please enter postal code.');
 
+    const cleanedName = name.trim();
+    const cleanedPhone = phone.replace(/\s+/g, '');
+    const cleanedHouse = house.trim();
+    const cleanedPostal = postal.trim();
+    
+
+    //only accepts letter,spaces and periods
+    if (!cleanedName || !/^[A-Za-z\s.]+$/.test(cleanedName)) {
+      return Alert.alert('Validation Error', 'Please enter a valid name(letters only).');
+    }
+    //ensures number starts at 09 or +639, and only 11 digits coz ph nums
+    if (!cleanedPhone || !/^(09\d{9}|(\+639)\d{9})$/.test(cleanedPhone)) {
+       return Alert.alert('Validation Error', 'Please enter a valid mobile number(e.g., 09xxx).');
+    }
+ if (!cleanedHouse || cleanedHouse.length < 5) {
+    return Alert.alert('Validation Error', 'Please enter a more complete house/street/building information');
+ }
+ if (!municipality) {
+  return Alert.alert('Validation Error', 'Please select a municipality.');
+ }
+  if (!barangay) {
+    return Alert.alert('Validation Error', 'Please select a barangay.');
+  }
+ if (!cleanedPostal || !/^\d{4}$/.test(cleanedPostal)) {
+   return Alert.alert('Validation Error', 'Please enter a valid 4-digit postal code.');
+ }
+  
   try {
     const user = auth.currentUser;
     if (!user) {
@@ -137,9 +165,11 @@ export default function ShippingLocation() {
       return;
     }
 
+
     // Get custom userId
     const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
+
     if (!userDocSnap.exists()) {
       Alert.alert("Error", "User profile not found.");
       return;
@@ -150,33 +180,23 @@ export default function ShippingLocation() {
     const q = query(collection(db, 'shippingLocations'), where('userId', '==', customUserId));
     const querySnapshot = await getDocs(q);
 
+    const addressData = {
+      userId: customUserId,
+      name: cleanedName,
+      phone: cleanedPhone,
+      house: cleanedHouse, municipality, barangay,
+      postalCode: cleanedPostal,
+      fullAddress: `${barangay}, ${municipality}, Tarlac`,
+      createdAt: new Date(),
+    };
+
     if (!querySnapshot.empty) {
       // Update existing location
       const docRef = querySnapshot.docs[0].ref;
-      await setDoc(docRef, {
-        userId: customUserId,
-        name: name.trim(),
-        phone: phone.trim(),
-        house: house.trim(),
-        municipality,
-        barangay,
-        postalCode: postal.trim(),
-        fullAddress: `${barangay}, ${municipality}, Tarlac`,
-        createdAt: new Date(),
-      }, { merge: true });
+      await setDoc(docRef, addressData, { merge: true });
     } else {
       // Add new location
-      await addDoc(collection(db, 'shippingLocations'), {
-        userId: customUserId,
-        name: name.trim(),
-        phone: phone.trim(),
-        house: house.trim(),
-        municipality,
-        barangay,
-        postalCode: postal.trim(),
-        fullAddress: `${barangay}, ${municipality}, Tarlac`,
-        createdAt: new Date(),
-      });
+      await addDoc(collection(db, 'shippingLocations'), addressData);
     }
 
     Alert.alert('Success', 'Shipping location saved successfully!');
@@ -189,29 +209,77 @@ export default function ShippingLocation() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <FontAwesome name="arrow-left" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Shipping Location</Text>
-        <View style={{ width: 24 }} />
-      </View>
+   <Header style = {{
+                     flexDirection: 'row',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     paddingHorizontal: 16,
+                     paddingBottom: 10,
+                     backgroundColor: '#fff',
+                     borderBottomWidth: 1,
+                     borderBottomColor: '#ddd',
+                   }}>
+                     <TouchableOpacity onPress={() => navigation.goBack()}
+                     style={{position: 'absolute', left: 16, top: -4}}>
+                       <Feather name="arrow-left" size={27} color="black"  />
+                     </TouchableOpacity>
+       
+                      <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Shipping Address</Text>
+                   </Header>
+      
+      <StyledFormArea style={{ width: '95%', justifyContent: 'center', alignSelf: 'center' }}>
+      <Text style={styles.label}>Name (Receiver):</Text>
+      <TextInput style={[styles.input,
+      focusedField === 'name' && {borderColor: '#9747FF'},
+      ]} 
+      value={name}
+       onChangeText={setName} 
+        placeholder="e.g. Juan Dela Cruz"
+        onFocus={() => setFocusedField('name')}
+        onBlur={() => setFocusedField('')}
+       />
 
-      <Text style={styles.label}>Name (Receiver)</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} />
+      <Text style={styles.label}>Phone Number:</Text>
+      <TextInput style={[styles.input,
+      focusedField === 'phone' && {borderColor: '#9747FF'},
+      ]}
+       value={phone}
+        onChangeText={(text) => {
+          //will auto format the number
+           let  cleaned = text.replace(/\D/g, '');//removes non digits
+           
+            if(cleaned.length > 11) {
+              cleaned = cleaned.slice(0, 11);
+            }
 
-      <Text style={styles.label}>Phone Number</Text>
-      <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="numeric" />
+          let formatted = cleaned;
+          if(cleaned.length > 4 && cleaned.length <= 7) {
+          formatted = cleaned.replace(/(\d{4})(\d{1,3})/, '$1 $2');
+        } else if (cleaned.length > 7) {
+          formatted = cleaned.replace(/(\d{4})(\d{3})(\d{1,4})/, '$1 $2 $3');
+        }
 
-      <Text style={styles.label}>House No., Street / Building</Text>
+        setPhone(formatted);
+        }}
+         keyboardType="numeric"
+          placeholder="e.g. 09xx xxx xxxx"
+          onFocus={() => setFocusedField('phone')}
+          onBlur={() => setFocusedField('')}
+         />
+
+      <Text style={styles.label}>House No., Street / Building:</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input,
+         focusedField === 'house' && {borderColor: '#9747FF'},
+      errors.name && {borderColor: 'red'},]}
         value={house}
         onChangeText={setHouse}
-        placeholder="e.g., 225, Purok Alpha"
+        placeholder="e.g., Kamanggahan, Care"
+        onFocus={() => setFocusedField('house')}
+          onBlur={() => setFocusedField('')}
       />
 
-      <Text style={styles.label}>Address</Text>
+      <Text style={styles.label}>Address:</Text>
       <View style={styles.pickerWrapper}>
         <Picker
           selectedValue={
@@ -223,13 +291,25 @@ export default function ShippingLocation() {
           }
           onValueChange={handlePickerChange}
           style={styles.picker}
+          dropdownIconColor="#9747FF"
         >
           {getPickerItems()}
         </Picker>
       </View>
 
-      <Text style={styles.label}>Postal Code</Text>
-      <TextInput style={styles.input} value={postal} onChangeText={setPostal} keyboardType="numeric" />
+      <Text style={styles.label}>Postal Code:</Text>
+      <TextInput style={[styles.input,
+         focusedField === 'postal' && {borderColor: '#9747FF'},
+      ]} 
+      value={postal} 
+      onChangeText={setPostal}
+       keyboardType="numeric"
+        placeholder="e.g., 2300"
+        onFocus={() => setFocusedField('postal')}
+        onBlur={() => setFocusedField('')}
+        />
+      </StyledFormArea>
+
 
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveText}>Save</Text>
@@ -241,8 +321,7 @@ export default function ShippingLocation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    paddingTop: 40,
     backgroundColor: '#fff',
   },
   header: {
@@ -256,30 +335,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
     marginTop: 10,
+    marginBottom: 5,
     color: '#333',
   },
   input: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: "#FFFFFF",
     borderRadius: 10,
     padding: 12,
     paddingVertical: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#1f1926",
+
   },
   pickerWrapper: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor:  "#FFFFFF",
     borderRadius: 10,
     overflow: 'hidden',
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#1f1926",
+    height: 55,
   },
   picker: {
-    height: 50,
+    height: '100%',
     width: '100%',
   },
   saveButton: {
@@ -287,12 +369,17 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
     borderRadius: 8,
-    marginTop: 190,
+    marginBottom: 190,
+    marginTop: 30,
+    width: '90%',
+    justifyContent: 'center',
+    alignSelf: 'center',
   },
   saveText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '400',
+    fontFamily: "KronaOne",
     letterSpacing: 2,
+
   },
 });
