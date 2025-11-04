@@ -175,7 +175,7 @@ export default function Orders() {
       </ScrollView>
 
       {/* Orders List */}
-      <ScrollView>
+      <ScrollView style={{marginTop: 10}}>
         {orders.length === 0 ? (
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
             No orders found.
@@ -255,13 +255,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 30,
-    paddingHorizontal: 20,
-    
+    paddingTop: 30, 
+    paddingHorizontal: 20
   },
   tabContainer: {
     flexDirection: 'row',
-    marginBottom: -300,
+    marginBottom: 0,
     
   },
   tabWrap: {
@@ -280,7 +279,7 @@ const styles = StyleSheet.create({
     height: 3,
     backgroundColor: 'transparent',
     width: '100%',
-    marginTop: -1,
+    marginTop: 1,
   },
   activeUnderline: {
     backgroundColor: '#9747FF',

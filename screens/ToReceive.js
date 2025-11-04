@@ -180,7 +180,7 @@ export default function ToReceive() {
       </ScrollView>
 
       {/* Orders */}
-      <ScrollView>
+      <ScrollView style={{marginBottom: 30}}>
         {orders.length === 0 ? (
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#555' }}>
             No "To Receive" orders found.
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     paddingTop: 30,
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -275,6 +275,7 @@ const styles = StyleSheet.create({
   },
   activeUnderline: {
     backgroundColor: '#9747FF',
+
   },
   orderCard: {
     backgroundColor: '#F7F7F7',
