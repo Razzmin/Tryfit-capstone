@@ -28,9 +28,7 @@ import {
 } from 'firebase/firestore';
 
 const db = getFirestore();
-const auth = getAuth();
-
-const randomSizes = ['small', 'medium', 'large', 'xl', 'xxl'];
+const auth = getAuth(); 
 
 export default function ToReceive() {
   const navigation = useNavigation();
@@ -229,17 +227,14 @@ export default function ToReceive() {
             const item = order.items && order.items.length > 0 ? order.items[0] : null;
             if (!item) return null;
 
-            const imageUri = item.imageUrl && item.imageUrl !== '' 
-            ? item.imageUrl 
-            : 'https://placehold.co/100x100';
-
+            const imageUri = item.imageUrl || 'https://placehold.co/100x100';
 
             return (
-              <View key={order.id} style={styles.orderCard}>
+              <View key={order.toreceiveID} style={styles.orderCard}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.orderStatus}>{order.status}</Text>
                   <Text style={styles.orderDate}>
-                  {order.createdAt?.toDate().toLocaleString() || 'N/A'}
+                    {order.createdAt?.toDate().toLocaleString() || 'N/A'}
                   </Text>
                 </View>
 
@@ -262,7 +257,10 @@ export default function ToReceive() {
                   <Text style={styles.waitingMessage}>
                     Waiting for you to confirm{'\n'}receipt of order
                   </Text>
-                  <TouchableOpacity style={styles.shippingBtn} onPress={() => handleReceiveOrder(order)}>
+                  <TouchableOpacity
+                    style={styles.shippingBtn}
+                    onPress={() => handleReceiveOrder(order)}
+                  >
                     <Text style={styles.shippingBtnText}>Mark as Received</Text>
                   </TouchableOpacity>
                 </View>
@@ -270,14 +268,15 @@ export default function ToReceive() {
                 <View style={styles.divider} />
 
                 <View style={styles.orderIdRow}>
-                  <Text style={styles.orderIdText}>Order ID: {order.id}</Text>
-                  <TouchableOpacity onPress={() => handleCopy(order.id)}>
+                  <Text style={styles.orderIdText}>Order ID: {order.orderId}</Text>
+                  <TouchableOpacity onPress={() => handleCopy(order.orderId)}>
                     <Feather name="copy" size={18} color="#9747FF" />
                   </TouchableOpacity>
                 </View>
               </View>
             );
           })
+
         )}
       </ScrollView>
     </SafeAreaView>

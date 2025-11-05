@@ -145,6 +145,7 @@ export default function Orders() {
                 price: item.price || 0,
                 status: "Cancelled",
               })),
+              productID: order.productID || "",
               name: order.name || "",
               orderId: order.orderId || "",
               status: "Cancelled",

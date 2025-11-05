@@ -155,7 +155,7 @@ export default function Cancelled() {
 
                 <View style={styles.productRow}>
                   <Image
-                    source={{ uri: item.image || 'https://placehold.co/100x100' }}
+                    source={{ uri: item.imageUrl || 'https://placehold.co/100x100' }}
                     style={styles.image}
                   />
                   <View style={styles.details}>
@@ -171,14 +171,16 @@ export default function Cancelled() {
 
                 {/* Buttons */}
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity
+                 <TouchableOpacity
                     style={styles.primaryButton}
                     onPress={() => {
-                      navigation.navigate("ReCheckout", {
-                        selectedItems: order.items,   
-                        total: order.total, 
-                        address: order.address, 
-                        deliveryFee: order.deliveryFee, }); }} >
+                    navigation.navigate("ReCheckout", {
+                      cancelledID: order.cancelledID || order.id, 
+                    });
+
+
+                    }}
+                  >
                     <Text style={styles.primaryButtonText}>Buy Again</Text>
                   </TouchableOpacity>
 

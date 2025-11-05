@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
 } from "firebase/firestore";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import{ Header } from '../components/styles';
@@ -32,19 +33,45 @@ export default function ToRate() {
   const route = useRoute();
   const navigation = useNavigation();
 
-  // Expect Completed.js to pass items[] and userId (custom id stored in completed)
-  const { items = [], userId: passedUserId = null } = route.params || {};
+  // Receive completed order ID and custom userId
+  const { completedOrderId, userId: passedUserId } = route.params || {};
 
-  const [ratings, setRatings] = useState({});   // { [itemId]: star }
-  const [comments, setComments] = useState({}); // { [itemId]: comment }
+  const [items, setItems] = useState([]);
+  const [ratings, setRatings] = useState({});
+  const [comments, setComments] = useState({});
   const [anonymous, setAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // convenience: are all items rated?
-  const allRated = useMemo(
-    () => items.length > 0 && items.every((it) => !!ratings[it.id]),
+  // Fetch completed order by ID
+  useEffect(() => {
+    if (!completedOrderId) return;
+
+    const fetchCompletedOrder = async () => {
+      try {
+        const orderRef = doc(db, "completed", completedOrderId);
+        const orderSnap = await getDoc(orderRef);
+        if (orderSnap.exists()) {
+          const orderData = orderSnap.data();
+          setItems(orderData.items || []);
+        } else {
+          Alert.alert("Error", "Completed order not found.");
+        }
+      } catch (err) {
+        console.error("Error fetching completed order:", err);
+      }
+    };
+
+    fetchCompletedOrder();
+  }, [completedOrderId]);
+
+   const allRated = useMemo(
+    () => items.length > 0 && items.every((it) => !!ratings[it.productId]),
     [items, ratings]
   );
+
+
+
+
 
   const handleRating = (itemId, value) => {
     setRatings((prev) => ({ ...prev, [itemId]: value }));
@@ -54,7 +81,6 @@ export default function ToRate() {
     setComments((prev) => ({ ...prev, [itemId]: text }));
   };
 
-  // Fetch username from users collection by the custom userId field
   const fetchUsernameByCustomId = async (customUserId) => {
     if (!customUserId) return "Guest";
     try {
@@ -69,6 +95,8 @@ export default function ToRate() {
     }
     return "Guest";
   };
+
+
 const handleSubmit = async () => {
   if (!allRated) {
     Alert.alert("Error", "Please provide a star rating for all items before submitting.");
@@ -78,37 +106,41 @@ const handleSubmit = async () => {
   try {
     setSubmitting(true);
 
-    // determine reviewer username
-    let reviewerUsername = anonymous ? "Anonymous" : "Guest";
-    if (!anonymous && passedUserId) {
-      reviewerUsername = await fetchUsernameByCustomId(passedUserId);
-    }
-
     const reviewsCollection = collection(db, "productReviews");
 
+    // Get reviewer name
+    const reviewerUsername = anonymous
+      ? "Anonymous"
+      : passedUserId
+      ? await fetchUsernameByCustomId(passedUserId)
+      : "Anonymous";
+
+    // Use the order-level productID for all items
+    const orderProductID = items.length > 0 ? items[0].productID || items[0].productId : null;
+
     for (const item of items) {
-      const userRating = ratings[item.id]; // guaranteed to exist
-      const commentText = (comments[item.id] || "").trim();
+      if (!orderProductID) continue; // fallback
 
-      // Save review entry
-      await addDoc(reviewsCollection, {
+      const reviewDoc = {
         reviewID: `RV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        productID: item.productID || item.id,
+        productID: orderProductID,        // 🔥 using order-level productID
         productName: item.productName,
-        size: item.size,
-        rating: userRating,
-        comment: commentText,
-        username: reviewerUsername,
+        size: item.size || "N/A",
+        rating: ratings[item.productId],
+        comment: comments[item.productId]?.trim() || "",
+        userName: reviewerUsername,
         createdAt: new Date(),
-      });
+      };
 
-      // Fetch all reviews for this product
-      const reviewsQuery = query(reviewsCollection, where("productID", "==", item.productId));
+      await addDoc(reviewsCollection, reviewDoc);
+
+      // Recalculate average rating for this productID
+      const reviewsQuery = query(reviewsCollection, where("productID", "==", orderProductID));
+
       const reviewSnap = await getDocs(reviewsQuery);
 
       let totalRating = 0;
       let count = 0;
-
       reviewSnap.forEach((doc) => {
         const data = doc.data();
         if (data.rating !== undefined) {
@@ -120,9 +152,8 @@ const handleSubmit = async () => {
       const avgRating = count > 0 ? totalRating / count : 0;
 
       // Update the product's average rating
-      const productsQuery = query(collection(db, "products"), where("productID", "==", item.productId));
+      const productsQuery = query(collection(db, "products"), where("productID", "==", orderProductID));
       const productSnap = await getDocs(productsQuery);
-
       for (const productDoc of productSnap.docs) {
         const productRef = doc(db, "products", productDoc.id);
         await updateDoc(productRef, { rating: avgRating });
@@ -133,11 +164,13 @@ const handleSubmit = async () => {
     navigation.goBack();
   } catch (err) {
     console.error("Error submitting ratings:", err);
-    Alert.alert("Error", "Failed to submit rating. Please try again.");
+    Alert.alert("Error", "Failed to submit ratings. Try again.");
   } finally {
     setSubmitting(false);
   }
 };
+
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -164,7 +197,7 @@ const handleSubmit = async () => {
           </Text>
         ) : (
           items.map((item) => (
-            <View key={item.id} style={styles.itemCard}>
+            <View key={item.productId} style={styles.itemCard}>
 
 
                <View style={styles.productRow}>
@@ -184,17 +217,18 @@ const handleSubmit = async () => {
               <Text style={[styles.ratingLabel, {marginRight: 10}]}>Rate your Product:</Text>
               <View style={styles.starRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity
-                    key={star}
-                    onPress={() => handleRating(item.id, star)}
-                  >
-                    <FontAwesome
-                      name={ratings[item.id] && ratings[item.id] >= star ? "star" : "star-o"}
-                      size={30}
-                      color="#9747FF"
-                      style={{ marginHorizontal: 3 }}
-                    />
-                  </TouchableOpacity>
+                 <TouchableOpacity
+                  key={star}
+                  onPress={() => handleRating(item.productId, star)}
+                >
+                  <FontAwesome
+                    name={ratings[item.productId] && ratings[item.productId] >= star ? "star" : "star-o"}
+                    size={30}
+                    color="#9747FF"
+                    style={{ marginHorizontal: 3 }}
+                  />
+                </TouchableOpacity>
+
                 ))}
               </View>
               </View>
@@ -203,8 +237,9 @@ const handleSubmit = async () => {
                 style={styles.commentInput}
                 placeholder="Write your feedback (optional)..."
                 placeholderTextColor="#999"
-                value={comments[item.id] || ""}
-                onChangeText={(text) => handleCommentChange(item.id, text)}
+                value={comments[item.productId] || ""}
+                onChangeText={(text) => handleCommentChange(item.productId, text)}
+
                 multiline
                 maxLength={200}
               />

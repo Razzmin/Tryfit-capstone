@@ -28,7 +28,7 @@ import {
   collection,
   query,
   where,
-  getDocs,
+  getDocs, 
   setDoc,
   doc,
   getDoc,
@@ -37,15 +37,56 @@ import {
 } from "firebase/firestore";
 
 export default function ReCheckout({ route, navigation }) {
-  const {  selectedItems: initialItems = [], total = 0, address: initialAddress = null, deliveryFee = 58 } = route.params || {}; 
-  const [checkoutItems, setCheckoutItems] = useState(initialItems);
+  const { completedID, cancelledID } = route.params || {};
+  const orderID = completedID || cancelledID;
+  const [checkoutItems, setCheckoutItems] = useState([]);
   const [showPopup, setShowPopup] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [shippingLocation, setShippingLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [total, setTotal] = useState(0);
+
 
   const auth = getAuth();
   const db = getFirestore();
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        let orderData = null;
+
+        if (completedID) {
+          const q = query(
+            collection(db, "completed"),
+            where("completedID", "==", completedID)
+          );
+          const querySnap = await getDocs(q);
+          if (!querySnap.empty) orderData = querySnap.docs[0].data();
+        } else if (cancelledID) {
+          const q = query(
+            collection(db, "cancelled"),
+            where("cancelledID", "==", cancelledID)
+          );
+          const querySnap = await getDocs(q);
+          if (!querySnap.empty) orderData = querySnap.docs[0].data();
+        }
+
+        if (orderData) {
+          setCheckoutItems(orderData.items || []);
+          setTotal(orderData.total || 0);
+          setShippingLocation(orderData.shippingLocation || null);
+        } else {
+          console.warn("Order not found");
+        }
+      } catch (err) {
+        console.error("Error fetching order:", err);
+      }
+    };
+
+    fetchOrder();
+  }, [completedID, cancelledID]);
+
+
 
 
   useEffect(() => {
@@ -74,7 +115,7 @@ export default function ReCheckout({ route, navigation }) {
         return;
       }
 
-      const shippingLoc = snapshot.docs
+     const shippingLoc = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .sort(
           (a, b) =>
@@ -83,6 +124,7 @@ export default function ReCheckout({ route, navigation }) {
         )[0];
 
       setShippingLocation(shippingLoc || null);
+
 
       console.log("Fetched shipping location:", shippingLoc);
 
@@ -94,11 +136,11 @@ export default function ReCheckout({ route, navigation }) {
   fetchShippingLocation();
 }, []);
 
-  const handleDelete = (itemId) => {
-    setCheckoutItems(prevItems =>
-      prevItems.filter(item => item.productId !== itemId)
-    );
+
+  const handleDelete = (productId) => {
+    setCheckoutItems(prevItems => prevItems.filter(item => item.productId !== productId));
   };
+
 
   return (
   <ProductContainer style={{ flex: 1}}>
@@ -124,20 +166,20 @@ export default function ReCheckout({ route, navigation }) {
       <View style = {{ flex: 1, marginTop: -10}}>
       <FlatList
         data={checkoutItems}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.productId || item.id}
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={{ flexGrow: 1,
             justifyContent:
             checkoutItems.length > 2 ? 'flex-start' : 'space-between',
             paddingBottom: 180}}
         
-      renderItem={({ item }) => ( 
-          <View style={styles.itemContainer}>
-          <Image
-         source={{ uri: item.productImage }} 
-         style={styles.itemImage} 
-        resizeMode="cover" 
-        />
+            renderItem={({ item }) => ( 
+                <View style={styles.itemContainer}>
+                <Image
+                  source={{ uri: item.imageUrl || 'https://placehold.co/100x100' }}
+                  style={[styles.productImage, { resizeMode: 'contain' }]}
+                />
+
   
       <View style={styles.itemInfo}>
      <View style={styles.itemTopRow}>
@@ -213,9 +255,9 @@ export default function ReCheckout({ route, navigation }) {
       marginBottom: 2,
     }}>
     <View style={{flexDirection: 'column'}}>
-  <Text style={styles.total}>SubTotal: ₱{total}</Text>
+  <Text style={styles.total}>SubTotal: ₱{total - 58}</Text>
  <Text style={styles.total}>Shipping Fee: ₱58</Text>
- <Text style={styles.totalAfter}>Total: ₱{total + 58}</Text>
+ <Text style={styles.totalAfter}>Total: ₱{total}</Text>
  </View>
       </View>
     <TouchableOpacity style={styles.button} onPress={() => setShowPopup(true)} >
@@ -268,25 +310,29 @@ export default function ReCheckout({ route, navigation }) {
                           // Add delivery fee
                           const total = subtotal + 58;
 
+                          const orderId = `OD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
                           const orderData = {
+                            orderId,
                             userId: uniqueUserId,
+                            name: shippingLocation?.name || "No Name",
                             address: shippingLocation
-                              ? `${shippingLocation.house}, ${shippingLocation.fullAddress}`
-                              : null,
+                              ? `${shippingLocation.house || "No House"}, ${shippingLocation.fullAddress || "No Address"}`
+                              : "No Address",
                             deliveryFee: 58,
-                            total,  
+                            total,
                             createdAt: serverTimestamp(),
                             status: "Pending",
                             items: checkoutItems.map(item => ({
-                              id: item.id,
-                              productId: item.productId,
-                              productName: item.productName,
-                              quantity: item.quantity,
-                              price: item.price, 
+                              imageUrl: item.imageUrl || "",
+                              productId: item.productId || "",
+                              productName: item.productName || "",
+                              quantity: item.quantity || 1,
+                              price: item.price || 0,
                               size: item.size || "-",
                             })),
-                          }
+                          };
+
 
                        // Save order and get a reference back
                           const orderRef = await addDoc(collection(db, "orders"), orderData);
@@ -378,6 +424,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     elevation: 2,
   },
+  productImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#ccc',
+    resizeMode: 'contain',
+  },
+
   itemImage: {
     width: 80,
     height: 80,
@@ -560,4 +614,5 @@ popupOverlay: {
     justifyContent: 'center',
     alignItems: 'center',
   }
+  
 });

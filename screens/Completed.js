@@ -27,7 +27,7 @@ export default function Completed() {
   const navigation = useNavigation();
   const user = auth.currentUser;
   const activeTab = 'Completed';
-  const item = order.items && order.items.length > 0 ? order.items[0] : null;
+  
 
 
   const [orders, setOrders] = useState([]);
@@ -90,20 +90,20 @@ export default function Completed() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
      <Header style = {{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                paddingHorizontal: 16,
-                                paddingBottom: 20,
-                                backgroundColor: '#fff',
-                              }}>
-                                <TouchableOpacity onPress={() => navigation.goBack()}
-                                style={{position: 'absolute', left: 10, top: -4}}>
-                                  <Feather name="arrow-left" size={27} color="black"  />
-                                </TouchableOpacity>
-                  
-                                 <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PURCHASES</Text>
-                              </Header>
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+      paddingBottom: 20,
+      backgroundColor: '#fff',
+    }}>
+      <TouchableOpacity onPress={() => navigation.goBack()}
+      style={{position: 'absolute', left: 10, top: -4}}>
+        <Feather name="arrow-left" size={27} color="black"  />
+      </TouchableOpacity>
+
+        <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PURCHASES</Text>
+    </Header>
 
       {/* Nav Tabs */}
       <ScrollView 
@@ -133,8 +133,9 @@ export default function Completed() {
           </Text>
         ) : (
           orders.map((order) => {
-            const item = order.items && order.items.length > 0 ? order.items[0] : null;
-            if (!item) return null;
+            const item = order.items?.[0]; // optional chaining
+              if (!item) return null;
+
 
             return (
               <View key={order.id} style={styles.orderCard}>
@@ -154,7 +155,7 @@ export default function Completed() {
                     <Text style={styles.productName}>{item.productName || item.name}</Text>
                     <Text style={styles.productSize}>Size: {item.size || '-'}</Text>
                     <Text style={styles.productQty}>Qty: {item.quantity || 1}</Text>
-                  </View>
+                                      </View>
                 </View>
 
                 <Text style={{ fontSize: 12, color: '#555', marginTop: 5 }}>
@@ -175,26 +176,25 @@ export default function Completed() {
                   <TouchableOpacity
                     style={[styles.secondaryButton, { marginRight: 10 }]}
                     onPress={() =>
-                     navigation.navigate("ToRate", {
-                      orderData: order,
-                      items: order.items,
-                      userId: order.userId
-                      }) } >
+                      navigation.navigate("ToRate", {
+                        completedOrderId: order.id, // just send the completed document ID
+                        userId: order.userId
+                      })
+                    }
+                  >
                     <Text style={styles.secondaryButtonText}>Rate</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() =>
-                      navigation.navigate("ReCheckout", {
-                        productImage: item.productImage,
-                        selectedItems: order.items,      
-                        total: order.total,               
-                        address: order.address,  
-                        deliveryFee: order.deliveryFee, }) } >
-                    <Text style={styles.actionButtonText}>Buy Again</Text>
-                  </TouchableOpacity>
-
+                 <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => {
+                    navigation.navigate("ReCheckout", {
+                      completedID: order.completedID, // send the completed order's unique ID
+                    });
+                  }}
+                >
+                  <Text style={styles.actionButtonText}>Buy Again</Text>
+                </TouchableOpacity>
 
                 </View>
               </View>
