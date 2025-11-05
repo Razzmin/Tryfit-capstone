@@ -330,10 +330,10 @@ export default function Orders() {
                 
                
 
-               {/* ✅ Cancel Order Button */}
+               {/* Cancel Order Button */}
                 {order.status !== 'Cancelled' && (
                  <TouchableOpacity
-                    style={[styles.actionButton, { borderColor: "red" }]}
+                    style={[styles.actionButton, { borderColor: "red", marginBottom: 15 }]}
                     onPress={() => handleCancelOrder(order)}
                   >
                     <Text style={[styles.actionButtonText, { color: "red" }]}>
@@ -345,7 +345,8 @@ export default function Orders() {
 
                   <View style={styles.orderIdRow}>
                     <Text style={styles.orderIdText}>Order ID: {order.id}</Text>
-                    <TouchableOpacity onPress={() => handleCopy(order.id)}>
+                    <TouchableOpacity onPress={() => handleCopy(order.id)}
+                    style={{ marginRight: 5}}>
                       <Feather name="copy" size={18} color="#9747FF" />
                     </TouchableOpacity>
                   </View>
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
-    marginBottom: 10,
+    marginBottom: 1,
   },
   totalLabel: {
     fontWeight: '500',
