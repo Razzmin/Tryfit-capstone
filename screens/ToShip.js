@@ -189,20 +189,20 @@ Alert.alert(
 
     <SafeAreaView style={styles.container}>
       <Header style = {{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      paddingHorizontal: 16,
-                      paddingBottom: 20,
-                      backgroundColor: '#fff',
-                    }}>
-                      <TouchableOpacity onPress={() => navigation.goBack()}
-                      style={{position: 'absolute', left: 10, top: -4}}>
-                        <Feather name="arrow-left" size={27} color="black"  />
-                      </TouchableOpacity>
-        
-                       <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PURCHASES</Text>
-                    </Header>
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+        backgroundColor: '#fff',
+      }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}
+        style={{position: 'absolute', left: 10, top: -4}}>
+          <Feather name="arrow-left" size={27} color="black"  />
+        </TouchableOpacity>
+
+          <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PURCHASES</Text>
+      </Header>
 
       {/* Nav Tabs */}
       <ScrollView

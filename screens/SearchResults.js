@@ -19,40 +19,84 @@ export default function SearchResults({ route, navigation }) {
   const { query } = route.params;
   const [results, setResults] = useState([]);
   const [message, setMessage] = useState('');
+  const [displayTerm, setDisplayTerm] = useState(query);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'products'));
-        const allProducts = [];
-        querySnapshot.forEach((doc) => {
-          allProducts.push({ id: doc.id, ...doc.data() });
-        });
+useEffect(() => {
+  const fetchProducts = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'products'));
+      const allProducts = [];
+      querySnapshot.forEach((doc) => {
+        allProducts.push({ id: doc.id, ...doc.data() });
+      });
 
-        const lowerQuery = query.toLowerCase();
-        const directMatches = allProducts.filter((p) =>
-          p.name?.toLowerCase().includes(lowerQuery)
+      const lowerQuery = query.toLowerCase().trim();
+
+      // ⚠️ If query is 3 characters or less
+      if (lowerQuery.length > 0 && lowerQuery.length <= 3) {
+        // Show random products
+        const shuffled = [...allProducts].sort(() => Math.random() - 0.5);
+        const randomProducts = shuffled.slice(0, 10);
+        setResults(randomProducts);
+        setMessage(`No exact results for "${query}". Search results.`);
+        setDisplayTerm(query);
+        return;
+      }
+
+      // Normal logic for 4+ characters
+      const directMatches = allProducts.filter((p) =>
+        p.productName
+          ?.toLowerCase()
+          .replace(/[-\s]/g, '')
+          .includes(lowerQuery.replace(/[-\s]/g, ''))
+      );
+
+      const categoryMatches = allProducts.filter((p) =>
+        p.categorySub
+          ?.toLowerCase()
+          .replace(/[-\s]/g, '')
+          .includes(lowerQuery.replace(/[-\s]/g, ''))
+      );
+
+      const combinedResults = [
+        ...new Map(
+          [...directMatches, ...categoryMatches].map((item) => [item.id, item])
+        ).values(),
+      ];
+
+      if (combinedResults.length > 0) {
+        setResults(combinedResults);
+        setMessage('');
+        setDisplayTerm(query);
+      } else {
+        const similarKeyword = getClosestMatch(lowerQuery, KNOWN_LABELS);
+        const fuzzyMatches = allProducts.filter(
+          (p) =>
+            p.productName?.toLowerCase().includes(similarKeyword) ||
+            p.categorySub?.toLowerCase().includes(similarKeyword)
         );
 
-        if (directMatches.length > 0) {
-          setResults(directMatches);
-          setMessage('');
-        } else {
-          const similarKeyword = getClosestMatch(lowerQuery, KNOWN_LABELS);
-          const fuzzyMatches = allProducts.filter((p) =>
-            p.name?.toLowerCase().includes(similarKeyword)
-          );
-
+        if (fuzzyMatches.length > 0) {
           setResults(fuzzyMatches);
-          setMessage(`No results for "${query}". Showing results for "${similarKeyword}".`);
+          setMessage(
+            `No exact results for "${query}". Showing similar results for "${similarKeyword}".`
+          );
+        } else {
+          setResults([]);
+          setMessage(`No results found for "${query}".`);
+          setDisplayTerm(query);
         }
-      } catch (error) {
-        console.error('Error fetching products:', error);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
 
-    fetchProducts();
-  }, [query]);
+  fetchProducts();
+}, [query]);
+
+
+
 
   const getClosestMatch = (input, options) => {
     let closest = options[0];
@@ -93,29 +137,28 @@ export default function SearchResults({ route, navigation }) {
   };
 
   return (
-     <ImageBackground
-        source={require('../assets/bg.png')}
-        style={{ flex: 1}}
-        resizeMode="cover">
-
+    <ImageBackground
+      source={require('../assets/bg.png')}
+      style={{ flex: 1 }}
+      resizeMode="cover"
+    >
       <View style={styles.container}>
-
-       {/* Header */}
+        {/* Header */}
         <View
           style={{
-            width: "124%",
+            width: '124%',
             height: 50,
-            justifyContent: "center",
-            alignItems: "center",
-            position: "relative",
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative',
             marginTop: 12,
             paddingHorizontal: 20,
-            marginBottom: 30
+            marginBottom: 30,
           }}
         >
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{ position: "absolute", left: 20, padding: 4 }}
+            style={{ position: 'absolute', left: 20, padding: 4 }}
           >
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
@@ -123,9 +166,9 @@ export default function SearchResults({ route, navigation }) {
           <Text
             style={{
               fontSize: 17,
-              color: "black",
-              fontFamily: "KronaOne",
-              textTransform: "uppercase",
+              color: 'black',
+              fontFamily: 'KronaOne',
+              textTransform: 'uppercase',
               alignSelf: 'center',
               marginRight: 70,
             }}
@@ -134,10 +177,12 @@ export default function SearchResults({ route, navigation }) {
           </Text>
         </View>
 
-        <Text style={styles.title}>Search Results for "{query}"</Text>
-        {message !== '' && <Text style={styles.message}>{message}</Text>}
+       
+        <ScrollView contentContainerStyle={styles.grid}> 
+        
+        <Text style={styles.title}>Search Results for "{displayTerm}"</Text>
+        {message ? <Text style={styles.message}>{message}</Text> : null}
 
-        <ScrollView contentContainerStyle={styles.grid}>
           {results.length > 0 ? (
             results.map((product) => (
               <TouchableOpacity
@@ -157,7 +202,8 @@ export default function SearchResults({ route, navigation }) {
                   source={{ uri: product.imageUrl || PLACEHOLDER_IMAGE }}
                   style={styles.image}
                 />
-                <Text style={styles.name}>{product.name}</Text>
+                {/* ✅ FIXED: display productName instead of name */}
+                <Text style={styles.name}>{product.productName}</Text>
                 <Text style={styles.price}>{product.price}</Text>
                 <Text style={styles.meta}>
                   ⭐ {product.rating} • {product.sold} Sold
@@ -170,7 +216,7 @@ export default function SearchResults({ route, navigation }) {
           )}
         </ScrollView>
       </View>
-  </ImageBackground>
+    </ImageBackground>
   );
 }
 
@@ -179,10 +225,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 30,
   },
-  backButton: {
-    marginLeft: 20,
-    marginBottom: 10,
-  },
   title: {
     fontSize: 16,
     fontWeight: '600',
@@ -190,13 +232,12 @@ const styles = StyleSheet.create({
     paddingBottom: 5,
   },
   message: {
-    fontSize: 13,
-    color: '#555',
-    paddingHorizontal: 20,
-    marginBottom: 160,
-    fontStyle: 'italic',
-    alignSelf: 'center',
-    justifyContent: 'center',
+  fontSize: 13,
+  color: '#555',
+  paddingHorizontal: 20,
+  marginBottom: 10,
+  fontStyle: 'italic',
+  textAlign: 'center',
   },
   grid: {
     flexDirection: 'row',

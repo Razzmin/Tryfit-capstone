@@ -11,7 +11,7 @@ import {
   Keyboard,
   Modal,
   KeyboardAvoidingView,
-  Platform
+  Platform,
 } from 'react-native';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -181,13 +181,15 @@ const ChatSupportScreen = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff'}}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'android' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'android' ? 80: 20}
-      >
+
+     <KeyboardAvoidingView
+     style={{flex: 1}}
+       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
+         >
         <TouchableWithoutFeedback onPress={() => { Keyboard.dismiss(); closeModal(); }}>
-          <View style={styles.container}>
+          
+          <View style={{flex: 1}}>
 
             {/* Header */}
             <View style={styles.header}>
@@ -261,7 +263,6 @@ const ChatSupportScreen = () => {
                 </TouchableOpacity>
               </View>
             )}
-
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
@@ -272,7 +273,7 @@ const ChatSupportScreen = () => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#fff' 
+    backgroundColor: '#fff',
   },
   chatContainer: { 
     padding: 16, 
@@ -311,13 +312,14 @@ const styles = StyleSheet.create({
   messageText: { 
     fontSize: 16 
   },
-  inputContainer: { 
-    position: 'absolute', 
+  inputContainer: {
+    position: 'absolute',
     bottom: 0, left: 0, 
     right: 0, 
     flexDirection: 'row', 
     padding: 10, 
-    backgroundColor: '#f1f1f1' 
+    backgroundColor: '#f1f1f1',
+    
   },
   textInput: { 
     flex: 1, 

@@ -18,8 +18,7 @@ import {
 
 import { CartContext } from '../content/shoppingcartcontent';
 
-import Fuse from 'fuse.js';  // <-- Import Fuse for fuzzy search
-
+import Fuse from 'fuse.js';
 const colors = {
   bg: "#382a47",
   purple: "#9747FF",
@@ -30,7 +29,7 @@ const colors = {
 
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/130x180.png?text=No+Image';
 
-const SEARCH_SUGGESTIONS = ['T-Shirts', 'Longsleeves', 'Pants', 'Shorts'];
+const SEARCH_SUGGESTIONS = ['T-shirts', 'Longsleeves', 'Pants', 'Shorts'];
 
 export default function LandingPage() {
   const [products, setProducts] = useState([]);
@@ -41,14 +40,16 @@ export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigation = useNavigation();
   const { cartItems } = useContext(CartContext);
+  const [searchSuggestions, setSearchSuggestions] = useState(SEARCH_SUGGESTIONS);
 
-  // Memoize Fuse instance to avoid recreation on each render
-  const fuse = useMemo(() => new Fuse(SEARCH_SUGGESTIONS, {
+
+  
+  const fuse = useMemo(() => new Fuse(searchSuggestions, {
     includeScore: true,
     threshold: 0.4,
-  }), []);
+  }), [searchSuggestions]);
 
- useEffect(() => {
+useEffect(() => {
   const fetchProducts = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, 'products'));
@@ -82,7 +83,6 @@ export default function LandingPage() {
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
       const firestoreDate = Timestamp.fromDate(oneMonthAgo);
 
-      // Get recent activity logs from the past month
       const logsSnapshot = await getDocs(
         query(
           collection(db, 'recentActivityLogs'),
@@ -104,7 +104,6 @@ export default function LandingPage() {
         if (prodSnap.exists()) {
           const data = prodSnap.data();
 
-          // Push all necessary product info
           newProducts.push({
             id,
             productID: data.productID,
@@ -130,9 +129,33 @@ export default function LandingPage() {
     }
   };
 
+  // ✅ Moved outside, now separate function
+  const fetchProductNames = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'products'));
+      const names = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.productName) names.push(data.productName);
+      });
+
+      const mergedSuggestions = Array.from(
+        new Set([...SEARCH_SUGGESTIONS, ...names])
+      );
+
+      setSearchSuggestions(mergedSuggestions);
+    } catch (error) {
+      console.error('Error fetching product names:', error);
+    }
+  };
+
+  // ✅ Call all functions in order
   fetchProducts();
   fetchNewArrivals();
+  fetchProductNames();
 }, []);
+
 
   const handleSearchSubmit = () => {
     if (searchText.trim().length > 0) {
@@ -169,6 +192,7 @@ export default function LandingPage() {
 
   return (
     <LinearGradient colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
+      
       <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
           <View style={styles.header}>
@@ -505,7 +529,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingTop: 10,
-    paddingBottom: 50,
+    paddingBottom: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',
