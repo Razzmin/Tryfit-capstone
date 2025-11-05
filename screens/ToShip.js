@@ -288,13 +288,6 @@ Alert.alert(
                     <Feather name="copy" size={18} color="#9747FF" />
                   </TouchableOpacity>
                 </View>
-
-                <TouchableOpacity style={styles.cancelBtn}
-                  onPress={() => handleCancelOrder(order)} >
-                  <Text style={styles.cancelBtnText}>Cancel Order</Text>
-                </TouchableOpacity>
-
-
               </View>
             );
           })
@@ -302,7 +295,7 @@ Alert.alert(
         
       </ScrollView>
 
-       {/* ✅ Shipping Modal should go HERE — after all your scrollable UI */}
+       {/*  Shipping Modal should go HERE — after all your scrollable UI */}
         <Modal
           visible={shippingModalVisible}
           transparent
