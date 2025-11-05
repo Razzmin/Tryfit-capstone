@@ -332,7 +332,9 @@ const styles = StyleSheet.create({
     borderRadius: 20, 
     paddingHorizontal: 16, 
     justifyContent: 'center', 
-    alignItems: 'center' 
+    alignItems: 'center',
+    paddingVertical: 9,
+
   },
   header: { 
     flexDirection: 'row', 
