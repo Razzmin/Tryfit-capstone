@@ -181,11 +181,7 @@ const ChatSupportScreen = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff'}}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'android' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'android' ? 80: 20}
-      >
+      
         <TouchableWithoutFeedback onPress={() => { Keyboard.dismiss(); closeModal(); }}>
           <View style={styles.container}>
 
@@ -239,16 +235,19 @@ const ChatSupportScreen = () => {
 
             {/* Chat Messages */}
             {started && (
+                <KeyboardAvoidingView
+        style={{flex: 1}}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
+          >
               <FlatList
                 data={messages}
                 keyExtractor={(item) => item.id}
                 renderItem={renderItem}
                 contentContainerStyle={styles.chatContainer}
               />
-            )}
-
+      
             {/* Input Box */}
-            {started && (
               <View style={styles.inputContainer}>
                 <TextInput
                   value={input}
@@ -260,11 +259,10 @@ const ChatSupportScreen = () => {
                   <Ionicons name="send" size={20} color="#fff" />
                 </TouchableOpacity>
               </View>
+               </KeyboardAvoidingView>
             )}
-
           </View>
         </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -312,12 +310,12 @@ const styles = StyleSheet.create({
     fontSize: 16 
   },
   inputContainer: { 
-    position: 'absolute', 
-    bottom: 0, left: 0, 
-    right: 0, 
     flexDirection: 'row', 
     padding: 10, 
-    backgroundColor: '#f1f1f1' 
+    backgroundColor: '#f1f1f1', 
+    alignItems: 'center',
+    borderTopwidth: 1,
+    bordercolor: '#ddd'
   },
   textInput: { 
     flex: 1, 
