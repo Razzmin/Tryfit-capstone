@@ -127,38 +127,6 @@ Alert.alert(
     Alert.alert('Copied', 'Order ID copied to clipboard');
   };
 
-  const handleCancelOrder = (order) => {
-    Alert.alert(
-      'Confirm Cancellation?',
-      'Are you sure you want to cancel this order?',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes',
-          onPress: async () => {
-            try {
-              // ✅ Step 1: Save order into "cancelled"
-              await addDoc(collection(db, 'cancelled'), {
-                ...order,
-                status: 'Cancelled',
-                cancelledAt: new Date(),
-              });
-
-              // ✅ Step 2: Remove it from "toShip"
-              await deleteDoc(doc(db, 'toShip', order.id));
-
-              Alert.alert('Cancelled', 'Your order has been moved to Cancelled.');
-            } catch (err) {
-              console.error('Error cancelling order:', err);
-              Alert.alert('Error', 'Failed to cancel the order.');
-            }
-          },
-          style: 'destructive',
-        },
-      ]
-    );
-  };
-
    // ✅ Open modal with shipping details
   const handleViewShippingDetails = async (order) => {
     try {

@@ -15,7 +15,8 @@ import{Header, StyledFormArea } from '../components/styles';
 import { Picker } from '@react-native-picker/picker';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc,setDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc, 
+  serverTimestamp, updateDoc} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const MUNICIPALITIES = {
@@ -131,35 +132,32 @@ export default function ShippingLocation() {
     }
   };
 
-  const handleSave = async () => {
+const handleSave = async () => {
+  const cleanedName = name.trim();
+  const cleanedPhone = phone.replace(/\s+/g, '');
+  const cleanedHouse = house.trim();
+  const cleanedPostal = postal.trim();
 
-    const cleanedName = name.trim();
-    const cleanedPhone = phone.replace(/\s+/g, '');
-    const cleanedHouse = house.trim();
-    const cleanedPostal = postal.trim();
-    
-
-    //only accepts letter,spaces and periods
-    if (!cleanedName || !/^[A-Za-z\s.]+$/.test(cleanedName)) {
-      return Alert.alert('Validation Error', 'Please enter a valid name(letters only).');
-    }
-    //ensures number starts at 09 or +639, and only 11 digits coz ph nums
-    if (!cleanedPhone || !/^(09\d{9}|(\+639)\d{9})$/.test(cleanedPhone)) {
-       return Alert.alert('Validation Error', 'Please enter a valid mobile number(e.g., 09xxx).');
-    }
-    if (!cleanedHouse || cleanedHouse.length < 5) {
-      return Alert.alert('Validation Error', 'Please enter a more complete house/street/building information');
-    }
-    if (!municipality) {
+  // ✅ Validation
+  if (!cleanedName || !/^[A-Za-z\s.]+$/.test(cleanedName)) {
+    return Alert.alert('Validation Error', 'Please enter a valid name (letters only).');
+  }
+  if (!cleanedPhone || !/^(09\d{9}|(\+639)\d{9})$/.test(cleanedPhone)) {
+    return Alert.alert('Validation Error', 'Please enter a valid mobile number (e.g., 09xxxxxxxxx).');
+  }
+  if (!cleanedHouse || cleanedHouse.length < 5) {
+    return Alert.alert('Validation Error', 'Please enter a more complete house/street/building information.');
+  }
+  if (!municipality) {
     return Alert.alert('Validation Error', 'Please select a municipality.');
-    }
-    if (!barangay) {
-      return Alert.alert('Validation Error', 'Please select a barangay.');
-    }
-    if (!cleanedPostal || !/^\d{4}$/.test(cleanedPostal)) {
-      return Alert.alert('Validation Error', 'Please enter a valid 4-digit postal code.');
-    }
-  
+  }
+  if (!barangay) {
+    return Alert.alert('Validation Error', 'Please select a barangay.');
+  }
+  if (!cleanedPostal || !/^\d{4}$/.test(cleanedPostal)) {
+    return Alert.alert('Validation Error', 'Please enter a valid 4-digit postal code.');
+  }
+
   try {
     const user = auth.currentUser;
     if (!user) {
@@ -167,44 +165,71 @@ export default function ShippingLocation() {
       return;
     }
 
-
-    // Get custom userId
-    const userDocRef = doc(db, "users", user.uid);
+    // ✅ Get custom userId from users collection
+    const userDocRef = doc(db, 'users', user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
     if (!userDocSnap.exists()) {
-      Alert.alert("Error", "User profile not found.");
+      Alert.alert('Error', 'User profile not found.');
       return;
     }
+
     const customUserId = userDocSnap.data().userId;
 
-    // Check if a location already exists
+    // ✅ Check if user already has a shipping location
     const q = query(collection(db, 'shippingLocations'), where('userId', '==', customUserId));
     const querySnapshot = await getDocs(q);
 
-    const addressData = {
-      userId: customUserId,
-      name: cleanedName,
-      phone: cleanedPhone,
-      house: cleanedHouse, municipality, barangay,
-      postalCode: cleanedPostal,
-      fullAddress: `${barangay}, ${municipality}, Tarlac`,
-      createdAt: new Date(),
-    };
+    if (querySnapshot.empty) {
+      // 🆕 First time saving
+      const saveData = {
+        userId: customUserId,
+        name: cleanedName,
+        phone: cleanedPhone,
+        house: cleanedHouse,
+        municipality,
+        barangay,
+        fullAddress: `${barangay}, ${municipality}, Tarlac`,
+        postalCode: cleanedPostal,
+        createdAt: new Date(),
+        updatedAt: serverTimestamp(),
+        shippingLocationID: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      };
 
-    if (!querySnapshot.empty) {
-      // Update existing location
-      const docRef = querySnapshot.docs[0].ref;
-      await setDoc(docRef, addressData, { merge: true });
+      await addDoc(collection(db, 'shippingLocations'), saveData);
+      console.log('✅ New shipping location created!');
     } else {
-      // Add new location
-      await addDoc(collection(db, 'shippingLocations'), addressData);
+      // 🔁 Update existing location (keep createdAt + ID)
+      const docRef = querySnapshot.docs[0].ref;
+      const existingData = querySnapshot.docs[0].data();
+
+      const updateData = {
+        name: cleanedName,
+        phone: cleanedPhone,
+        house: cleanedHouse,
+        municipality,
+        barangay,
+        fullAddress: `${barangay}, ${municipality}, Tarlac`,
+        postalCode: cleanedPostal,
+        updatedAt: serverTimestamp(), // ✅ updates properly each time
+      };
+
+      // 🔒 Preserve these values — never overwrite
+      if (!existingData.createdAt) {
+        updateData.createdAt = new Date();
+      }
+      if (!existingData.shippingLocationID) {
+        updateData.shippingLocationID = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      }
+
+      await updateDoc(docRef, updateData);
+      console.log('📦 Shipping location updated!');
     }
 
     Alert.alert('Success', 'Shipping location saved successfully!');
     navigation.goBack();
   } catch (error) {
-    console.error('Error saving shipping location:', error);
+    console.error('❌ Error saving shipping location:', error);
     Alert.alert('Error', 'Failed to save shipping location.');
   }
 };

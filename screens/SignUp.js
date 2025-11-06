@@ -108,46 +108,54 @@ const Signup = () => {
             return;
         }
 
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        values.email,
-        values.password
-      );
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      values.email,
+      values.password
+    );
 
-      const user = userCredential.user;
-      const counterRef = doc(db, "counters", "userId");
-      let userId;
+    const user = userCredential.user;
+    const counterRef = doc(db, "counters", "userId");
+    let userId;
 
-      // Transaction to generate unique userId
-      await runTransaction(db, async (transaction) => {
-        const counterDoc = await transaction.get(counterRef);
+    // Transaction to generate unique userId
+    await runTransaction(db, async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
 
-        if (!counterDoc.exists()) {
-          transaction.set(counterRef, { lastId: 1 });
-          userId = "U0001";
-        } else {
-          const newId = counterDoc.data().lastId + 1;
-          transaction.update(counterRef, { lastId: newId });
-          userId = `U${String(newId).padStart(4, "0")}`;
-        }
-      });
+      let newId;
+      if (!counterDoc.exists()) {
+        transaction.set(counterRef, { lastId: 1 });
+        newId = 1;
+      } else {
+        newId = counterDoc.data().lastId + 1;
+        transaction.update(counterRef, { lastId: newId });
+      }
 
-      // Save new user record
-      await setDoc(doc(db, "users", user.uid), {
-        username: values.username,
-        email: values.email,
-        userId,
-        createdAt: serverTimestamp(),
-      });
+      // ✅ Generate userId with max size of 10 characters
+      userId = `U${String(newId).padStart(9, "0")}`; // 1 letter + 9 digits = 10 chars total
 
-      console.log("✅ New user created:", userId);
+      // ✅ Optional safety check
+      if (userId.length > 10) {
+        throw new Error("Generated userId exceeds max length of 10 characters!");
+      }
+    });
 
-      // ✅ FIX: Pass user data to BodyMeasurement.js
-      navigation.navigate("BodyMeasurement", {
-        userId,
-        username: values.username,
-        email: values.email,
-      });
+    // ✅ Save new user record
+    await setDoc(doc(db, "users", user.uid), {
+      username: values.username,
+      email: values.email,
+      userId,
+      createdAt: serverTimestamp(),
+    });
+
+    console.log("✅ New user created:", userId);
+
+    // ✅ Pass user data to BodyMeasurement.js
+    navigation.navigate("BodyMeasurement", {
+      userId,
+      username: values.username,
+      email: values.email,
+    });
 
     } catch (error) {
       console.log("Firebase Error:", error);
