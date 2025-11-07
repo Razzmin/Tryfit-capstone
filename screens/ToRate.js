@@ -41,6 +41,8 @@ export default function ToRate() {
   const [comments, setComments] = useState({});
   const [anonymous, setAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState(null);
+
 
   // Fetch completed order by ID
   useEffect(() => {
@@ -50,12 +52,14 @@ export default function ToRate() {
       try {
         const orderRef = doc(db, "completed", completedOrderId);
         const orderSnap = await getDoc(orderRef);
-        if (orderSnap.exists()) {
+       if (orderSnap.exists()) {
           const orderData = orderSnap.data();
+          setCompletedOrder(orderData); // ✅ store the full completed doc
           setItems(orderData.items || []);
         } else {
           Alert.alert("Error", "Completed order not found.");
         }
+
       } catch (err) {
         console.error("Error fetching completed order:", err);
       }
@@ -96,68 +100,69 @@ export default function ToRate() {
     return "Guest";
   };
 
-
 const handleSubmit = async () => {
   if (!allRated) {
     Alert.alert("Error", "Please provide a star rating for all items before submitting.");
     return;
   }
 
+  if (!completedOrder?.productID) {
+    Alert.alert("Error", "Missing productID in the completed order document.");
+    return;
+  }
+
   try {
     setSubmitting(true);
-
     const reviewsCollection = collection(db, "productReviews");
 
-    // Get reviewer name
     const reviewerUsername = anonymous
       ? "Anonymous"
       : passedUserId
       ? await fetchUsernameByCustomId(passedUserId)
       : "Anonymous";
 
-    // Use the order-level productID for all items
-    const orderProductID = items.length > 0 ? items[0].productID || items[0].productId : null;
+    const customProductID = completedOrder.productID; // ✅ from stored doc
 
     for (const item of items) {
-      if (!orderProductID) continue; // fallback
+      const firestoreProductId = item.productId;
 
       const reviewDoc = {
         reviewID: `RV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        productID: orderProductID,        // 🔥 using order-level productID
+        productID: customProductID,
         productName: item.productName,
         size: item.size || "N/A",
-        rating: ratings[item.productId],
-        comment: comments[item.productId]?.trim() || "",
+        rating: ratings[firestoreProductId],
+        comment: comments[firestoreProductId]?.trim() || "",
         userName: reviewerUsername,
         createdAt: new Date(),
       };
 
       await addDoc(reviewsCollection, reviewDoc);
+    }
 
-      // Recalculate average rating for this productID
-      const reviewsQuery = query(reviewsCollection, where("productID", "==", orderProductID));
+    // 🔁 Recalculate average rating
+    const reviewsQuery = query(reviewsCollection, where("productID", "==", customProductID));
+    const reviewSnap = await getDocs(reviewsQuery);
 
-      const reviewSnap = await getDocs(reviewsQuery);
-
-      let totalRating = 0;
-      let count = 0;
-      reviewSnap.forEach((doc) => {
-        const data = doc.data();
-        if (data.rating !== undefined) {
-          totalRating += data.rating;
-          count++;
-        }
-      });
-
-      const avgRating = count > 0 ? totalRating / count : 0;
-
-      // Update the product's average rating
-      const productsQuery = query(collection(db, "products"), where("productID", "==", orderProductID));
-      const productSnap = await getDocs(productsQuery);
-      for (const productDoc of productSnap.docs) {
-        const productRef = doc(db, "products", productDoc.id);
-        await updateDoc(productRef, { rating: avgRating });
+    let totalRating = 0;
+    let count = 0;
+    reviewSnap.forEach((doc) => {
+      const data = doc.data();
+      if (data.rating !== undefined) {
+        totalRating += data.rating;
+        count++;
       }
+    });
+
+    const avgRating = count > 0 ? totalRating / count : 0;
+
+    // 🔄 Update product average rating
+    const productsQuery = query(collection(db, "products"), where("productID", "==", customProductID));
+    const productSnap = await getDocs(productsQuery);
+
+    for (const productDoc of productSnap.docs) {
+      const productRef = doc(db, "products", productDoc.id);
+      await updateDoc(productRef, { rating: avgRating });
     }
 
     Alert.alert("Success", "Your ratings have been submitted. Thank you!");
@@ -169,7 +174,6 @@ const handleSubmit = async () => {
     setSubmitting(false);
   }
 };
-
 
 
   return (
