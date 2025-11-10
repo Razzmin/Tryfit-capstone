@@ -21,6 +21,9 @@ export default function BodyMeasurement() {
   const { userId, username, email } = route.params || {};
   const animationRef = useRef(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isNextProcessing, setIsNextProcessing] = useState(false);
+  const [isProceedProcessing, setIsProceedProcessing] = useState(false);
+
 
   useEffect(() => {
     if (!userId || !username || !email) {
@@ -36,21 +39,30 @@ export default function BodyMeasurement() {
   }, [userId, username, email]);
 
   const handleNext = () => {
+    if (isNextProcessing) return; 
+    setIsNextProcessing(true);
+
     if (!userId) {
       Alert.alert("Error", "User ID is missing. Please go back and try again.");
+      setIsNextProcessing(false);
       return;
     }
+
     setModalVisible(true);
+    setTimeout(() => setIsNextProcessing(false), 300); 
   };
 
+
   const confirmProceed = () => {
-    setModalVisible(false);
-    navigation.navigate("BodyTracking", {
-      userId,
-      username,
-      email,
-    });
-  };
+  if (isProceedProcessing) return; 
+  setIsProceedProcessing(true);
+
+  setModalVisible(false);
+  navigation.navigate("BodyTracking", { userId, username, email });
+
+  setTimeout(() => setIsProceedProcessing(false), 500); 
+};
+
 
   const cancelProceed = () => {
     setModalVisible(false);
@@ -109,9 +121,14 @@ export default function BodyMeasurement() {
           <Text style={styles.infoText}>{item.text}</Text>
 
           {index === steps.length - 1 && (
-            <TouchableOpacity style={styles.button} onPress={handleNext}>
-              <Text style={styles.buttonText}>Next</Text>
+            <TouchableOpacity
+              style={[styles.button, isNextProcessing && { opacity: 0.6 }]}
+              onPress={handleNext}
+              disabled={isNextProcessing}
+            >
+              <Text style={styles.buttonText}>{isNextProcessing ? "Processing..." : "Next"}</Text>
             </TouchableOpacity>
+
         )}
           </View>
           </View>
@@ -130,11 +147,16 @@ export default function BodyMeasurement() {
                 This feature needs access to your camera to measure your body proportions accurately.
               </Text>
 
-              <View style={styles.modalButtons}>
-                <TouchableOpacity style={[styles.modalButton, {backgroundColor: "#9747FF" }]}
-                onPress={confirmProceed}>
-                  <Text style={styles.modalButtonText}>Proceed</Text>
+              <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: "#9747FF" }, isProceedProcessing && { opacity: 0.6 }]}
+                  onPress={confirmProceed}
+                  disabled={isProceedProcessing}
+                >
+                  <Text style={styles.modalButtonText}>
+                    {isProceedProcessing ? "Processing..." : "Proceed"}
+                  </Text>
                 </TouchableOpacity>
+
 
                 <TouchableOpacity style={[styles.modalButton, {backgroundColor: "#717171" }]}
                 onPress={cancelProceed}>

@@ -84,6 +84,9 @@ export default function ProductDetail() {
   const [reviews, setReviews] = useState([]);
   const [visibleMenuId, setVisibleMenuId] = useState(null);
   const [recommendedSize, setRecommendedSize] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTryOnProcessing, setIsTryOnProcessing] = useState(false);
+
 
 
   const reviewsRef = collection(db, 'productReviews');
@@ -176,6 +179,10 @@ export default function ProductDetail() {
   const sizeOrder = product.sizes || [];
 
  const saveCartItem = async () => {
+
+    if (isSaving) return; // prevent double click
+      setIsSaving(true);
+
     if (!selectedSize) {
       Alert.alert('Error', 'Please select a size.');
       return;
@@ -221,8 +228,20 @@ export default function ProductDetail() {
         timestamp: serverTimestamp(),
       };
 
-      // 🔹 Always create a new cart item (no merging)
-      await setDoc(doc(cartRef, cartItemCode), cartItem);
+        await Promise.all([
+          setDoc(doc(cartRef, cartItemCode), cartItem),
+          addDoc(collection(db, "notifications"), {
+            notifID: `CRT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            userId: customUserId,
+            title: "Item Added to Cart",
+            message: `${product.productName} (${selectedSize}) was added to your cart.`,
+            productID: product.productID,
+            productName: product.productName,
+            size: selectedSize,
+            timestamp: serverTimestamp(),
+            read: false,
+          }),
+        ]);
 
       // 🔹 Add notification
       await addDoc(collection(db, "notifications"), {
@@ -267,13 +286,19 @@ const decrementQuantity = () => {
 };
 
 const handleTryOn = () => {
+  if (isTryOnProcessing) return; // ❌ prevent multiple clicks
+  setIsTryOnProcessing(true);
+
   if (!product?.arUrl) {
     Alert.alert("AR not available", "Sorry, this product doesn’t have an AR try-on link yet.");
+    setIsTryOnProcessing(false);
     return;
   }
 
   navigation.navigate("TryOnWebAR", { arUrl: product.arUrl });
+  setTimeout(() => setIsTryOnProcessing(false), 500); // reset after navigation
 };
+
 
 
   return (
@@ -398,57 +423,58 @@ const handleTryOn = () => {
               </View>
               
                <ReviewContainer>
-  {(showAllReviews ? reviews : reviews.slice(0, 3)).map((item) => (
-    <ReviewItems key={item.id}>
-      <Avatar style={{ backgroundColor: item.avatarColor || "#9747FF" }}>
-        <AvatarText>{item.userName?.[0]?.toUpperCase() || "A"}</AvatarText>
-      </Avatar>
+                  {(showAllReviews ? reviews : reviews.slice(0, 3)).map((item) => (
+                    <ReviewItems key={item.id}>
+                      <Avatar style={{ backgroundColor: item.avatarColor || "#9747FF" }}>
+                        <AvatarText>{item.userName?.[0]?.toUpperCase() || "A"}</AvatarText>
+                      </Avatar>
 
-      <ReviewContent>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <ReviewerName>{item.userName}</ReviewerName>
-          <StarRatings>
-            {[...Array(5)].map((_, i) => (
-              <FontAwesome
-                key={i}
-                name={i < item.rating ? "star" : "star-o"}
-                size={14}
-                color="#F7C700"
-                style={{ marginRight: 2 }}
-              />
-            ))}
-          </StarRatings>
-        </View>
+                      <ReviewContent>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                          <ReviewerName>{item.userName}</ReviewerName>
+                          <StarRatings>
+                            {[...Array(5)].map((_, i) => (
+                              <FontAwesome
+                                key={i}
+                                name={i < item.rating ? "star" : "star-o"}
+                                size={14}
+                                color="#F7C700"
+                                style={{ marginRight: 2 }}
+                              />
+                            ))}
+                          </StarRatings>
+                        </View>
 
-        <VariationText>Size: {item.size}</VariationText>
-        <CommentText>{item.comment}</CommentText>
-      </ReviewContent>
-    </ReviewItems>
-  ))}
+                        <VariationText>Size: {item.size}</VariationText>
+                        <CommentText>{item.comment}</CommentText>
+                      </ReviewContent>
+                    </ReviewItems>
+                  ))}
 
-  {reviews.length > 3 && (
-    <TouchableOpacity onPress={() => setShowAllReviews(!showAllReviews)} style={{ marginTop: 10, alignSelf: "center" }}>
-      <Text style={{ color: "#9747FF", fontWeight: "600" }}>
-        {showAllReviews ? "Hide Reviews" : "Show More Reviews"}
-      </Text>
-    </TouchableOpacity>
-  )}
-</ReviewContainer>
+              {reviews.length > 3 && (
+                <TouchableOpacity onPress={() => setShowAllReviews(!showAllReviews)} style={{ marginTop: 10, alignSelf: "center" }}>
+                  <Text style={{ color: "#9747FF", fontWeight: "600" }}>
+                    {showAllReviews ? "Hide Reviews" : "Show More Reviews"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </ReviewContainer>
 
-            </Content>
-          </ProductContainer>
-          </ScrollView>
-          </TouchableWithoutFeedback>
-          </KeyboardAvoidingView>
+                        </Content>
+                      </ProductContainer>
+                      </ScrollView>
+                      </TouchableWithoutFeedback>
+                      </KeyboardAvoidingView>
 
-          <NavBar>
-            <AddCartBtn onPress={() => setModalVisible(true)}>
-              <AddCartText>Add to Cart</AddCartText>
-            </AddCartBtn>
+                      <NavBar>
+                        <AddCartBtn onPress={() => setModalVisible(true)}>
+                          <AddCartText>Add to Cart</AddCartText>
+                        </AddCartBtn>
 
-            <AddCartBtn onPress={handleTryOn}>
-              <AddCartText>Try-on</AddCartText>
-            </AddCartBtn>
+                        <AddCartBtn onPress={handleTryOn} disabled={isTryOnProcessing}>
+                          <AddCartText>{isTryOnProcessing ? "Processing..." : "Try-on"}</AddCartText>
+                        </AddCartBtn>
+
 
           </NavBar>
 
@@ -606,10 +632,18 @@ const handleTryOn = () => {
                   {/* Add Button */}
                     <AddCartBtn
                       onPress={saveCartItem}
-                      style={{ paddingHorizontal: 10, paddingVertical: 20, marginBottom: 5, minWidth: 290, fontSize: 20}}
+                      disabled={isSaving}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 20,
+                        marginBottom: 5,
+                        minWidth: 290,
+                        opacity: isSaving ? 0.6 : 1,
+                      }}
                     >
-                      <AddCartText>Add to Cart</AddCartText>
+                      <AddCartText>{isSaving ? "Adding..." : "Add to Cart"}</AddCartText>
                     </AddCartBtn>
+
                   </View>
             </TouchableWithoutFeedback>
           </View>
