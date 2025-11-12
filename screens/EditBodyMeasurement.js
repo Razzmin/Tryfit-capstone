@@ -11,7 +11,8 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   TouchableWithoutFeedback, 
-  BackHandler 
+  BackHandler,
+  ActivityIndicator, 
 } from 'react-native';
 import { useNavigation, useFocusEffect  } from '@react-navigation/native';
 import { Feather, } from '@expo/vector-icons';
