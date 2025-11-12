@@ -1,7 +1,7 @@
 import React from "react";
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
-import Popup from '../components/Popup'; 
+import Popup from '../components/Popup';
 
 //firebase
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -22,6 +22,8 @@ import { View,
      TouchableWithoutFeedback,
     Keyboard,
     ImageBackground,
+    ActivityIndicator,
+    Text,
   } from "react-native";
 
 import {
@@ -42,6 +44,7 @@ import {
     PlainText,
     LinkText,
     SignUpButton,
+    LoadingOverlay,
 } from "./../components/styles";
 import { useState } from 'react';
 
@@ -56,10 +59,12 @@ const Login = () => {
 
     const [popupVisible, setPopupVisible] = useState(false);
     const [popupMessage, setPopupMessage] = useState('');
+    const [loading, setLoading] = useState(false);
 
 
    const handleLogin = async (values) => {
     try {
+        setLoading(true);
 
         const email = values.email.trim();
         const password = values.password.trim();
@@ -68,6 +73,7 @@ const Login = () => {
         if (!email || !password) {
             setPopupMessage("Please fill in all fields");
             setPopupVisible(true);
+            setLoading(false);
             return;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -81,12 +87,6 @@ const Login = () => {
         setPopupVisible(true);
         return;
 }
-        //const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$^&*])[A-Za-z0-9!@#$%^&*]{6,}$/;
-        //if (!passwordRegex.test(password)) {
-            //setPopupMessage("Password must be at least 6 characters long and include at least 1 number and 1 special character");
-            // setPopupVisible(true);
-           // return;
-        //}
         const userCredential = await signInWithEmailAndPassword(
             auth,
             email,
@@ -135,8 +135,11 @@ const Login = () => {
                 message = 'Login failed. Please try again.';
             }
             setPopupMessage(message);
-            setPopupVisible(true);
-    }
+            setPopupVisible(true); 
+
+            } finally {
+                setLoading(false);
+            }
 };
 
     return(
@@ -212,11 +215,20 @@ const Login = () => {
          <Popup
                 visible={popupVisible}
                 message={popupMessage}
-                onClose={() => setPopupVisible(false)}/>
-               
+                onClose={() => setPopupVisible(false)}
+                />
+                
+                {loading && (
+                    <LoadingOverlay>
+                        <ActivityIndicator size="large" color="#9747FF"/>
+                        <Text style={{marginTop: 10}}>Logging in...</Text>
+                    </LoadingOverlay>
+                )}
 </ImageBackground>
     );
-}
+};
+
+
 
 const MyTextInput = ({label, icon,isPassword, hidePassword, setHidePassword ,...props}) => {
     const [isFocused, setIsFocused] = useState(false);

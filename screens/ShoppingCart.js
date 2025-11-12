@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { TouchableOpacity, Text, View, ScrollView, Alert } from "react-native";
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
@@ -44,6 +44,14 @@ export default function ShoppingCart() {
   const user = auth.currentUser;
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isFocused = useIsFocused();
+
+
+  useEffect(() => {
+    if (isFocused) {
+      global.activeTab = 'ShoppingCart';
+    }
+  }, [isFocused]);
 
   useEffect(() => {
     if (!user) {

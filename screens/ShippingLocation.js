@@ -9,14 +9,14 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   TouchableWithoutFeedback,
-  Keyboard
+  Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import{Header, StyledFormArea } from '../components/styles';
 import { Picker } from '@react-native-picker/picker';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc, 
-  serverTimestamp, updateDoc} from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc,setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const MUNICIPALITIES = {
@@ -39,9 +39,12 @@ export default function ShippingLocation() {
   const navigation = useNavigation();
   const db = getFirestore();
   const auth = getAuth();
- 
+
+  const [stage, setStage] = useState('municipality');
   const [municipality, setMunicipality] = useState('');
-  const [barangay, setBarangay] = useState(''); 
+  const [barangay, setBarangay] = useState('');
+  const [finalAddress, setFinalAddress] = useState('');
+  
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -51,6 +54,7 @@ export default function ShippingLocation() {
   const [isDefault, setIsDefault] = useState(true);
   const [focusedField, setFocusedField] = useState('');
   const [errors, setErrors] = useState({});
+  const [isSaving, setSaving] = useState(false);
 
   useEffect(() => {
   const fetchShippingLocation = async () => {
@@ -79,6 +83,8 @@ export default function ShippingLocation() {
         setMunicipality(data.municipality || '');
         setBarangay(data.barangay || '');
         setPostal(data.postalCode || '');
+        setFinalAddress(`${data.barangay}, ${data.municipality}, Tarlac`);
+        setStage('final');
       }
     } catch (err) {
       console.error('Error fetching shipping location:', err);
@@ -127,105 +133,87 @@ export default function ShippingLocation() {
     }
   };
 
-const handleSave = async () => {
-  const cleanedName = name.trim();
-  const cleanedPhone = phone.replace(/\s+/g, '');
-  const cleanedHouse = house.trim();
-  const cleanedPostal = postal.trim();
+  const handleSave = async () => {
 
-  // ✅ Validation
-  if (!cleanedName || !/^[A-Za-z\s.]+$/.test(cleanedName)) {
-    return Alert.alert('Validation Error', 'Please enter a valid name (letters only).');
-  }
-  if (!cleanedPhone || !/^(09\d{9}|(\+639)\d{9})$/.test(cleanedPhone)) {
-    return Alert.alert('Validation Error', 'Please enter a valid mobile number (e.g., 09xxxxxxxxx).');
-  }
-  if (!cleanedHouse || cleanedHouse.length < 5) {
-    return Alert.alert('Validation Error', 'Please enter a more complete house/street/building information.');
-  }
-  if (!municipality) {
+    const cleanedName = name.trim();
+    const cleanedPhone = phone.replace(/\s+/g, '');
+    const cleanedHouse = house.trim();
+    const cleanedPostal = postal.trim();
+    
+
+    //only accepts letter,spaces and periods
+    if (!cleanedName || !/^[A-Za-z\s.]+$/.test(cleanedName)) {
+      return Alert.alert('Validation Error', 'Please enter a valid name(letters only).');
+    }
+    //ensures number starts at 09 or +639, and only 11 digits coz ph nums
+    if (!cleanedPhone || !/^(09\d{9}|(\+639)\d{9})$/.test(cleanedPhone)) {
+       return Alert.alert('Validation Error', 'Please enter a valid mobile number(e.g., 09xxx).');
+    }
+    if (!cleanedHouse || cleanedHouse.length < 5) {
+      return Alert.alert('Validation Error', 'Please enter a more complete house/street/building information');
+    }
+    if (!municipality) {
     return Alert.alert('Validation Error', 'Please select a municipality.');
-  }
-  if (!barangay) {
-    return Alert.alert('Validation Error', 'Please select a barangay.');
-  }
-  if (!cleanedPostal || !/^\d{4}$/.test(cleanedPostal)) {
-    return Alert.alert('Validation Error', 'Please enter a valid 4-digit postal code.');
-  }
-
+    }
+    if (!barangay) {
+      return Alert.alert('Validation Error', 'Please select a barangay.');
+    }
+    if (!cleanedPostal || !/^\d{4}$/.test(cleanedPostal)) {
+      return Alert.alert('Validation Error', 'Please enter a valid 4-digit postal code.');
+    }
+  
   try {
+    setSaving(true);
+
     const user = auth.currentUser;
     if (!user) {
       Alert.alert('Not logged in', 'Please login to save your shipping location.');
+      setSaving(false);
       return;
     }
 
-    // ✅ Get custom userId from users collection
-    const userDocRef = doc(db, 'users', user.uid);
+
+    // Get custom userId
+    const userDocRef = doc(db, "users", user.uid);
     const userDocSnap = await getDoc(userDocRef);
 
     if (!userDocSnap.exists()) {
-      Alert.alert('Error', 'User profile not found.');
+      Alert.alert("Error", "User profile not found.");
+      setSaving(false);
       return;
     }
-
     const customUserId = userDocSnap.data().userId;
 
-    // ✅ Check if user already has a shipping location
+    // Check if a location already exists
     const q = query(collection(db, 'shippingLocations'), where('userId', '==', customUserId));
     const querySnapshot = await getDocs(q);
 
-    if (querySnapshot.empty) {
-      // 🆕 First time saving
-      const saveData = {
-        userId: customUserId,
-        name: cleanedName,
-        phone: cleanedPhone,
-        house: cleanedHouse,
-        municipality,
-        barangay,
-        fullAddress: `${barangay}, ${municipality}, Tarlac`,
-        postalCode: cleanedPostal,
-        createdAt: new Date(),
-        updatedAt: serverTimestamp(),
-        shippingLocationID: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      };
+    const addressData = {
+      userId: customUserId,
+      name: cleanedName,
+      phone: cleanedPhone,
+      house: cleanedHouse, municipality, barangay,
+      postalCode: cleanedPostal,
+      fullAddress: `${barangay}, ${municipality}, Tarlac`,
+      createdAt: new Date(),
+    };
 
-      await addDoc(collection(db, 'shippingLocations'), saveData);
-      console.log('✅ New shipping location created!');
-    } else {
-      // 🔁 Update existing location (keep createdAt + ID)
+    if (!querySnapshot.empty) {
+      // Update existing location
       const docRef = querySnapshot.docs[0].ref;
-      const existingData = querySnapshot.docs[0].data();
-
-      const updateData = {
-        name: cleanedName,
-        phone: cleanedPhone,
-        house: cleanedHouse,
-        municipality,
-        barangay,
-        fullAddress: `${barangay}, ${municipality}, Tarlac`,
-        postalCode: cleanedPostal,
-        updatedAt: serverTimestamp(), // ✅ updates properly each time
-      };
-
-      // 🔒 Preserve these values — never overwrite
-      if (!existingData.createdAt) {
-        updateData.createdAt = new Date();
-      }
-      if (!existingData.shippingLocationID) {
-        updateData.shippingLocationID = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      }
-
-      await updateDoc(docRef, updateData);
-      console.log('📦 Shipping location updated!');
+      await setDoc(docRef, addressData, { merge: true });
+    } else {
+      // Add new location
+      await addDoc(collection(db, 'shippingLocations'), addressData);
     }
 
     Alert.alert('Success', 'Shipping location saved successfully!');
     navigation.goBack();
   } catch (error) {
-    console.error('❌ Error saving shipping location:', error);
+    console.error('Error saving shipping location:', error);
     Alert.alert('Error', 'Failed to save shipping location.');
+  } finally {
+    setSaving(false);
   }
 };
 
@@ -240,23 +228,23 @@ const handleSave = async () => {
             keyboardShouldPersistTaps="handled">
 
     <View style={styles.container}>
-      <Header style = {{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 16,
-          paddingBottom: 10,
-          backgroundColor: '#fff',
-          borderBottomWidth: 1,
-          borderBottomColor: '#ddd',
-        }}>
-          <TouchableOpacity onPress={() => navigation.goBack()}
-          style={{position: 'absolute', left: 16, top: -4}}>
-            <Feather name="arrow-left" size={27} color="black"  />
-          </TouchableOpacity>
-
-          <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Shipping Address</Text>
-        </Header>
+   <Header style = {{
+                     flexDirection: 'row',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     paddingHorizontal: 16,
+                     paddingBottom: 10,
+                     backgroundColor: '#fff',
+                     borderBottomWidth: 1,
+                     borderBottomColor: '#ddd',
+                   }}>
+                     <TouchableOpacity onPress={() => navigation.goBack()}
+                     style={{position: 'absolute', left: 16, top: -4}}>
+                       <Feather name="arrow-left" size={27} color="black"  />
+                     </TouchableOpacity>
+       
+                      <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Shipping Address</Text>
+                   </Header>
       
       <StyledFormArea style={{ width: '95%', justifyContent: 'center', alignSelf: 'center' }}>
       <Text style={styles.label}>Name (Receiver):</Text>
@@ -298,8 +286,7 @@ const handleSave = async () => {
           onFocus={() => setFocusedField('phone')}
           onBlur={() => setFocusedField('')}
          />
-      
-      <Text style={styles.label}>ADDRESS:</Text>
+
       <Text style={styles.label}>House No., Street / Building:</Text>
       <TextInput
         style={[styles.input,
@@ -313,62 +300,23 @@ const handleSave = async () => {
           maxLength={150}
       />
 
-     
-      <View style={{ marginBottom: 10 }}>
-        <Text style={styles.label}>Municipality:</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ccc', borderRadius: 10, overflow: 'hidden' }}>
-          {/* Text Field showing current value */}
-          <TextInput
-            style={{ flex: 1, padding: 12 }}
-            value={municipality}
-            editable={false} // read-only
-            placeholder="Select Municipality"
-          />
-
-          {/* Picker */}
-          <Picker
-            selectedValue={municipality}
-            style={{ width: 150 }}
-            onValueChange={(value) => {
-              setMunicipality(value);
-              setBarangay(''); // reset barangay when municipality changes
-            }}
-          >
-            <Picker.Item label="Select Municipality" value="" />
-            {Object.keys(MUNICIPALITIES).map((m) => (
-              <Picker.Item key={m} label={m} value={m} />
-            ))}
-          </Picker>
-        </View>
+      <Text style={styles.label}>Address:</Text>
+      <View style={styles.pickerWrapper}>
+        <Picker
+          selectedValue={
+            stage === 'municipality'
+              ? municipality
+              : stage === 'barangay'
+              ? barangay
+              : finalAddress
+          }
+          onValueChange={handlePickerChange}
+          style={styles.picker}
+          dropdownIconColor="#9747FF"
+        >
+          {getPickerItems()}
+        </Picker>
       </View>
-
-      <View style={{ marginBottom: 10 }}>
-        <Text style={styles.label}>Barangay:</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ccc', borderRadius: 10, overflow: 'hidden' }}>
-          {/* Text Field showing current value */}
-          <TextInput
-            style={{ flex: 1, padding: 12 }}
-            value={barangay}
-            editable={false} // read-only
-            placeholder="Select Barangay"
-          />
-
-          {/* Picker */}
-          <Picker
-            selectedValue={barangay}
-            style={{ width: 150 }}
-            onValueChange={(value) => setBarangay(value)}
-            enabled={municipality !== ''} // only enable if municipality is selected
-          >
-            <Picker.Item label={`Select Barangay in ${municipality || '...'}`} value="" />
-            {municipality &&
-              MUNICIPALITIES[municipality].map((b) => (
-                <Picker.Item key={b} label={b} value={b} />
-              ))}
-          </Picker>
-        </View>
-      </View>
-
 
       <Text style={styles.label}>Postal Code:</Text>
       <TextInput style={[styles.input,
@@ -380,12 +328,24 @@ const handleSave = async () => {
         placeholder="e.g., 2300"
         onFocus={() => setFocusedField('postal')}
         onBlur={() => setFocusedField('')}
+        maxLength={4}
         />
       </StyledFormArea>
 
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveText}>Save</Text>
+      <TouchableOpacity 
+      style={styles.saveButton} 
+      onPress={handleSave}
+      disabled={isSaving}
+      >
+      {isSaving ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center'}}>
+          <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8}}/>
+            <Text style={styles.saveText}>Saving...</Text>
+        </View>
+      ) : (
+      <Text style={styles.saveText}>Save</Text>
+      )}
       </TouchableOpacity>
     </View>
     </ScrollView>

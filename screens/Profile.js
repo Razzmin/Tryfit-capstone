@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import{ Header } from '../components/styles';
+import{ Header, LoadingOverlay } from '../components/styles';
 import { FontAwesome, Feather, MaterialIcons, MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { auth } from '../firebase/config';
 import { signOut, deleteUser } from 'firebase/auth';
 import {
@@ -27,6 +28,16 @@ export default function EditProfile() {
   const navigation = useNavigation();
   const [showModal, setShowModal] = useState(false);
   const [pressedItem, setPressedItem] = useState(null);
+  const [signOutModal, setSignOutModal] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const isFocused = useIsFocused();
+
+
+  useEffect(() => {
+    if (isFocused) {
+      global.activeTab = 'EditProfile';
+    }
+  }, [isFocused]);
   
 
   const handleDeleteAccount = async () => {
@@ -79,8 +90,11 @@ export default function EditProfile() {
   };
 
   const handleSignOut = async () => {
+    setSigningOut(true);
+
     try {
       await signOut(auth);
+      setSigningOut(false);
       navigation.replace('Login');
     } catch (error) {
       alert('Error signing out: ' + error.message);
@@ -188,7 +202,8 @@ export default function EditProfile() {
       </View>
 
       <View style={styles.signOutWrapper}>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+        <TouchableOpacity style={styles.signOutButton} 
+        onPress={() => setSignOutModal(true)}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
@@ -230,6 +245,53 @@ export default function EditProfile() {
           </View>
         </View>
       </Modal>
+
+         {/*Sign out modal */}
+      <Modal
+      visible={signOutModal}
+      transparent animationType="fade"
+      onRequestClose={() => setSignOutModal(false)}
+      >
+      <View style={styles.popupOverlay}>
+      <View style={styles.popupBox}>
+         <Text style={styles.popupText}>
+          Are you sure you want to sign out?
+         </Text>
+         <View style={styles.popupButtons}>
+         <TouchableOpacity 
+         style={styles.popupButtonNo}
+         onPress={() => setSignOutModal(false)}>
+        <Text style={{ color: '#fff', fontWeight: '600'}}>No</Text>
+         </TouchableOpacity>
+         
+          <TouchableOpacity 
+         style={styles.popupButtonYes}
+         onPress={async () => {
+          setSignOutModal (false);
+          setSigningOut(true);
+
+          try {
+            await signOut(auth);
+            setSigningOut(false);
+            navigation.replace('Login');
+          } catch (error) {
+            setSigningOut(false);
+            alert('Error signing out: ' +error.message);
+          }
+         }}>
+        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15}}>Yes</Text>
+         </TouchableOpacity>
+            </View> 
+          </View>
+        </View>
+      </Modal>
+
+      {signingOut && (
+        <LoadingOverlay>
+          <ActivityIndicator size="large" color="#9747FF"/>
+          <Text style={{marginTop: 10}}>Signing out in...</Text>
+        </LoadingOverlay>
+      )}
     </SafeAreaView>
   );
 }
@@ -360,5 +422,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 2,
     fontFamily: "KronaOne",
+  },
+  popupOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+     alignItems: 'center',
+  },
+  popupBox: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 45,
+    alignItems: 'center',
+    width: '80%',
+  },
+  popupText: {
+    fontSize: 17,
+    marginBottom: 20,
+    color: '#333',
+    textAlign: 'center',
+  },
+  popupButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '120%',
+  },
+  popupButtonYes: {
+    backgroundColor: '#9747FF',
+    padding: 16,
+    borderRadius: 10,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  popupButtonNo: {
+    backgroundColor: '#A9A9A9',
+    padding: 14,
+    borderRadius: 10,
+    minWidth: 120,
+    alignItems: 'center',
   },
 });

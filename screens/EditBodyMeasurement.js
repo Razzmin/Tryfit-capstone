@@ -11,6 +11,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Feather, } from '@expo/vector-icons';
@@ -40,6 +41,7 @@ export default function EditBodyMeasurement() {
   const [recommendedBottom, setRecommendedBottom] = useState('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [focusedField, setFocusedField] = useState('');
+  const [isSaving, setSaving] = useState(false);
 
   // ---------- Size recommendation logic ----------
   const topSizes = [
@@ -135,6 +137,8 @@ export default function EditBodyMeasurement() {
 
   const handleSave = async () => {
     if (!user) return alert('User not logged in');
+
+    setSaving(true);
     try {
       const docRef = doc(db, 'measurements', user.uid);
       await setDoc(docRef, {
@@ -154,6 +158,8 @@ export default function EditBodyMeasurement() {
     } catch (err) {
       console.error('Error saving measurements:', err);
       alert('Failed to save measurements.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -222,8 +228,19 @@ export default function EditBodyMeasurement() {
             <Text style={styles.recalcText}>Recalculate</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <TouchableOpacity 
+          style={styles.saveButton} 
+          onPress={handleSave}
+          disabled={isSaving}
+          >
+          {isSaving ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center'}}>
+                    <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8}}/>
+                      <Text style={styles.saveText}>Saving...</Text>
+                  </View>
+                ) : (
             <Text style={styles.saveText}>Save</Text>
+                )}
           </TouchableOpacity>
           </View>
         </View>

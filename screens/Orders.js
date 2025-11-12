@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import{ Header } from '../components/styles';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
 import {
@@ -35,6 +35,15 @@ export default function Orders() {
 
   const [orders, setOrders] = useState([]);
   const [customUserId, setCustomUserId] = useState(null);
+
+  const isFocused = useIsFocused();
+
+
+  useEffect(() => {
+    if (isFocused) {
+      global.activeTab = 'Orders';
+    }
+  }, [isFocused]);
 
   // 🔑 Step 1: Get custom userId from users collection
   useEffect(() => {
