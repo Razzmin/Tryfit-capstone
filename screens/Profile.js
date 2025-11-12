@@ -1,16 +1,18 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Modal,
+  BackHandler,
+  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import{ Header, LoadingOverlay } from '../components/styles';
 import { FontAwesome, Feather, MaterialIcons, MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useIsFocused  } from '@react-navigation/native';
 import { auth } from '../firebase/config';
 import { signOut, deleteUser } from 'firebase/auth';
 import {
@@ -32,13 +34,25 @@ export default function EditProfile() {
   const [signingOut, setSigningOut] = useState(false);
   const isFocused = useIsFocused();
 
-
   useEffect(() => {
     if (isFocused) {
       global.activeTab = 'EditProfile';
     }
   }, [isFocused]);
-  
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.goBack(); // normal back
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => subscription.remove();
+    }, [navigation])
+  );
+
 
   const handleDeleteAccount = async () => {
     const user = auth.currentUser;
@@ -89,35 +103,55 @@ export default function EditProfile() {
     }
   };
 
-  const handleSignOut = async () => {
-    setSigningOut(true);
-
-    try {
-      await signOut(auth);
-      setSigningOut(false);
-      navigation.replace('Login');
-    } catch (error) {
-      alert('Error signing out: ' + error.message);
-    }
+  const handleSignOut = () => {
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Yes, Log Out",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              
+              // Reset navigation so user cannot go back
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            } catch (error) {
+              alert('Error signing out: ' + error.message);
+            }
+          },
+        },
+      ],
+      { cancelable: false }
+    );
   };
+
 
   return (
     <SafeAreaView style={styles.container}>
       <Header style = {{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingHorizontal: 16,
-                        paddingBottom: 20,
-                        backgroundColor: '#fff',
-                      }}>
-                        <TouchableOpacity onPress={() => navigation.goBack()}
-                        style={{position: 'absolute', left: 2, top: -4}}>
-                          <Feather name="arrow-left" size={27} color="black"  />
-                        </TouchableOpacity>
-          
-                         <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PROFILE</Text>
-                      </Header>
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+        backgroundColor: '#fff',
+      }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}
+        style={{position: 'absolute', left: 2, top: -4}}>
+          <Feather name="arrow-left" size={27} color="black"  />
+        </TouchableOpacity>
+
+          <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PROFILE</Text>
+      </Header>
 
       <View style={styles.profileSection}>
         <MaterialIcons name="account-circle" size={80} color="#9747FF"

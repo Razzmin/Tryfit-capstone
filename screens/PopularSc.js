@@ -31,7 +31,7 @@ import {
   FilterButton,
   FilterButtonText,
   ProductListWrapper,
-} from '../components/popularstyles'; // we'll define this next
+} from '../components/popularstyles';
 
 const categories = [
   { label: 'Shorts', screen: 'ShortsScreen' },

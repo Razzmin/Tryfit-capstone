@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext, useMemo, useRef } from 'react';
 import {FontAwesome, EvilIcons, Ionicons, Feather }  from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { collection, getDocs, getDoc, doc, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -16,6 +16,8 @@ import {
   View,
   Animated,
   TouchableWithoutFeedback,
+  BackHandler, 
+  Alert,
 } from 'react-native'; 
 
 import { CartContext } from '../content/shoppingcartcontent';
@@ -32,7 +34,7 @@ const colors = {
 
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/130x180.png?text=No+Image';
 
-const SEARCH_SUGGESTIONS = ['T-Shirts', 'Longsleeves', 'Pants', 'Shorts'];
+const SEARCH_SUGGESTIONS = ['T-shirt', 'Longsleeves', 'Pants', 'Shorts'];
 
 export default function LandingPage() {
   const [products, setProducts] = useState([]);
@@ -53,6 +55,8 @@ export default function LandingPage() {
       setActiveTab('Home');
     }
   }, [isFocused]);
+  const [searchSuggestions, setSearchSuggestions] = useState(SEARCH_SUGGESTIONS);
+  const [popularProducts, setPopularProducts] = useState([]);
 
 
   useEffect(() => {
@@ -98,90 +102,164 @@ export default function LandingPage() {
   }), []);
 
  useEffect(() => {
-  const fetchProducts = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, 'products'));
-      const fetched = [];
+    // Fetch "Our Picks" (price <= 250)
+    const fetchProducts = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'products'));
+        const allProducts = [];
 
-      querySnapshot.forEach((doc) => {
-        const product = doc.data();
-        if (product.price) {
-          const numericPrice =
-            typeof product.price === 'string'
-              ? parseInt(product.price.replace(/[^\d]/g, ''))
-              : typeof product.price === 'number'
-              ? product.price
-              : null;
+        querySnapshot.forEach((doc) => {
+          const product = doc.data();
+
+          // Normalize price
+          let numericPrice = null;
+          if (product.price) {
+            numericPrice =
+              typeof product.price === 'string'
+                ? parseInt(product.price.replace(/[^\d]/g, ''))
+                : product.price;
+          }
+
+          // Normalize sold
+          let numericSold = null;
+          if (product.sold) {
+            numericSold =
+              typeof product.sold === 'string'
+                ? parseInt(product.sold.replace(/[^\d]/g, ''))
+                : product.sold;
+          }
 
           if (numericPrice !== null && numericPrice <= 250) {
-            fetched.push({ id: doc.id, ...product });
+            allProducts.push({ id: doc.id, ...product, price: numericPrice, sold: numericSold });
           }
-        }
-      });
+        });
 
-      setProducts(fetched);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    }
-  };
-
-  const fetchNewArrivals = async () => {
-    try {
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-      const firestoreDate = Timestamp.fromDate(oneMonthAgo);
-
-      // Get recent activity logs from the past month
-      const logsSnapshot = await getDocs(
-        query(
-          collection(db, 'recentActivityLogs'),
-          where('timestamp', '>=', firestoreDate)
-        )
-      );
-
-      const uniqueProductIds = new Set();
-      logsSnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.productId) uniqueProductIds.add(data.productId);
-      });
-
-      const newProducts = [];
-      for (const id of uniqueProductIds) {
-        const prodRef = doc(db, 'products', id);
-        const prodSnap = await getDoc(prodRef);
-
-        if (prodSnap.exists()) {
-          const data = prodSnap.data();
-
-          // Push all necessary product info
-          newProducts.push({
-            id,
-            productID: data.productID,
-            productName: data.productName,
-            price: data.price,
-            rating: data.rating,
-            sold: data.sold,
-            delivery: data.delivery,
-            categoryMain: data.categoryMain,
-            categorySub: data.categorySub,
-            sizes: data.sizes,
-            stock: data.stock,
-            colors: data.colors,
-            imageUrl: data.imageUrl,
-            description: data.description,
-          });
-        }
+        setProducts(allProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
       }
+    };
 
-      setNewArrivals(newProducts);
-    } catch (error) {
-      console.error('Error fetching new arrivals:', error);
-    }
-  };
+    const fetchNewArrivals = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'products'));
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setDate(oneMonthAgo.getDate() - 31); // 31 days ago
 
-  fetchProducts();
-  fetchNewArrivals();
-}, []);
+        const newProducts = [];
+
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (!data.createdAt) return;
+
+          const createdAt = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+          if (createdAt >= oneMonthAgo) {
+            newProducts.push({
+              id: docSnap.id,
+              productID: data.productID,
+              productName: data.productName,
+              price: data.price,
+              rating: data.rating,
+              sold: data.sold,
+              delivery: data.delivery,
+              categoryMain: data.categoryMain,
+              categorySub: data.categorySub,
+              sizes: data.sizes,
+              stock: data.stock,
+              colors: data.colors,
+              imageUrl: data.imageUrl,
+              description: data.description,
+              createdAt: data.createdAt,
+              arUrl: data.arUrl || null,
+            });
+          }
+        });
+
+        setNewArrivals(newProducts);
+      } catch (error) {
+        console.error('Error fetching new arrivals:', error);
+      }
+    };
+
+    // Fetch "Popular Products" (sold >= 1000) – new separate function
+    const fetchPopularProducts = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'products'));
+        const popularProductsList = [];
+
+        querySnapshot.forEach((doc) => {
+          const product = doc.data();
+
+          // Normalize sold
+          let numericSold = null;
+          if (product.sold) {
+            numericSold =
+              typeof product.sold === 'string'
+                ? parseInt(product.sold.replace(/[^\d]/g, ''))
+                : product.sold;
+          }
+
+          if (numericSold !== null && numericSold >= 1000) {
+            popularProductsList.push({ id: doc.id, ...product, sold: numericSold });
+          }
+        });
+
+        setPopularProducts(popularProductsList);
+      } catch (error) {
+        console.error('Error fetching popular products:', error);
+      }
+    };
+
+    // Fetch product names for search suggestions
+    const fetchProductNames = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'products'));
+        const names = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.productName) names.push(data.productName);
+        });
+
+        const mergedSuggestions = Array.from(
+          new Set([...SEARCH_SUGGESTIONS, ...names])
+        );
+
+        setSearchSuggestions(mergedSuggestions);
+      } catch (error) {
+        console.error('Error fetching product names:', error);
+      }
+    };
+
+    // Call all functions
+    fetchProducts();
+    fetchNewArrivals(); // ✅ unchanged
+    fetchPopularProducts();
+    fetchProductNames();
+  }, []);
+
+    useFocusEffect(
+      React.useCallback(() => {
+        const onBackPress = () => {
+          Alert.alert(
+            'Exit App',
+            'Do you want to exit?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Exit', onPress: () => BackHandler.exitApp() },
+            ],
+            { cancelable: true }
+          );
+          return true; // prevent default behavior
+        };
+
+        // Add event listener and get subscription
+        const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+        // Cleanup using subscription.remove()
+        return () => subscription.remove();
+      }, [])
+    );
 
   const handleSearchSubmit = () => {
     if (searchText.trim().length > 0) {
@@ -324,29 +402,29 @@ export default function LandingPage() {
             ))}
           </ScrollView>
 
-          {/* Popular */}
+         {/* Popular */}
           <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { categoryKey: 'popular' })}>
             <Text style={styles.sectionTitle}>Popular</Text>
           </TouchableOpacity>
           <ScrollView horizontal style={styles.popularRow} showsHorizontalScrollIndicator={false}>
-            {products
-              .filter(product => product.sold >= 1000)
-              .map(product => (
-                <TouchableOpacity
-                  key={product.id}
-                  style={styles.popularCard}
-                  onPress={() => navigation.navigate('ProductDetail', { product })}
-                >
-                  <Image
-                    source={{ uri: product.imageUrl || PLACEHOLDER_IMAGE }}
-                    style={styles.popularImage}
-                  />
-                  <Text style={styles.popularNameText}>
-                    {product.name?.length > 16 ? product.name.slice(0, 14) + '…' : product.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            {popularProducts.map(product => (
+              <TouchableOpacity
+                key={product.id}
+                style={styles.popularCard}
+                onPress={() => navigation.navigate('ProductDetail', { product })}
+              >
+                <Image
+                  source={{ uri: product.imageUrl || PLACEHOLDER_IMAGE }}
+                  style={styles.popularImage}
+                />
+                <Text style={styles.popularNameText}>
+                  {product.productName?.length > 16 ? product.productName.slice(0, 14) + '…' : product.productName}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
+
+
 
           {/* Our Picks - show ALL products always */}
           <Text style={styles.sectionTitle}>Our Picks for You</Text>

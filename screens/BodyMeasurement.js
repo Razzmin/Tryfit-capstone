@@ -136,10 +136,11 @@ export default function BodyMeasurement() {
         />
 
         <Modal 
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}>
+          animationType="fade"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
               <Text style={styles.modalTitle}>Allow Camera Access</Text>
@@ -148,21 +149,21 @@ export default function BodyMeasurement() {
               </Text>
 
               <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: "#9747FF" }, isProceedProcessing && { opacity: 0.6 }]}
-                  onPress={confirmProceed}
-                  disabled={isProceedProcessing}
-                >
-                  <Text style={styles.modalButtonText}>
-                    {isProceedProcessing ? "Processing..." : "Proceed"}
-                  </Text>
-                </TouchableOpacity>
+                style={[styles.modalButton, { backgroundColor: "#9747FF" }, isProceedProcessing && { opacity: 0.6 }]}
+                onPress={confirmProceed}
+                disabled={isProceedProcessing}
+              >
+                <Text style={styles.modalButtonText}>
+                  {isProceedProcessing ? "Processing..." : "Proceed"}
+                </Text>
+              </TouchableOpacity>
 
-
-                <TouchableOpacity style={[styles.modalButton, {backgroundColor: "#717171" }]}
-                onPress={cancelProceed}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#717171" }]}
+                onPress={cancelProceed}
+              >
                 <Text style={[styles.modalButtonText, { color: "#000000" }]}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>

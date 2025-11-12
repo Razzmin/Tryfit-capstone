@@ -156,7 +156,7 @@ export default function ToReceive() {
             // Optionally switch to Completed tab
             // setActiveTab('Completed'); // Uncomment if you manage tabs
 
-            Alert.alert('Success', 'Your order has been marked as completed.');
+            Alert.alert('Received', 'Your order has been Received.');
           } catch (err) {
             console.error('Error marking order as received:', err);
             Alert.alert('Error', 'Failed to mark order as received. Try again.');

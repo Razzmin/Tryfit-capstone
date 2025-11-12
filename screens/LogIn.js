@@ -1,6 +1,6 @@
 import React from "react";
 import { StatusBar } from 'expo-status-bar';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Popup from '../components/Popup';
 
 //firebase
@@ -24,6 +24,7 @@ import { View,
     ImageBackground,
     ActivityIndicator,
     Text,
+    BackHandler,
   } from "react-native";
 
 import {
@@ -46,7 +47,7 @@ import {
     SignUpButton,
     LoadingOverlay,
 } from "./../components/styles";
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 
 //colors
@@ -140,7 +141,20 @@ const Login = () => {
             } finally {
                 setLoading(false);
             }
-};
+            };
+
+         useFocusEffect(
+            useCallback(() => {
+                const onBackPress = () => {
+                // Disable going back from login screen
+                return true; // prevents default behavior
+                };
+
+                const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+                return () => subscription.remove();
+            }, [])
+            );
 
     return(
     <ImageBackground
@@ -226,9 +240,7 @@ const Login = () => {
                 )}
 </ImageBackground>
     );
-};
-
-
+}; 
 
 const MyTextInput = ({label, icon,isPassword, hidePassword, setHidePassword ,...props}) => {
     const [isFocused, setIsFocused] = useState(false);

@@ -48,34 +48,50 @@ const CategoryProductsScreen = () => {
   const [loading, setLoading] = useState(true);
 
   const currentCategory = categories.find(cat => cat.key === categoryKey) || categories[0];
-
-  useEffect(() => {
+useEffect(() => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
       if (currentCategory.key === 'latest') {
-        // Fetch recent products from recentActivityLogs from last month
+        // Fetch products created within the last 31 days
+        const querySnapshot = await getDocs(collection(db, 'products'));
         const oneMonthAgo = new Date();
-        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        oneMonthAgo.setDate(oneMonthAgo.getDate() - 31);
 
-        const logsRef = collection(db, 'recentActivityLogs');
-        const logsQuery = query(logsRef, where('timestamp', '>=', Timestamp.fromDate(oneMonthAgo)));
-        const logsSnapshot = await getDocs(logsQuery);
+        const newProducts = [];
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (!data.createdAt) return; // skip if no timestamp
 
-        const productIdsSet = new Set();
-        logsSnapshot.forEach(logDoc => {
-          const data = logDoc.data();
-          if (data.productId) productIdsSet.add(data.productId);
+          // Convert Firestore Timestamp to JS Date
+          const createdAt = data.createdAt.toDate
+            ? data.createdAt.toDate()
+            : new Date(data.createdAt);
+
+          // Only include products created within the last 31 days
+          if (createdAt >= oneMonthAgo) {
+            newProducts.push({
+              id: docSnap.id,
+              productID: data.productID,
+              productName: data.productName,
+              price: data.price,
+              rating: data.rating,
+              sold: data.sold,
+              delivery: data.delivery,
+              categoryMain: data.categoryMain,
+              categorySub: data.categorySub,
+              sizes: data.sizes,
+              stock: data.stock,
+              colors: data.colors,
+              imageUrl: data.imageUrl,
+              description: data.description,
+              createdAt: data.createdAt,
+              arUrl: data.arUrl || null,
+            });
+          }
         });
 
-        const productIds = Array.from(productIdsSet);
-        const fetchedProducts = [];
-        for (const productId of productIds) {
-          const productDocRef = doc(db, 'products', productId);
-          const productDoc = await getDoc(productDocRef);
-          if (productDoc.exists()) fetchedProducts.push({ id: productDoc.id, ...productDoc.data() });
-        }
-        setProducts(fetchedProducts);
+        setProducts(newProducts);
       } else if (currentCategory.key === 'popular') {
         // Popular: fetch products with sold >= 1000
         const querySnapshot = await getDocs(collection(db, 'products'));
@@ -104,7 +120,6 @@ const CategoryProductsScreen = () => {
 
   fetchProducts();
 }, [currentCategory]);
-
 
  return (
    <ImageBackground

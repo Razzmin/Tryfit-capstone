@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,10 @@ import {
   Alert,
   Keyboard,
   KeyboardAvoidingView,
-  TouchableWithoutFeedback,
-  ActivityIndicator,
+  TouchableWithoutFeedback, 
+  BackHandler 
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect  } from '@react-navigation/native';
 import { Feather, } from '@expo/vector-icons';
 import{Header } from '../components/styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -83,8 +83,21 @@ export default function EditBodyMeasurement() {
     });
     return bestMatch || 'M';
   };
+  
+  useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          navigation.goBack();
+          return true;
+        };
 
-  // ---------- Fetch Firestore measurements ----------
+        // Add listener and save subscription
+        const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+        // Cleanup using subscription.remove()
+        return () => subscription.remove();
+      }, [navigation])
+    );
   useEffect(() => {
     const fetchMeasurements = async () => {
       if (!user) return;

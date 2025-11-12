@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; 
 import {
   View,
   Text,
@@ -10,11 +10,12 @@ import {
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
   ActivityIndicator,
+  BackHandler 
 } from 'react-native';
 import{Header } from '../components/styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, FontAwesome } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect  } from '@react-navigation/native';
 
 import { getAuth, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
 
@@ -31,6 +32,22 @@ export default function Password() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSaving, setSaving] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.goBack();
+        return true;
+      };
+
+      // Add listener and save subscription
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      // Cleanup using subscription.remove()
+      return () => subscription.remove();
+    }, [navigation])
+  );
+  
 
   const handleSetPassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -56,18 +73,30 @@ export default function Password() {
 
     const credential = EmailAuthProvider.credential(user.email, currentPassword);
 
-    try {
-      setSaving(true);
+      try {
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, newPassword);
 
+          Alert.alert('Success', 'Your password has been changed.', [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Log out the user and redirect to login screen
+            auth.signOut().then(() => {
+              // Reset navigation stack
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }], // replace 'Login' with your login screen name
+              });
+            });
+          },
+        },
+      ]);
 
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, newPassword);
-
-      Alert.alert('Success', 'Your password has been changed.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (error) {
+  } catch (error) {
       console.error('Password change error:', error);
       if (error.code === 'auth/wrong-password') {
         Alert.alert('Error', 'Current password is incorrect.');
@@ -91,20 +120,20 @@ export default function Password() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <Header style = {{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          paddingHorizontal: 16,
-                          paddingBottom: 20,
-                          backgroundColor: '#fff',
-                        }}>
-                          <TouchableOpacity onPress={() => navigation.goBack()}
-                          style={{position: 'absolute', left: 5, top: -4}}>
-                            <Feather name="arrow-left" size={27} color="black"  />
-                          </TouchableOpacity>
-            
-                           <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Change Password</Text>
-                        </Header>
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 16,
+          paddingBottom: 20,
+          backgroundColor: '#fff',
+        }}>
+          <TouchableOpacity onPress={() => navigation.goBack()}
+          style={{position: 'absolute', left: 5, top: -4}}>
+            <Feather name="arrow-left" size={27} color="black"  />
+          </TouchableOpacity>
+
+            <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Change Password</Text>
+        </Header>
 
       <Text style={styles.instructionText}>
         Enter new password below to change your password

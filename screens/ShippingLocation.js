@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,15 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   TouchableWithoutFeedback,
-  Keyboard,
-  ActivityIndicator,
+  Keyboard, 
+  BackHandler,
+  ActivityIndicator, 
 } from 'react-native';
 import{Header, StyledFormArea } from '../components/styles';
 import { Picker } from '@react-native-picker/picker';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc,setDoc } from 'firebase/firestore';
+import { useNavigation, useFocusEffect  } from '@react-navigation/native';
+import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc, setDoc,} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const MUNICIPALITIES = {
@@ -55,6 +56,22 @@ export default function ShippingLocation() {
   const [focusedField, setFocusedField] = useState('');
   const [errors, setErrors] = useState({});
   const [isSaving, setSaving] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        navigation.goBack();
+        return true;
+      };
+
+      // Add listener and save subscription
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      // Cleanup using subscription.remove()
+      return () => subscription.remove();
+    }, [navigation])
+  );
+
 
   useEffect(() => {
   const fetchShippingLocation = async () => {
@@ -229,22 +246,22 @@ export default function ShippingLocation() {
 
     <View style={styles.container}>
    <Header style = {{
-                     flexDirection: 'row',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     paddingHorizontal: 16,
-                     paddingBottom: 10,
-                     backgroundColor: '#fff',
-                     borderBottomWidth: 1,
-                     borderBottomColor: '#ddd',
-                   }}>
-                     <TouchableOpacity onPress={() => navigation.goBack()}
-                     style={{position: 'absolute', left: 16, top: -4}}>
-                       <Feather name="arrow-left" size={27} color="black"  />
-                     </TouchableOpacity>
-       
-                      <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Shipping Address</Text>
-                   </Header>
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 16,
+          paddingBottom: 10,
+          backgroundColor: '#fff',
+          borderBottomWidth: 1,
+          borderBottomColor: '#ddd',
+        }}>
+          <TouchableOpacity onPress={() => navigation.goBack()}
+          style={{position: 'absolute', left: 16, top: -4}}>
+            <Feather name="arrow-left" size={27} color="black"  />
+          </TouchableOpacity>
+
+          <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Shipping Address</Text>
+        </Header>
       
       <StyledFormArea style={{ width: '95%', justifyContent: 'center', alignSelf: 'center' }}>
       <Text style={styles.label}>Name (Receiver):</Text>
@@ -300,23 +317,88 @@ export default function ShippingLocation() {
           maxLength={150}
       />
 
-      <Text style={styles.label}>Address:</Text>
-      <View style={styles.pickerWrapper}>
+     
+     <View style={{ marginBottom: 10 }}>
+      <Text style={styles.label}>Municipality:</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ccc', borderRadius: 10, overflow: 'hidden' }}>
+        {/* Text Field showing current value */}
+        <TextInput
+          style={{ flex: 1, padding: 12 }}
+          value={municipality}
+          editable={false} // read-only
+          placeholder="Select Municipality"
+        />
+
+        {/* Icon indicator */}
+        <Feather 
+          name="chevron-down" 
+          size={20} 
+          color="#999" 
+          style={{ position: 'absolute', right: 10, pointerEvents: 'none' }} 
+        />
+
+        {/* Picker */}
         <Picker
-          selectedValue={
-            stage === 'municipality'
-              ? municipality
-              : stage === 'barangay'
-              ? barangay
-              : finalAddress
-          }
-          onValueChange={handlePickerChange}
-          style={styles.picker}
-          dropdownIconColor="#9747FF"
+          selectedValue={municipality}
+          style={{ width: 150, opacity: 0.01 }} // make Picker almost invisible, still functional
+          onValueChange={(value) => {
+            setMunicipality(value);
+            setBarangay(''); // reset barangay when municipality changes
+          }}
         >
-          {getPickerItems()}
+          <Picker.Item label="Select Municipality" value="" />
+          {Object.keys(MUNICIPALITIES).map((m) => (
+            <Picker.Item key={m} label={m} value={m} />
+          ))}
         </Picker>
       </View>
+    </View>
+
+
+      <View style={{ marginBottom: 10 }}>
+        <Text style={styles.label}>Barangay:</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: '#ccc',
+            borderRadius: 10,
+            overflow: 'hidden',
+          }}
+        >
+          {/* Text Field showing current value */}
+          <TextInput
+            style={{ flex: 1, padding: 12 }}
+            value={barangay}
+            editable={false} // read-only
+            placeholder="Select Barangay"
+          />
+
+          {/* Icon indicator */}
+          <Feather
+            name="chevron-down"
+            size={20}
+            color="#999"
+            style={{ position: 'absolute', right: 10, pointerEvents: 'none' }}
+          />
+
+          {/* Picker */}
+          <Picker
+            selectedValue={barangay}
+            style={{ width: 150, opacity: 0.01 }} // almost invisible but still functional
+            onValueChange={(value) => setBarangay(value)}
+            enabled={municipality !== ''} // only enable if municipality is selected
+          >
+            <Picker.Item label={`Select Barangay in ${municipality || '...'}`} value="" />
+            {municipality &&
+              MUNICIPALITIES[municipality].map((b) => (
+                <Picker.Item key={b} label={b} value={b} />
+              ))}
+          </Picker>
+        </View>
+      </View>
+
 
       <Text style={styles.label}>Postal Code:</Text>
       <TextInput style={[styles.input,

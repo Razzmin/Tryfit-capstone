@@ -75,8 +75,6 @@ export default function ToRate() {
 
 
 
-
-
   const handleRating = (itemId, value) => {
     setRatings((prev) => ({ ...prev, [itemId]: value }));
   };
@@ -154,7 +152,7 @@ const handleSubmit = async () => {
       }
     });
 
-    const avgRating = count > 0 ? totalRating / count : 0;
+    const avgRating = count > 0 ? Math.round((totalRating / count) * 10) / 10 : 0;
 
     // 🔄 Update product average rating
     const productsQuery = query(collection(db, "products"), where("productID", "==", customProductID));
@@ -191,7 +189,7 @@ const handleSubmit = async () => {
           <Feather name="arrow-left" size={27} color="black"  />
         </TouchableOpacity>
 
-          <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PROFILE</Text>
+          <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Rate the product</Text>
       </Header>
 
       <ScrollView>
@@ -205,17 +203,17 @@ const handleSubmit = async () => {
 
 
                <View style={styles.productRow}>
-                               <Image
-                                 source={{ uri: item.imageUrl || 'https://placehold.co/100x100' }}
-                                 style={styles.productImage}
-                               />
-                               <View style={styles.productInfo}>
-                                 <Text style={styles.productName}>{item.productName}</Text>
-                                 <Text style={styles.productSize}>
-                                   Size: {item.size || 'N/A'}
-                                 </Text>
-                                 </View>
-                                 </View>
+                  <Image
+                    source={{ uri: item.imageUrl || 'https://placehold.co/100x100' }}
+                    style={styles.productImage}
+                  />
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName}>{item.productName}</Text>
+                    <Text style={styles.productSize}>
+                      Size: {item.size || 'N/A'}
+                    </Text>
+                    </View>
+                    </View>
 
               <View style= {{flexDirection: 'row', alignItems: 'center', marginBottom: -10}}>
               <Text style={[styles.ratingLabel, {marginRight: 10}]}>Rate your Product:</Text>

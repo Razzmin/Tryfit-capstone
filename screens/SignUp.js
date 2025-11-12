@@ -62,6 +62,7 @@ const Signup = () => {
 
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [newUserData, setNewUserData] = useState(null);
 
   // Reset form when returning to screen
@@ -76,6 +77,8 @@ const Signup = () => {
   // ✅ Firebase Signup Function
   const handleSignup = async (values, { setFieldValue }) => {
     try {
+
+      setIsLoading(true); 
 
       values.username = values.username.trim();
       values.email = values.email.trim();
@@ -184,6 +187,9 @@ const Signup = () => {
       setPopupMessage(message);
       setPopupVisible(true);
       formikRef.current?.resetForm();
+    }
+     finally {
+      setIsLoading(false); 
     }
   };
 

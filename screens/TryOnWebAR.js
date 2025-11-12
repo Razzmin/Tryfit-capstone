@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, SafeAreaView, Animated } from "react-native";
+import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity,Animated } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { FontAwesome } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";

@@ -96,7 +96,7 @@ export default function ProductDetail() {
 
     const reviewsQuery = query(
       collection(db, "productReviews"),
-      where("productId", "==", product.productID),
+     where("productID", "==", product.productID),
       orderBy("createdAt", "desc")
     );
 
@@ -184,16 +184,26 @@ export default function ProductDetail() {
       setIsSaving(true);
 
     if (!selectedSize) {
-      Alert.alert('Error', 'Please select a size.');
+    Alert.alert('Error', 'Please select a size.', [
+      {
+        text: 'OK',
+        onPress: () => setIsSaving(false), // <-- reset isSaving when user presses OK
+        },
+      ]);
       return;
     }
 
     const stockAvailable = getSizeStock(selectedSize);
     if (modalQuantity > stockAvailable) {
-      Alert.alert('Error', `Only ${stockAvailable} item(s) available for this size.`);
+      Alert.alert('Error', `Only ${stockAvailable} item(s) available for this size.`, [
+        {
+          text: 'OK',
+          onPress: () => setIsSaving(false),
+        },
+      ]);
       return;
     }
-
+    
     try {
       // 🔹 Get current user
       const user = auth.currentUser;
@@ -256,8 +266,23 @@ export default function ProductDetail() {
         read: false,
       });
 
-      addNotification(`${product.productName} added to cart`);
-      Alert.alert("Success", "Item is added to your cart");
+     addNotification(`${product.productName} added to cart`);
+        Alert.alert(
+          "Success",
+          "Item has been added to your cart.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                // Reset modal and re-enable button
+                setModalVisible(false);
+                setModalQuantity(1);
+                setSelectedSize(null);
+                setIsSaving(false); // ✅ button can be pressed again
+              },
+            },
+          ]
+        );
 
       setModalVisible(false);
       setModalQuantity(1);
@@ -266,7 +291,7 @@ export default function ProductDetail() {
     } catch (error) {
       Alert.alert('Error', 'Failed to add item to cart.');
       console.error('Add to cart error:', error);
-    }
+    } 
   };
 
  const incrementQuantity = () => {
@@ -286,7 +311,7 @@ const decrementQuantity = () => {
 };
 
 const handleTryOn = () => {
-  if (isTryOnProcessing) return; // ❌ prevent multiple clicks
+  if (isTryOnProcessing) return; 
   setIsTryOnProcessing(true);
 
   if (!product?.arUrl) {
@@ -296,7 +321,7 @@ const handleTryOn = () => {
   }
 
   navigation.navigate("TryOnWebAR", { arUrl: product.arUrl });
-  setTimeout(() => setIsTryOnProcessing(false), 500); // reset after navigation
+  setTimeout(() => setIsTryOnProcessing(false), 500); 
 };
 
 
@@ -423,7 +448,7 @@ const handleTryOn = () => {
               </View>
               
                <ReviewContainer>
-                  {(showAllReviews ? reviews : reviews.slice(0, 3)).map((item) => (
+                  {(reviews.filter(r => r.comment && r.comment.trim() !== "").slice(0, showAllReviews ? reviews.length : 3)).map((item) => (
                     <ReviewItems key={item.id}>
                       <Avatar style={{ backgroundColor: item.avatarColor || "#9747FF" }}>
                         <AvatarText>{item.userName?.[0]?.toUpperCase() || "A"}</AvatarText>
@@ -448,35 +473,35 @@ const handleTryOn = () => {
                         <VariationText>Size: {item.size}</VariationText>
                         <CommentText>{item.comment}</CommentText>
                       </ReviewContent>
-                    </ReviewItems>
-                  ))}
+                            </ReviewItems>
+                          ))}
 
-              {reviews.length > 3 && (
-                <TouchableOpacity onPress={() => setShowAllReviews(!showAllReviews)} style={{ marginTop: 10, alignSelf: "center" }}>
-                  <Text style={{ color: "#9747FF", fontWeight: "600" }}>
-                    {showAllReviews ? "Hide Reviews" : "Show More Reviews"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </ReviewContainer>
+                      {reviews.length > 3 && (
+                        <TouchableOpacity onPress={() => setShowAllReviews(!showAllReviews)} style={{ marginTop: 10, alignSelf: "center" }}>
+                          <Text style={{ color: "#9747FF", fontWeight: "600" }}>
+                            {showAllReviews ? "Hide Reviews" : "Show More Reviews"}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </ReviewContainer>
 
-                        </Content>
-                      </ProductContainer>
-                      </ScrollView>
-                      </TouchableWithoutFeedback>
-                      </KeyboardAvoidingView>
+                    </Content>
+                  </ProductContainer>
+                  </ScrollView>
+                  </TouchableWithoutFeedback>
+                  </KeyboardAvoidingView>
 
-                      <NavBar>
-                        <AddCartBtn onPress={() => setModalVisible(true)}>
-                          <AddCartText>Add to Cart</AddCartText>
-                        </AddCartBtn>
+                  <NavBar>
+                    <AddCartBtn onPress={() => setModalVisible(true)}>
+                      <AddCartText>Add to Cart</AddCartText>
+                    </AddCartBtn>
 
-                        <AddCartBtn onPress={handleTryOn} disabled={isTryOnProcessing}>
-                          <AddCartText>{isTryOnProcessing ? "Processing..." : "Try-on"}</AddCartText>
-                        </AddCartBtn>
+                    <AddCartBtn onPress={handleTryOn} disabled={isTryOnProcessing}>
+                      <AddCartText>{isTryOnProcessing ? "Processing..." : "Try-on"}</AddCartText>
+                    </AddCartBtn>
 
 
-          </NavBar>
+        </NavBar>
 
       {/* Modal for Add to Cart */}
       <Modal

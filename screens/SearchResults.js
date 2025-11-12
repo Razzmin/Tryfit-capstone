@@ -32,13 +32,34 @@ useEffect(() => {
 
       const lowerQuery = query.toLowerCase().trim();
 
-      // ⚠️ If query is 3 characters or less
-      if (lowerQuery.length > 0 && lowerQuery.length <= 3) {
-        // Show random products
-        const shuffled = [...allProducts].sort(() => Math.random() - 0.5);
-        const randomProducts = shuffled.slice(0, 10);
-        setResults(randomProducts);
-        setMessage(`No exact results for "${query}". Search results.`);
+
+      if (lowerQuery.length > 0 && lowerQuery.length <= 3) { 
+        const subsequenceMatch = (text, pattern) => {
+          let i = 0, j = 0;
+          while (i < text.length && j < pattern.length) {
+            if (text[i] === pattern[j]) j++;
+            i++;
+          }
+          return j === pattern.length; // true if letters appear in order
+        };
+
+        const filteredProducts = allProducts.filter((p) => {
+          const name = p.productName?.toLowerCase() || '';
+          const category = p.categorySub?.toLowerCase() || '';
+          return subsequenceMatch(name, lowerQuery) || subsequenceMatch(category, lowerQuery);
+        });
+
+        if (filteredProducts.length > 0) {
+          setResults(filteredProducts);
+          setMessage(`No exact results for "${query}". Showing closest matches instead.`);
+        } else { 
+
+          const shuffled = [...allProducts].sort(() => Math.random() - 0.5);
+          const randomProducts = shuffled.slice(0, 10);
+          setResults(randomProducts);
+          setMessage(`No exact results for "${query}". Showing similar products instead.`);
+        }
+
         setDisplayTerm(query);
         return;
       }
@@ -69,24 +90,33 @@ useEffect(() => {
         setMessage('');
         setDisplayTerm(query);
       } else {
-        const similarKeyword = getClosestMatch(lowerQuery, KNOWN_LABELS);
-        const fuzzyMatches = allProducts.filter(
-          (p) =>
-            p.productName?.toLowerCase().includes(similarKeyword) ||
-            p.categorySub?.toLowerCase().includes(similarKeyword)
-        );
+          const { closest, distance } = getClosestMatch(lowerQuery, KNOWN_LABELS);
+          const similarityThreshold = 3; // smaller = stricter
 
-        if (fuzzyMatches.length > 0) {
-          setResults(fuzzyMatches);
-          setMessage(
-            `No exact results for "${query}". Showing similar results for "${similarKeyword}".`
-          );
-        } else {
-          setResults([]);
-          setMessage(`No results found for "${query}".`);
-          setDisplayTerm(query);
+          if (distance <= similarityThreshold) {
+            const fuzzyMatches = allProducts.filter(
+              (p) =>
+                p.productName?.toLowerCase().includes(closest) ||
+                p.categorySub?.toLowerCase().includes(closest)
+            );
+
+            if (fuzzyMatches.length > 0) {
+              setResults(fuzzyMatches);
+              setMessage(
+                `No exact results for "${query}". Showing similar results for "${closest}".`
+              );
+            } else {
+              setResults([]);
+              setMessage(`No results found for "${query}".`);
+              setDisplayTerm(query);
+            }
+          } else {
+            // If query is too different → no results
+            setResults([]);
+            setMessage(`No results found for "${query}".`);
+            setDisplayTerm(query);
+          }
         }
-      }
     } catch (error) {
       console.error('Error fetching products:', error);
     }
@@ -96,21 +126,19 @@ useEffect(() => {
 }, [query]);
 
 
+const getClosestMatch = (input, options) => {
+  let closest = options[0];
+  let minDistance = levenshtein(input, closest);
 
-
-  const getClosestMatch = (input, options) => {
-    let closest = options[0];
-    let minDistance = levenshtein(input, closest);
-
-    for (let i = 1; i < options.length; i++) {
-      const dist = levenshtein(input, options[i]);
-      if (dist < minDistance) {
-        closest = options[i];
-        minDistance = dist;
-      }
+  for (let i = 1; i < options.length; i++) {
+    const dist = levenshtein(input, options[i]);
+    if (dist < minDistance) {
+      closest = options[i];
+      minDistance = dist;
     }
-    return closest;
-  };
+  }
+  return { closest, distance: minDistance };
+};
 
   const levenshtein = (a, b) => {
     const matrix = Array.from({ length: a.length + 1 }, () =>

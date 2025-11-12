@@ -39,119 +39,151 @@ const ChatSupportScreen = () => {
   const chatCollection = collection(db, 'chatMessages');
 
   const convoDeletedRef = useRef(false);
+  const isSending = useRef(false); 
 
-  // Fetch messages using custom userId
-  useEffect(() => {
-    let unsubscribe;
+useEffect(() => {
+  let unsubscribe;
 
-    const fetchMessages = async () => {
-      const deletedFlag = await AsyncStorage.getItem(CONVO_DELETED_KEY);
-      convoDeletedRef.current = deletedFlag === 'true';
+  const fetchMessages = async () => {
+    const deletedFlag = await AsyncStorage.getItem(CONVO_DELETED_KEY);
+    convoDeletedRef.current = deletedFlag === 'true';
 
-      if (convoDeletedRef.current) {
-        setMessages([]);
-        setStarted(false);
-        return;
-      }
-
-      const firebaseUser = auth.currentUser;
-      if (!firebaseUser) return;
-
-      try {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (!userDocSnap.exists()) {
-          console.error('No user found in users collection!');
-          return;
-        }
-
-        const customUserId = userDocSnap.data().userId;
-
-        const q = query(
-          chatCollection,
-          where('userId', '==', customUserId),
-          orderBy('timestamp', 'asc')
-        );
-
-        unsubscribe = onSnapshot(q, async (querySnapshot) => {
-          const deletedNow = await AsyncStorage.getItem(CONVO_DELETED_KEY);
-          convoDeletedRef.current = deletedNow === 'true';
-
-          if (convoDeletedRef.current) {
-            setMessages([]);
-            setStarted(false);
-            if (unsubscribe) unsubscribe();
-            return;
-          }
-
-          const loadedMessages = [];
-          querySnapshot.forEach(doc => {
-            loadedMessages.push({ id: doc.id, ...doc.data() });
-          });
-          setMessages(loadedMessages);
-          setStarted(loadedMessages.length > 0);
-        });
-
-      } catch (error) {
-        console.error('Error fetching messages:', error);
-      }
-    };
-
-    fetchMessages();
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
-
-  // Send message using custom userId
-  const sendMessage = async () => {
-    if (input.trim() === '') return;
-
-    const user = auth.currentUser;
-    if (!user) {
-      console.error('User not logged in');
+    if (convoDeletedRef.current) {
+      setMessages([]);
+      setStarted(false);
       return;
     }
 
-    const userId = user.uid;
-    const username = user.displayName || user.email || 'Anonymous';
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return;
 
     try {
-      // Generate a unique message ID
-      const messageId = `MS-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      const timestamp = Date.now();
+      // ✅ Step 1: Get the user's document
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
 
-      // Save message to Firestore
-      const docRef = await addDoc(chatCollection, {
-        messageId,        // ✅ unique messageId
-        text: input,
+      if (!userDocSnap.exists()) {
+        console.error('No user found in users collection!');
+        return;
+      }
+
+      const customUserId = userDocSnap.data().userId; // "U0078"
+
+      // ✅ Step 2: Now that we have the correct custom ID, listen to chat messages
+      const q = query(
+        chatCollection,
+        where('userId', '==', customUserId), // This will now work properly
+        orderBy('timestamp', 'asc')
+      );
+
+      unsubscribe = onSnapshot(q, async (querySnapshot) => {
+        const deletedNow = await AsyncStorage.getItem(CONVO_DELETED_KEY);
+        convoDeletedRef.current = deletedNow === 'true';
+
+        if (convoDeletedRef.current) {
+          setMessages([]);
+          setStarted(false);
+          if (unsubscribe) unsubscribe();
+          return;
+        }
+
+        const loadedMessages = querySnapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            messageId: data.messageId,
+            text: data.text,
+            sender: data.sender,
+            userId: data.userId,          // Should now be "U0078"
+            username: data.username,      // Should now be from users collection
+            timestamp: data.timestamp?.toDate?.() || new Date(),
+          };
+        });
+
+        setMessages(loadedMessages);
+        setStarted(loadedMessages.length > 0);
+      });
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  };
+
+  fetchMessages();
+
+  return () => {
+    if (unsubscribe) unsubscribe();
+  };
+}, []);
+
+  // Send message using custom userId
+  const sendMessage = async () => {
+      console.log('Send button pressed'); // 👈 Add this
+      if (input.trim() === '') {
+        console.log('Input empty, returning');
+        return;
+      }
+
+      const user = auth.currentUser;
+      console.log('Current user:', user?.uid || 'no user');
+
+      if (!user) {
+        console.error('User not logged in');
+        return;
+      }
+
+      isSending.current = true; // 🚫 disable multiple taps
+      console.log('Send button pressed');
+
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        console.error('No user document found!');
+        return;
+      }
+  
+      const userData = userDocSnap.data();
+      const customUserId = userData.userId;     
+      const username = userData.username;    
+      const messageId = `MS-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+   
+
+       await addDoc(chatCollection, {
+        messageId,
+        text: input.trim(),
         sender: 'user',
-        userId,
-        username,
-        timestamp,
+        userId: customUserId,
+        username: username,
+        timestamp: serverTimestamp(),
       });
 
-      // Update local state immediately
+
+      
       setMessages(prev => [
-        ...prev,
-        {
-          id: docRef.id,
-          messageId,      // ✅ store locally too
-          text: input,
-          sender: 'user',
-          userId,
-          username,
-          timestamp,
-        },
-      ]);
+      ...prev,
+      {
+        id: Date.now().toString(), 
+        messageId,
+        text: input.trim(),
+        sender: 'user',
+        userId: customUserId,
+        username: username,
+        timestamp: new Date(), 
+      },
+    ]);
 
       setStarted(true);
       setInput('');
     } catch (error) {
       console.error('Error sending message:', error);
     }
+     finally {
+        // ✅ Re-enable sending (after short delay to debounce)
+        setTimeout(() => {
+          isSending.current = false;
+        }, 1000);
+      }
   };
 
 
@@ -256,9 +288,14 @@ const ChatSupportScreen = () => {
                   placeholder="Type a message..."
                   style={styles.textInput}
                 />
-                <TouchableOpacity style={styles.sendBtn} onPress={sendMessage}>
+                <TouchableOpacity
+                  style={[styles.sendBtn, isSending.current && { opacity: 0.5 }]}
+                  onPress={sendMessage}
+                  disabled={isSending.current}
+                >
                   <Ionicons name="send" size={20} color="#fff" />
                 </TouchableOpacity>
+
               </View>
                </KeyboardAvoidingView>
             )}

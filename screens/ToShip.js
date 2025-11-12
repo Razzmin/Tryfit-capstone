@@ -212,7 +212,7 @@ Alert.alert(
               item.image || item.imageUrl|| 'https://placehold.co/100x100';
 
             return (
-              <View key={order.id} style={styles.orderCard}>
+              <View key={order.orderId} style={styles.orderCard}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.orderStatus}>{order.status}</Text>
                   <Text style={styles.orderDate}>
@@ -251,8 +251,8 @@ Alert.alert(
                 <View style={styles.divider} />
 
                 <View style={styles.orderIdRow}>
-                  <Text style={styles.orderIdText}>Order ID: {order.id}</Text>
-                  <TouchableOpacity onPress={() => handleCopy(order.id)}>
+                  <Text style={styles.orderIdText}>Order ID: {order.orderId}</Text>
+                  <TouchableOpacity onPress={() => handleCopy(order.orderId)}>
                     <Feather name="copy" size={18} color="#9747FF" />
                   </TouchableOpacity>
                 </View>
@@ -276,7 +276,7 @@ Alert.alert(
 
               <ScrollView style={{ maxHeight: 350 }}>
                 <Text style={styles.modalText}>
-                  <Text style={{ fontWeight: 'bold' }}>Order ID:</Text> {shippingDetails?.id}
+                  <Text style={{ fontWeight: 'bold' }}>Order ID:</Text> {shippingDetails?.orderId}
                 </Text>
 
                 <Text style={styles.modalText}>
@@ -292,7 +292,8 @@ Alert.alert(
                     <Text>Product: {item.productName || 'N/A'}</Text>
                     <Text>Quantity: {item.quantity || 1}</Text>
                     <Text>Size: {item.size || 'N/A'}</Text>
-                    <Text>Expected Delivery: {item.expectedDelivery || 'TBD'}</Text>
+                    <Text style={styles.modalText}>
+                    <Text style={{ fontWeight: 'bold' }}>Delivery:</Text>{' '} {shippingDetails?.delivery || 'N/A'} </Text>
                     <Text>Status: Waiting to be shipped...</Text>
                     <View style={styles.itemDivider} />
                   </View>

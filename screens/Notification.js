@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, BackHandler  } from 'react-native';
 import { Feather, Ionicons, AntDesign, MaterialIcons  } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useNavigation, useFocusEffect  } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAuth } from "firebase/auth";
 import{Header } from '../components/styles';
@@ -12,6 +12,22 @@ export default function Notification() {
   const [notifications, setNotifications] = useState([]);
   const auth = getAuth();
   const db = getFirestore();
+
+  useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          navigation.goBack();
+          return true;
+        };
+  
+        // Add listener and save subscription
+        const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+  
+        // Cleanup using subscription.remove()
+        return () => subscription.remove();
+      }, [navigation])
+    );
+    
 useEffect(() => {
   const user = auth.currentUser;
   if (!user) return;

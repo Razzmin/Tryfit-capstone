@@ -68,7 +68,6 @@ export default function Orders() {
     fetchCustomUserId();
   }, [user]);
 
-  // 🔑 Step 2: Listen to orders filtered by customUserId + attach product delivery time
   useEffect(() => {
     if (!customUserId) return;
 
@@ -144,6 +143,7 @@ export default function Orders() {
               cancelledID: `CN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
               address: order.address || "",
               createdAt: order.createdAt || new Date(),
+              delivery: order.delivery || "",
               deliveryFee: order.deliveryFee || 0,
               items: order.items.map((item) => ({
                 productId: item.productId || "",
@@ -205,7 +205,7 @@ export default function Orders() {
             });
 
             // ✅ Success
-            Alert.alert("Success", "Your order has been cancelled successfully.");
+            Alert.alert("Cancelled", "Your order has been cancelled.");
           } catch (err) {
             console.error("Error cancelling order:", err);
             Alert.alert("Error", "Failed to cancel your order. Please try again.");
@@ -354,8 +354,8 @@ export default function Orders() {
                 )}
 
                   <View style={styles.orderIdRow}>
-                    <Text style={styles.orderIdText}>Order ID: {order.id}</Text>
-                    <TouchableOpacity onPress={() => handleCopy(order.id)}
+                    <Text style={styles.orderIdText}>Order ID: {order.orderId}</Text>
+                    <TouchableOpacity onPress={() => handleCopy(order.orderId)}
                     style={{ marginRight: 5}}>
                       <Feather name="copy" size={18} color="#9747FF" />
                     </TouchableOpacity>

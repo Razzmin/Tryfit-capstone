@@ -1,6 +1,6 @@
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect  } from '@react-navigation/native';
 import { FontAwesome, Feather } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Picker } from '@react-native-picker/picker';
 import {
   View,
@@ -14,7 +14,7 @@ import {
   Alert,
   TouchableWithoutFeedback,
   Keyboard,
-  ActivityIndicator,
+  BackHandler
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import{Header } from '../components/styles';
@@ -67,6 +67,22 @@ export default function EditProfile() {
 
      return true;
     };
+
+  useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          navigation.goBack();
+          return true;
+        };
+
+        // Add listener and save subscription
+        const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+        // Cleanup using subscription.remove()
+        return () => subscription.remove();
+      }, [navigation])
+    );
+  
 
   useEffect(() => {
     const fetchUserData = async () => {

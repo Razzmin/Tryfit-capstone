@@ -279,88 +279,87 @@ useEffect(() => {
 
     const deliveryFee = 58;
 
-    // 🔹 Group checkout items by productId + size
-    const groupedItemsMap = new Map();
-    checkoutItems.forEach((item) => {
-      const key = `${item.productId}_${item.size}`;
-      if (groupedItemsMap.has(key)) {
-        const existing = groupedItemsMap.get(key);
-        existing.quantity += item.quantity;
-      } else {
-        groupedItemsMap.set(key, { ...item });
-      }
-    });
+   // 🔹 Group checkout items by productId + size
+const groupedItemsMap = new Map();
+checkoutItems.forEach((item) => {
+  const key = `${item.productId}_${item.size}`;
+  if (groupedItemsMap.has(key)) {
+    const existing = groupedItemsMap.get(key);
+    existing.quantity += item.quantity; // combine same product + size
+  } else {
+    groupedItemsMap.set(key, { ...item });
+  }
+});
 
-    // 🔹 Loop through grouped items to create individual orders
-    for (const groupedItem of groupedItemsMap.values()) {
-      const subtotal = (groupedItem.price || 0) * (groupedItem.quantity || 1);
-      const total = subtotal + deliveryFee;
-      const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+// 🔹 Create separate order per unique productId + size
+for (const groupedItem of groupedItemsMap.values()) {
+  const subtotal = (groupedItem.price || 0) * (groupedItem.quantity || 1);
+  const total = subtotal + deliveryFee;
+  const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      const orderData = {
-        orderId,
-        userId: customUserId,
-        name: shippingLocation.name || "",
-        address: `${shippingLocation.house || ""}, ${shippingLocation.fullAddress || ""}`,
-        productID: groupedItem.productId || null,
-        deliveryFee,
-        total,
-        delivery: groupedItem.delivery,
-        createdAt: serverTimestamp(),
-        status: "Pending",
-        items: [
-          {
-            imageUrl: groupedItem.imageUrl || "",
-            productId: groupedItem.productId || "",
-            productName: groupedItem.productName || "",
-            quantity: groupedItem.quantity || 1,
-            price: groupedItem.price || 0,
-            size: groupedItem.size || "-",
-          },
-        ],
-      };
+  const orderData = {
+    orderId,
+    userId: customUserId,
+    name: shippingLocation.name || "",
+    address: `${shippingLocation.house || ""}, ${shippingLocation.fullAddress || ""}`,
+    productID: groupedItem.productID || null,
+    deliveryFee,
+    total,
+    delivery: groupedItem.delivery,
+    createdAt: serverTimestamp(),
+    status: "Pending",
+    items: [
+      {
+        imageUrl: groupedItem.imageUrl || "",
+        productId: groupedItem.productId || "",
+        productName: groupedItem.productName || "",
+        quantity: groupedItem.quantity || 1,
+        price: groupedItem.price || 0,
+        size: groupedItem.size || "-",
+      },
+    ],
+  };
 
-      if (!orderData.productID) {
-        console.warn("⚠️ Skipping item with undefined productID:", groupedItem);
-        continue;
-      }
+  if (!orderData.productID) {
+    console.warn("⚠️ Skipping item with undefined productID:", groupedItem);
+    continue;
+  }
 
-      // 🔹 Save order to Firestore
-      await addDoc(collection(db, "orders"), orderData);
+  // 🔹 Save each order separately
+  await addDoc(collection(db, "orders"), orderData);
 
-      // 🔹 Send notification
-      await addDoc(collection(db, "notifications"), {
-        notifID: `NCK-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        userId: customUserId,
-        title: "Order Placed",
-        message: `Your order ${orderId} with total ₱${total.toLocaleString()} has been placed.`,
-        orderId,
-        timestamp: serverTimestamp(),
-        read: false,
-      });
+  // 🔹 Send notification per order
+  await addDoc(collection(db, "notifications"), {
+    notifID: `NCK-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    userId: customUserId,
+    title: "Order Placed",
+    message: `Your order ${orderId} with total ₱${total.toLocaleString()} has been placed.`,
+    orderId,
+    timestamp: serverTimestamp(),
+    read: false,
+  });
 
-      // 🔹 Update product stock
-      const productRef = doc(db, "products", groupedItem.productId);
-      const productSnap = await getDoc(productRef);
+  // 🔹 Update stock for that specific product + size
+  const productRef = doc(db, "products", groupedItem.productId);
+  const productSnap = await getDoc(productRef);
+  if (productSnap.exists()) {
+    const productData = productSnap.data();
+    const currentStock = productData.stock || {};
+    const currentQty = currentStock[groupedItem.size] || 0;
+    const newQty = Math.max(currentQty - groupedItem.quantity, 0);
+    await setDoc(
+      productRef,
+      {
+        stock: {
+          ...currentStock,
+          [groupedItem.size]: newQty,
+        },
+      },
+      { merge: true }
+    );
+  }
+}
 
-      if (productSnap.exists()) {
-        const productData = productSnap.data();
-        const currentStock = productData.stock || {};
-        const currentQty = currentStock[groupedItem.size] || 0;
-        const newQty = Math.max(currentQty - groupedItem.quantity, 0);
-
-        await setDoc(
-          productRef,
-          {
-            stock: {
-              ...currentStock,
-              [groupedItem.size]: newQty,
-            },
-          },
-          { merge: true }
-        );
-      }
-    }
 
     // 🔹 Delete ordered items from user's cart
     const cartRef = collection(db, "cartItems");
@@ -377,29 +376,29 @@ useEffect(() => {
 
     await Promise.all(deletePromises);
 
-                        setOrderPlaced(true);
-                      } catch (err) {
-                        console.error("Error saving order:", err);
-                      } finally {
-                        setIsSubmitting(false);
-                      }
-                    }}
-                  >
-                    <Text style={{ color: "#fff", fontSize: 15 }}>Yes, proceed</Text>
-                  </TouchableOpacity>
+              setOrderPlaced(true);
+            } catch (err) {
+              console.error("Error saving order:", err);
+            } finally {
+              setIsSubmitting(false);
+            }
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 15 }}>Yes, proceed</Text>
+        </TouchableOpacity>
 
-                    
-                    <TouchableOpacity
-                      style={styles.popupButtonNo}
-                      onPress={() => setShowPopup(false)}
-                    >
-                      <Text style={{ color: '#fff' , fontSize: 15, }}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-              </View>
-              </View>
-               )}
-            </Modal>
+          
+          <TouchableOpacity
+            style={styles.popupButtonNo}
+            onPress={() => setShowPopup(false)}
+          >
+            <Text style={{ color: '#fff' , fontSize: 15, }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+    </View>
+    </View>
+      )}
+  </Modal>
  </View>
  </SafeAreaView>
  </ProductContainer>

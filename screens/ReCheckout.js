@@ -45,6 +45,8 @@ export default function ReCheckout({ route, navigation }) {
   const [shippingLocation, setShippingLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [total, setTotal] = useState(0);
+  const [orderDetails, setOrderDetails] = useState(null);
+
 
 
   const auth = getAuth();
@@ -72,6 +74,7 @@ export default function ReCheckout({ route, navigation }) {
         }
 
         if (orderData) {
+          setOrderDetails(orderData); // ✅ store the full document
           setCheckoutItems(orderData.items || []);
           setTotal(orderData.total || 0);
           setShippingLocation(orderData.shippingLocation || null);
@@ -144,22 +147,22 @@ export default function ReCheckout({ route, navigation }) {
 
   return (
   <ProductContainer style={{ flex: 1}}>
-                      <Header style = {{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingHorizontal: 16,
-                        paddingBottom: 10,
-                        backgroundColor: '#fff',
-                      }}>
+        <Header style = {{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 16,
+          paddingBottom: 10,
+          backgroundColor: '#fff',
+        }}>
 
-                        <TouchableOpacity onPress={() => navigation.goBack()}
-                  style={{position: 'absolute', left: 16, top: -4}}>
-                    <Feather name="arrow-left" size={27} color="black"  />
-                  </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.goBack()}
+          style={{position: 'absolute', left: 16, top: -4}}>
+            <Feather name="arrow-left" size={27} color="black"  />
+          </TouchableOpacity>
 
-                         <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>BUY AGAIN</Text>
-                      </Header>
+            <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>BUY AGAIN</Text>
+        </Header>
 
        <SafeAreaView style = {styles.container}> 
 
@@ -181,10 +184,10 @@ export default function ReCheckout({ route, navigation }) {
                 />
 
   
-      <View style={styles.itemInfo}>
-     <View style={styles.itemTopRow}>
-      <Text style={styles.itemName}>{item.productName}</Text>
-      <TouchableOpacity onPress={() => handleDelete(item.productId)}>
+          <View style={styles.itemInfo}>
+        <View style={styles.itemTopRow}>
+          <Text style={styles.itemName}>{item.productName}</Text>
+          <TouchableOpacity onPress={() => handleDelete(item.productId)}>
         <Text style={styles.deleteButton}>✕</Text>
         </TouchableOpacity>
         </View>
@@ -319,6 +322,8 @@ export default function ReCheckout({ route, navigation }) {
                             address: shippingLocation
                               ? `${shippingLocation.house || "No House"}, ${shippingLocation.fullAddress || "No Address"}`
                               : "No Address",
+                              productID: orderDetails?.productID || null,   
+                              delivery: orderDetails?.delivery || "Standard Shipping", 
                             deliveryFee: 58,
                             total,
                             createdAt: serverTimestamp(),
