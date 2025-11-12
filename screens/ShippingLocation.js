@@ -9,7 +9,8 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   TouchableWithoutFeedback,
-  Keyboard
+  Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import{Header, StyledFormArea } from '../components/styles';
 import { Picker } from '@react-native-picker/picker';
@@ -53,6 +54,7 @@ export default function ShippingLocation() {
   const [isDefault, setIsDefault] = useState(true);
   const [focusedField, setFocusedField] = useState('');
   const [errors, setErrors] = useState({});
+  const [isSaving, setSaving] = useState(false);
 
   useEffect(() => {
   const fetchShippingLocation = async () => {
@@ -161,9 +163,12 @@ export default function ShippingLocation() {
     }
   
   try {
+    setSaving(true);
+
     const user = auth.currentUser;
     if (!user) {
       Alert.alert('Not logged in', 'Please login to save your shipping location.');
+      setSaving(false);
       return;
     }
 
@@ -174,6 +179,7 @@ export default function ShippingLocation() {
 
     if (!userDocSnap.exists()) {
       Alert.alert("Error", "User profile not found.");
+      setSaving(false);
       return;
     }
     const customUserId = userDocSnap.data().userId;
@@ -206,6 +212,8 @@ export default function ShippingLocation() {
   } catch (error) {
     console.error('Error saving shipping location:', error);
     Alert.alert('Error', 'Failed to save shipping location.');
+  } finally {
+    setSaving(false);
   }
 };
 
@@ -320,12 +328,24 @@ export default function ShippingLocation() {
         placeholder="e.g., 2300"
         onFocus={() => setFocusedField('postal')}
         onBlur={() => setFocusedField('')}
+        maxLength={4}
         />
       </StyledFormArea>
 
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveText}>Save</Text>
+      <TouchableOpacity 
+      style={styles.saveButton} 
+      onPress={handleSave}
+      disabled={isSaving}
+      >
+      {isSaving ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center'}}>
+          <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8}}/>
+            <Text style={styles.saveText}>Saving...</Text>
+        </View>
+      ) : (
+      <Text style={styles.saveText}>Save</Text>
+      )}
       </TouchableOpacity>
     </View>
     </ScrollView>

@@ -9,6 +9,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
 import{Header } from '../components/styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +30,7 @@ export default function Password() {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isSaving, setSaving] = useState(false);
 
   const handleSetPassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -55,6 +57,9 @@ export default function Password() {
     const credential = EmailAuthProvider.credential(user.email, currentPassword);
 
     try {
+      setSaving(true);
+
+
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
 
@@ -71,6 +76,8 @@ export default function Password() {
       } else {
         Alert.alert('Error', 'Failed to change password. Try again.');
       }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -151,8 +158,19 @@ export default function Password() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.setButton} onPress={handleSetPassword}>
+      <TouchableOpacity 
+      style={styles.setButton}
+       onPress={handleSetPassword}
+       disabled={isSaving}
+       >
+        {isSaving ? (
+                     <View style={{ flexDirection: 'row', alignItems: 'center'}}>
+                       <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8}}/>
+                           <Text style={styles.setButtonText}>Setting...</Text>
+                                 </View>
+                               ) : (
         <Text style={styles.setButtonText}>SET</Text>
+        )}
       </TouchableOpacity>
     </SafeAreaView>
     </TouchableWithoutFeedback>
@@ -209,12 +227,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     marginTop: 30,
-    alignItems: 'center',
+    alignSelf: 'center',
+    width: '90%',
+    justifyContent: 'center',
   },
   setButtonText: {
     color: '#fff',
     fontFamily:"KronaOne",
     fontSize: 15,
     letterSpacing: 2,
+    alignSelf: 'center',
   },
 });

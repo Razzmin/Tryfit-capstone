@@ -13,7 +13,8 @@ import {
   Platform,
   Alert,
   TouchableWithoutFeedback,
-  Keyboard
+  Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import{Header } from '../components/styles';
@@ -29,6 +30,8 @@ export default function EditProfile() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [focusedField, setFocusedField] = useState('');
+  const [isSaving, setSaving] = useState(false);
+
 
   const validateInputs = () => {
     const cleanedPhone = phone.replace(/\s/g, '');
@@ -95,6 +98,8 @@ export default function EditProfile() {
 
   const currentUser = auth.currentUser;
   if (currentUser) {
+
+    setSaving(true);
     try {
       const userRef = doc(db, 'users', currentUser.uid); 
       
@@ -117,8 +122,10 @@ export default function EditProfile() {
     } catch (error) {
       console.log('Error updating profile:', error);
       Alert.alert('Error', 'Failed to update profile');
+      } finally {
+      setSaving(false);
     }
-  }
+    }
 };
 
   return (
@@ -250,8 +257,19 @@ export default function EditProfile() {
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <TouchableOpacity 
+        style={styles.saveButton} 
+        onPress={handleSave}
+        disabled={isSaving}
+        >
+        {isSaving ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center'}}>
+                <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8}}/>
+                    <Text style={styles.saveButtonText}>Saving...</Text>
+                          </View>
+                        ) : (
           <Text style={styles.saveButtonText}>Save</Text>
+          )}
         </TouchableOpacity>
       </SafeAreaView>
       </ScrollView>
