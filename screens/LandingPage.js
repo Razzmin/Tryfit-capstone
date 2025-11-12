@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useContext, useMemo } from 'react';
-import {FontAwesome, EvilIcons, Ionicons }  from '@expo/vector-icons';
+import React, { useEffect, useState, useContext, useMemo, useRef } from 'react';
+import {FontAwesome, EvilIcons, Ionicons, Feather }  from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { collection, getDocs, getDoc, doc, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -14,11 +14,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
+  TouchableWithoutFeedback,
 } from 'react-native'; 
 
 import { CartContext } from '../content/shoppingcartcontent';
 
-import Fuse from 'fuse.js';
+import Fuse from 'fuse.js';  // <-- Import Fuse for fuzzy search
+
 const colors = {
   bg: "#382a47",
   purple: "#9747FF",
@@ -29,27 +32,72 @@ const colors = {
 
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/130x180.png?text=No+Image';
 
-const SEARCH_SUGGESTIONS = ['T-shirts', 'Longsleeves', 'Pants', 'Shorts'];
+const SEARCH_SUGGESTIONS = ['T-Shirts', 'Longsleeves', 'Pants', 'Shorts'];
 
 export default function LandingPage() {
   const [products, setProducts] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [filteredSuggestions, setFilteredSuggestions] = useState([]);
   const [newArrivals, setNewArrivals] = useState([]);
-  const [activeTab, setActiveTab] = useState('Home');
+  const [activeTab, setActiveTab] = useState(global.activeTab || 'Home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigation = useNavigation();
   const { cartItems } = useContext(CartContext);
-  const [searchSuggestions, setSearchSuggestions] = useState(SEARCH_SUGGESTIONS);
+  const isFocused = useIsFocused();
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isFocused) {
+      global.activeTab = 'Home';
+      setActiveTab('Home');
+    }
+  }, [isFocused]);
 
 
-  
-  const fuse = useMemo(() => new Fuse(searchSuggestions, {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (global.activeTab && global.activeTab !== activeTab) {
+        setActiveTab(global.activeTab);
+      }
+    }, 300);
+    return () => clearInterval(interval);
+  }, [activeTab]);
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+    const scaleAnim = useMemo(() => ({
+      Home: new Animated.Value(1),
+      Cart: new Animated.Value(1),
+      Orders: new Animated.Value(1),
+      Profile: new Animated.Value(1),
+    }), []);
+
+      const handleTabPress = (tab, navigateTo) => {
+        global.activeTab= tab;
+        setActiveTab(tab);
+
+        Animated.sequence([
+          Animated.timing(scaleAnim[tab], {toValue: 1.2, duration: 150, useNativeDriver: true}),
+          Animated.timing(scaleAnim[tab], {toValue: 1, duration: 150, useNativeDriver: true}),
+        ]).start();
+
+        if(navigateTo) navigation.navigate(navigateTo);
+      };
+
+  // Memoize Fuse instance to avoid recreation on each render
+  const fuse = useMemo(() => new Fuse(SEARCH_SUGGESTIONS, {
     includeScore: true,
     threshold: 0.4,
-  }), [searchSuggestions]);
+  }), []);
 
-useEffect(() => {
+ useEffect(() => {
   const fetchProducts = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, 'products'));
@@ -83,6 +131,7 @@ useEffect(() => {
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
       const firestoreDate = Timestamp.fromDate(oneMonthAgo);
 
+      // Get recent activity logs from the past month
       const logsSnapshot = await getDocs(
         query(
           collection(db, 'recentActivityLogs'),
@@ -104,6 +153,7 @@ useEffect(() => {
         if (prodSnap.exists()) {
           const data = prodSnap.data();
 
+          // Push all necessary product info
           newProducts.push({
             id,
             productID: data.productID,
@@ -129,33 +179,9 @@ useEffect(() => {
     }
   };
 
-  // ✅ Moved outside, now separate function
-  const fetchProductNames = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, 'products'));
-      const names = [];
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.productName) names.push(data.productName);
-      });
-
-      const mergedSuggestions = Array.from(
-        new Set([...SEARCH_SUGGESTIONS, ...names])
-      );
-
-      setSearchSuggestions(mergedSuggestions);
-    } catch (error) {
-      console.error('Error fetching product names:', error);
-    }
-  };
-
-  // ✅ Call all functions in order
   fetchProducts();
   fetchNewArrivals();
-  fetchProductNames();
 }, []);
-
 
   const handleSearchSubmit = () => {
     if (searchText.trim().length > 0) {
@@ -192,7 +218,6 @@ useEffect(() => {
 
   return (
     <LinearGradient colors={['hsl(266, 100%, 79%)', 'hsl(0, 0%, 100%)']} style={{ flex: 1 }}>
-      
       <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
           <View style={styles.header}>
@@ -206,19 +231,19 @@ useEffect(() => {
               <View style={{ flex: 1, position: 'relative'}}>
                <EvilIcons
                name="search"
-                size={28} 
+                size={29} 
                 color="black" 
                   style= {{
                     position: 'absolute',
-                    left: 10,
-                    top: '45%',
+                    left: 5,
+                    top: '40%',
                     transform: [{ translateY: -10}],
                     zIndex: 5,
                   }}
                 />
                 <TextInput
                   placeholder="Search..."
-                  style={[styles.searchBar, {paddingLeft: 40}]}
+                  style={[styles.searchBar, {paddingLeft: 40, fontSize: 14}]}
                   placeholderTextColor="#888"
                   value={searchText}
                   onChangeText={handleSearchChange}
@@ -355,34 +380,28 @@ useEffect(() => {
 
         {/* Footer */}
         <View style={styles.footerNav}>
-          <TouchableOpacity onPress={() => setActiveTab('Home')}>
-            <FontAwesome name="home" size={26} color={activeTab === 'Home' ? '#9747FF' : '#999'} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => {
-            setActiveTab('Cart');
-            navigation.navigate('ShoppingCart');
-          }}>
-            <View style={{ alignItems: 'center' }}>
-              <FontAwesome name="shopping-cart" size={26} color={activeTab === 'Cart' ? '#9747FF' : '#999'} />
-              {cartItems.length > 0 && (
-                <Text style={{ fontSize: 12, color: '#9747FF', fontWeight: 'bold' }}>
-                  Cart ({cartItems.length})
-                </Text>
-              )}
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => {
-            setActiveTab('Orders');
-            navigation.navigate('Orders');
-          }}>
-            <FontAwesome name="dropbox" size={26} color={activeTab === 'Orders' ? '#9747FF' : '#999'} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => {
-            setActiveTab('Profile');
-            navigation.navigate('Profile');
-          }}>
-            <FontAwesome name="user" size={26} color={activeTab === 'Profile' ? '#9747FF' : '#999'} />
-          </TouchableOpacity>
+            {['Home', 'Cart', 'Orders', 'Profile'].map((tab) => {
+              const icons = {Home: 'home', Cart: 'shopping-cart', Orders: 'dropbox', Profile: 'user'};
+              const navigateTo = { Home: null, Cart: 'ShoppingCart', Orders: 'Orders', Profile: 'Profile'}[tab];
+           
+
+          return (
+            <TouchableWithoutFeedback key={tab} onPress={() => handleTabPress(tab, navigateTo)}>
+            <Animated.View style ={{ transform: [{scale: scaleAnim[tab]}], alignItems: 'center'}}>
+            <FontAwesome 
+            name= {icons[tab]}
+            size={26} 
+            color={activeTab === tab ? '#9747FF' : '#999'} 
+            />
+            {tab === 'Cart' && cartItems.length > 0 && (
+              <Text style = {{ fontSize: 12, color:'#9747FF', fontWeight: 'bold'}}>
+                {cartItems.length}
+              </Text>
+            )}
+            </Animated.View>
+            </TouchableWithoutFeedback>
+          );
+           })}
         </View>
       </View>
     </LinearGradient>
@@ -413,7 +432,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 2,
     borderColor: '#ccc',
-    backgroundColor: '#DEDEDE',
+    backgroundColor: '#fff',
     color: '#000',
   },
   sectionTitle: {
@@ -529,7 +548,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: 50,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',
