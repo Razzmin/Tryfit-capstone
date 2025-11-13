@@ -149,13 +149,39 @@ export default function EditBodyMeasurement() {
     setRecommendedBottom(bottom);
   };
 
+  const generateMeasurementID = () => {
+    const now = new Date();
+    const yyyy = now.getFullYear().toString();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase(); // 3 random chars
+    return `MID${yyyy}${mm}${dd}${randomStr}`;
+  };
+
   const handleSave = async () => {
     if (!user) return alert('User not logged in');
 
     setSaving(true);
     try {
-      const docRef = doc(db, 'measurements', user.uid);
-      await setDoc(docRef, {
+      // Step 1: Get the custom userId from users collection
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        alert('User profile not found.');
+        setSaving(false);
+        return;
+      }
+
+      const customUserId = userDocSnap.data().userId; // <-- custom userId
+
+      // Step 2: Check if measurements doc exists
+      const measurementsRef = doc(db, 'measurements', user.uid);
+      const docSnap = await getDoc(measurementsRef);
+
+      // Step 3: Prepare measurement data
+      let measurementData = {
+        userId: customUserId, // <-- save custom userId
         height: parseFloat(formData.height),
         weight: parseFloat(formData.weight),
         waist: parseFloat(formData.waist),
@@ -166,7 +192,20 @@ export default function EditBodyMeasurement() {
         recommendation_top_size: recommendedTop,
         recommendation_bottom_size: recommendedBottom,
         timestamp: new Date(),
-      }, { merge: true });
+      };
+
+      // Step 4: Only generate measurementID if the doc does NOT exist
+      if (!docSnap.exists()) {
+        const now = new Date();
+        const yyyy = now.getFullYear().toString();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase();
+        measurementData.measurementID = `MID${yyyy}${mm}${dd}${randomStr}`;
+      }
+
+      // Step 5: Save / update measurements
+      await setDoc(measurementsRef, measurementData, { merge: true });
 
       setShowSuccessPopup(true);
     } catch (err) {
@@ -176,6 +215,8 @@ export default function EditBodyMeasurement() {
       setSaving(false);
     }
   };
+
+
 
   return (
       <KeyboardAvoidingView

@@ -24,6 +24,7 @@ import {
   query,
   where,
   updateDoc,
+  getDoc,
 } from 'firebase/firestore';
 
 export default function EditProfile() {
@@ -53,55 +54,89 @@ export default function EditProfile() {
     }, [navigation])
   );
 
-
   const handleDeleteAccount = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+  const user = auth.currentUser;
+  if (!user) return;
 
-    try {
-      const db = getFirestore();
+  try {
+    const db = getFirestore();
 
-      // Delete user profile
-      await deleteDoc(doc(db, 'users', user.uid));
-
-      // Anonymize chatMessages and productReviews
-      const collectionsToAnonymize = ['chatMessages', 'productReviews'];
-      for (const collectionName of collectionsToAnonymize) {
-        const q = query(collection(db, collectionName), where('userId', '==', user.uid));
-        const querySnapshot = await getDocs(q);
-        for (const docSnap of querySnapshot.docs) {
-          await updateDoc(docSnap.ref, {
-            userId: null,
-            username: 'Anonymous',
-          });
-        }
-      }
-
-      // Handle orders: delete only "pending" ones, anonymize the rest
-      const ordersRef = collection(db, 'orders');
-      const ordersQuery = query(ordersRef, where('userId', '==', user.uid));
-      const ordersSnapshot = await getDocs(ordersQuery);
-      for (const docSnap of ordersSnapshot.docs) {
-        const data = docSnap.data();
-        if (data.status === 'pending') {
-          await deleteDoc(docSnap.ref); // Delete pending order
-        } else {
-          await updateDoc(docSnap.ref, {
-            userId: null,
-            username: 'Anonymous',
-          });
-        }
-      }
-
-      // Delete Auth user
-      await deleteUser(user);
-
-      setShowModal(false);
-      navigation.replace('Login');
-    } catch (error) {
-      alert('Error deleting account: ' + error.message);
+    // Get user's own document first
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+    if (!userDocSnap.exists()) {
+      throw new Error('User document not found.');
     }
-  };
+    const userData = userDocSnap.data();
+    const userUniqueId = userData.userId || user.uid; // Use the stored userId if available
+
+    // Delete user profile
+    await deleteDoc(userDocRef);
+
+    // Collections to anonymize
+    const collectionsToAnonymize = ['chatMessages', 'productReviews'];
+    for (const collectionName of collectionsToAnonymize) {
+      const q = query(collection(db, collectionName), where('userId', '==', userUniqueId));
+      const querySnapshot = await getDocs(q);
+      for (const docSnap of querySnapshot.docs) {
+        await updateDoc(docSnap.ref, {
+          userId: null,
+          username: 'Anonymous',
+        });
+      }
+    }
+
+    // Collections to delete completely
+    const collectionsToDelete = ['cartItems', 'measurements', 'notifications', 'shippingLocations'];
+    for (const collectionName of collectionsToDelete) {
+      const q = query(collection(db, collectionName), where('userId', '==', userUniqueId));
+      const querySnapshot = await getDocs(q);
+      for (const docSnap of querySnapshot.docs) {
+        await deleteDoc(docSnap.ref);
+      }
+    }
+
+    // Orders: delete pending, anonymize others
+    const ordersRef = collection(db, 'orders');
+    const ordersQuery = query(ordersRef, where('userId', '==', userUniqueId));
+    const ordersSnapshot = await getDocs(ordersQuery);
+    for (const docSnap of ordersSnapshot.docs) {
+      const data = docSnap.data();
+      if (data.status === 'pending') {
+        await deleteDoc(docSnap.ref);
+      } else {
+        await updateDoc(docSnap.ref, {
+          name: 'User not found',
+          address: null,
+          userId: null,
+        });
+      }
+    }
+
+    // Update toReceive and toShip: set name, address, userId to null
+    const toUpdateCollections = ['toReceive', 'toShip'];
+    for (const collectionName of toUpdateCollections) {
+      const q = query(collection(db, collectionName), where('userId', '==', userUniqueId));
+      const querySnapshot = await getDocs(q);
+      for (const docSnap of querySnapshot.docs) {
+        await updateDoc(docSnap.ref, {
+          name: 'User not found',
+          address: null,
+          userId: null,
+        });
+      }
+    }
+
+    // Delete Auth user
+    await deleteUser(user);
+
+    setShowModal(false);
+    navigation.replace('Login');
+  } catch (error) {
+    alert('Error deleting account: ' + error.message);
+  }
+};
+
 
   const handleSignOut = () => {
     Alert.alert(
