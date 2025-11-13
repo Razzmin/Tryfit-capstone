@@ -339,25 +339,41 @@ for (const groupedItem of groupedItemsMap.values()) {
     read: false,
   });
 
-  // 🔹 Update stock for that specific product + size
   const productRef = doc(db, "products", groupedItem.productId);
   const productSnap = await getDoc(productRef);
+
   if (productSnap.exists()) {
     const productData = productSnap.data();
     const currentStock = productData.stock || {};
     const currentQty = currentStock[groupedItem.size] || 0;
+
+    // Subtract ordered quantity from the selected size
     const newQty = Math.max(currentQty - groupedItem.quantity, 0);
+
+    // Update stock object
+    const updatedStock = {
+      ...currentStock,
+      [groupedItem.size]: newQty,
+    };
+
+    // Recalculate total stock (sum of all sizes)
+    const totalStock = Object.values(updatedStock).reduce(
+      (sum, val) => sum + val,
+      0
+    );
+
+    // 🔹 Update Firestore (stock and totalStock only)
     await setDoc(
       productRef,
       {
-        stock: {
-          ...currentStock,
-          [groupedItem.size]: newQty,
-        },
+        stock: updatedStock,
+        totalStock,
       },
       { merge: true }
     );
   }
+
+
 }
 
 

@@ -98,74 +98,89 @@ export default function ToReceive() {
   };
 
   const handleReceiveOrder = (order) => {
-  Alert.alert(
-    'Confirm Receive',
-    'Have you received this order successfully?',
-    [
-      { text: 'No', style: 'cancel' },
-      {
-        text: 'Yes, received',
-        onPress: async () => {
-          try {
-            // Build completed order object
-            const completedOrder = {
-              toshipID: order.toshipID,         
-              toreceiveID: order.toreceiveID,
-              productID: order.productID,
-              completedID: `CP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-              address: order.address,
-              createdAt: order.createdAt,
-              deliveryFee: order.deliveryFee,
-              delivery: order.delivery,
-              items: order.items.map(item => ({
-                imageUrl: item.imageUrl,
-                productId: item.productId,
-                productName: item.productName,
-                quantity: item.quantity,
-                size: item.size,
-                price: item.price,     
-              })),
-              name: order.name,
-              orderId: order.orderId,
-              packedAt: order.packedAt,
-              shippedAt: order.shippedAt,
-              receivedAt: new Date(), 
-              status: 'Completed',
-              total: order.total,
-              userId: order.userId,
-            };
+    Alert.alert(
+      'Confirm Receive',
+      'Have you received this order successfully?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, received',
+          onPress: async () => {
+            try {
+              // Build completed order object
+              const completedOrder = {
+                toshipID: order.toshipID,         
+                toreceiveID: order.toreceiveID,
+                productID: order.productID,
+                completedID: `CP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                address: order.address,
+                createdAt: order.createdAt,
+                deliveryFee: order.deliveryFee,
+                delivery: order.delivery,
+                items: order.items.map(item => ({
+                  imageUrl: item.imageUrl,
+                  productId: item.productId,
+                  productName: item.productName,
+                  quantity: item.quantity,
+                  size: item.size,
+                  price: item.price,     
+                })),
+                name: order.name,
+                orderId: order.orderId,
+                packedAt: order.packedAt,
+                shippedAt: order.shippedAt,
+                receivedAt: new Date(), 
+                status: 'Completed',
+                total: order.total,
+                userId: order.userId,
+              };
 
-            // Save to "completed" collection
-            const completedRef = doc(collection(db, 'completed'));
-            await setDoc(completedRef, completedOrder);
+              // Save to "completed" collection
+              const completedRef = doc(collection(db, 'completed'));
+              await setDoc(completedRef, completedOrder);
 
-            // Delete from "toReceive"
-            await deleteDoc(doc(db, 'toReceive', order.docId));
+               // 🔹 Update sold count for each product in the order
+                for (const item of order.items) {
+                  const productRef = doc(db, "products", item.productId);
+                  const productSnap = await getDoc(productRef);
 
-            // Add notification
-            await addDoc(collection(db, "notifications"), {
-              notifID: `NTC-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-              userId: order.userId,
-              title: "Order Received",
-              message: "Orders is received",
-              orderId: order.orderId,
-              timestamp: new Date(),
-              read: false,
-            });
+                  if (productSnap.exists()) {
+                    const productData = productSnap.data();
+                    const currentSold = productData.sold || 0;
+                    const newSold = currentSold + item.quantity;
 
-            // Optionally switch to Completed tab
-            // setActiveTab('Completed'); // Uncomment if you manage tabs
+                    await setDoc(
+                      productRef,
+                      { sold: newSold },
+                      { merge: true }
+                    );
+                  }
+                }
 
-            Alert.alert('Received', 'Your order has been Received.');
-          } catch (err) {
-            console.error('Error marking order as received:', err);
-            Alert.alert('Error', 'Failed to mark order as received. Try again.');
-          }
+              // Delete from "toReceive"
+              await deleteDoc(doc(db, 'toReceive', order.docId));
+
+              // Add notification
+              await addDoc(collection(db, "notifications"), {
+                notifID: `NTC-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                userId: order.userId,
+                title: "Order Received",
+                message: "Orders is received",
+                orderId: order.orderId,
+                timestamp: new Date(),
+                read: false,
+              });
+
+              Alert.alert('Received', 'Your order has been Received.');
+            } catch (err) {
+              console.error('Error marking order as received:', err);
+              Alert.alert('Error', 'Failed to mark order as received. Try again.');
+            }
+          },
         },
-      },
-    ]
-  );
-};
+      ]
+    );
+  };
 
   const tabRoutes = {
     'Orders': 'Orders',
@@ -178,20 +193,20 @@ export default function ToReceive() {
   return (
     <SafeAreaView style={styles.container}>
       <Header style = {{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            paddingHorizontal: 16,
-                            paddingBottom: 20,
-                            backgroundColor: '#fff',
-                          }}>
-                            <TouchableOpacity onPress={() => navigation.goBack()}
-                            style={{position: 'absolute', left: 10, top: -4}}>
-                              <Feather name="arrow-left" size={27} color="black"  />
-                            </TouchableOpacity>
-              
-                             <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PURCHASES</Text>
-                          </Header>
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+        backgroundColor: '#fff',
+      }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}
+        style={{position: 'absolute', left: 10, top: -4}}>
+          <Feather name="arrow-left" size={27} color="black"  />
+        </TouchableOpacity>
+
+          <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>MY PURCHASES</Text>
+      </Header>
 
       {/* Nav Tabs */}
       <ScrollView

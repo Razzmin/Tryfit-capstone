@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#9747FF",
-    paddingTop: 60,
+    paddingTop: 30,
     paddingBottom: 15,
     paddingHorizontal: 20,
     flexDirection: "row",
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   webContainer: {
     flex: 1,
     backgroundColor: "#000",
-    paddingBottom: 60,
+    paddingBottom: 30,
   },
   webview: {
     flex: 1,
