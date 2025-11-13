@@ -1,14 +1,15 @@
 // BodyMeasurement.js
 import React, { useEffect, useRef, useState } from "react";
-import { View,
-   Text,
-    TouchableOpacity,
-     StyleSheet, 
-     Alert,
-    ImageBackground,
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ImageBackground,
   Dimensions,
-   Modal, 
-   Pressable } from "react-native";
+  Modal,
+} from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SwiperFlatList } from "react-native-swiper-flatlist";
 import LottieView from "lottie-react-native";
@@ -24,7 +25,6 @@ export default function BodyMeasurement() {
   const [isNextProcessing, setIsNextProcessing] = useState(false);
   const [isProceedProcessing, setIsProceedProcessing] = useState(false);
 
-
   useEffect(() => {
     if (!userId || !username || !email) {
       console.warn("⚠️ Missing user data in BodyMeasurement");
@@ -39,7 +39,7 @@ export default function BodyMeasurement() {
   }, [userId, username, email]);
 
   const handleNext = () => {
-    if (isNextProcessing) return; 
+    if (isNextProcessing) return;
     setIsNextProcessing(true);
 
     if (!userId) {
@@ -49,20 +49,18 @@ export default function BodyMeasurement() {
     }
 
     setModalVisible(true);
-    setTimeout(() => setIsNextProcessing(false), 300); 
+    setTimeout(() => setIsNextProcessing(false), 300);
   };
 
-
   const confirmProceed = () => {
-  if (isProceedProcessing) return; 
-  setIsProceedProcessing(true);
+    if (isProceedProcessing) return;
+    setIsProceedProcessing(true);
 
-  setModalVisible(false);
-  navigation.navigate("BodyTracking", { userId, username, email });
+    setModalVisible(false);
+    navigation.navigate("BodyTracking", { userId, username, email });
 
-  setTimeout(() => setIsProceedProcessing(false), 500); 
-};
-
+    setTimeout(() => setIsProceedProcessing(false), 500);
+  };
 
   const cancelProceed = () => {
     setModalVisible(false);
@@ -72,25 +70,26 @@ export default function BodyMeasurement() {
     {
       title: "Step 1 - Input Your Measurements",
       text: "Enter your basic body measurements in Smart Setup. You can also try the optional calibration to get more accurate size results.",
-      animation: require("../assets/animations/using mobile phone.json")
+      animation: require("../assets/animations/using mobile phone.json"),
     },
     {
       title: "Step 2 - Stand Inside the Frame",
       text: "On the next screen, make sure your whole body fits inside the box. Stay in a bright area so the camera can track you clearly.",
-      animation: require("../assets/animations/humanbody01.json")
+      animation: require("../assets/animations/humanbody01.json"),
     },
     {
       title: "Step 3 - View Your Results",
       text: "After scanning, your measurements and best-fit sizes will appear. You can always retake them later if needed.",
-      animation: require("../assets/animations/tape measure.json")
+      animation: require("../assets/animations/tape measure.json"),
     },
-  ]
+  ];
+
   return (
-     <ImageBackground
-        source={require('../assets/bg.png')}
-        style={{ flex: 1}}
-        resizeMode="cover">
-    
+    <ImageBackground
+      source={require("../assets/bg.png")}
+      style={{ flex: 1 }}
+      resizeMode="cover"
+    >
       <View style={styles.overlay}>
         {/* Header */}
         <View style={styles.header}>
@@ -98,44 +97,51 @@ export default function BodyMeasurement() {
         </View>
 
         <SwiperFlatList
-        showPagination paginationStyle={styles.paginationDot}
-        paginationDefaultColor="#ebdfff"
-        paginationActiveColor="#9747FF"
-        index={0}
-        autoplay = {false}
-        paginationStyleItem={{width: 10, height: 10, marginHorizontal: 7}}
-        data={steps}
-        renderItem={({ item, index }) => (
-          <View style={styles.cardContainer}>
-           <View style = {styles.card}>
-            <View style={styles.animationWrapper}>
-          <LottieView
-          source={item.animation}
-          autoPlay loop style={styles.animation}/>
+          showPagination
+          paginationStyle={styles.paginationDot}
+          paginationDefaultColor="#ebdfff"
+          paginationActiveColor="#9747FF"
+          index={0}
+          autoplay={false}
+          paginationStyleItem={{ width: 10, height: 10, marginHorizontal: 7 }}
+          data={steps}
+          renderItem={({ item, index }) => (
+            <View style={styles.cardContainer}>
+              <View style={styles.card}>
+                <View style={styles.animationWrapper}>
+                  <LottieView
+                    source={item.animation}
+                    autoPlay
+                    loop
+                    style={styles.animation}
+                  />
+                  {index === 1 && <View style={styles.scanFrame} />}
+                </View>
 
-          {/**made rectangle border for animation 2 */}
-          {index === 1 && <View style={styles.scanFrame} />}
-          </View>
+                <Text style={styles.stepTitle}>{item.title}</Text>
+                <Text style={styles.infoText}>{item.text}</Text>
 
-          <Text style={styles.stepTitle}>{item.title}</Text>
-          <Text style={styles.infoText}>{item.text}</Text>
-
-          {index === steps.length - 1 && (
-            <TouchableOpacity
-              style={[styles.button, isNextProcessing && { opacity: 0.6 }]}
-              onPress={handleNext}
-              disabled={isNextProcessing}
-            >
-              <Text style={styles.buttonText}>{isNextProcessing ? "Processing..." : "Next"}</Text>
-            </TouchableOpacity>
-
-        )}
-          </View>
-          </View>
-        )}
+                {index === steps.length - 1 && (
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      isNextProcessing && { opacity: 0.6 },
+                    ]}
+                    onPress={handleNext}
+                    disabled={isNextProcessing}
+                  >
+                    <Text style={styles.buttonText}>
+                      {isNextProcessing ? "Processing..." : "Next"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
         />
 
-        <Modal 
+        {/* Modal */}
+        <Modal
           animationType="fade"
           transparent={true}
           visible={modalVisible}
@@ -145,25 +151,33 @@ export default function BodyMeasurement() {
             <View style={styles.modalContainer}>
               <Text style={styles.modalTitle}>Allow Camera Access</Text>
               <Text style={styles.modalText}>
-                This feature needs access to your camera to measure your body proportions accurately.
+                This feature needs access to your camera to measure your body
+                proportions accurately.
               </Text>
 
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: "#9747FF" }, isProceedProcessing && { opacity: 0.6 }]}
-                onPress={confirmProceed}
-                disabled={isProceedProcessing}
-              >
-                <Text style={styles.modalButtonText}>
-                  {isProceedProcessing ? "Processing..." : "Proceed"}
-                </Text>
-              </TouchableOpacity>
+              {/* Updated Buttons */}
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    styles.proceedButton,
+                    isProceedProcessing && { opacity: 0.6 },
+                  ]}
+                  onPress={confirmProceed}
+                  disabled={isProceedProcessing}
+                >
+                  <Text style={styles.proceedText}>
+                    {isProceedProcessing ? "Processing..." : "Proceed"}
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: "#717171" }]}
-                onPress={cancelProceed}
-              >
-                <Text style={[styles.modalButtonText, { color: "#000000" }]}>Cancel</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.cancelButton]}
+                  onPress={cancelProceed}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
@@ -173,23 +187,18 @@ export default function BodyMeasurement() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-  },
   overlay: {
     flex: 1,
     paddingVertical: 80,
   },
   header: {
     alignItems: "center",
-    marginBottom: -90
+    marginBottom: -90,
   },
   title: {
     fontSize: 18,
     color: "#1f1926",
-    fontFamily: "KronaOne"
+    fontFamily: "KronaOne",
   },
   card: {
     backgroundColor: "#FFFFFF",
@@ -200,7 +209,7 @@ const styles = StyleSheet.create({
     width: width * 0.85,
     marginTop: 40,
     shadowColor: "#000",
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     elevation: 2,
   },
@@ -210,18 +219,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 10,
   },
-  animationWrapper: {
-    position: "relative",
-    justifyContent: "center",
-    alignContent: "center"
-  },
   stepTitle: {
     fontSize: 16,
     marginTop: 10,
     marginBottom: 20,
     color: "#1f1926",
     textAlign: "center",
-    fontFamily: "KronaOne"
+    fontFamily: "KronaOne",
   },
   infoText: {
     fontSize: 16,
@@ -267,6 +271,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     opacity: 0.9,
   },
+
+  /** Modal Styles **/
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -274,7 +280,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContainer: {
-    backgroundColor: "#ffff",
+    backgroundColor: "#fff",
     width: "80%",
     padding: 20,
     borderRadius: 12,
@@ -292,21 +298,35 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
   },
+
+  /** Updated Button Layout **/
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
   },
-  modalButton: {
+  actionButton: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
     marginHorizontal: 5,
     alignItems: "center",
+    justifyContent: "center",
   },
-  modalButtonText: {
-    color: "#ffff",
-    fontSize: 16,
-    fontWeight: "600",
+  proceedButton: {
+    backgroundColor: "#9747FF",
+  },
+  cancelButton: {
+    backgroundColor: "#E0E0E0",
+  },
+  proceedText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  cancelText: {
+    color: "#000000",
+    fontSize: 15,
+    fontWeight: "bold",
   },
 });

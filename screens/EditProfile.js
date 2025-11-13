@@ -14,7 +14,8 @@ import {
   Alert,
   TouchableWithoutFeedback,
   Keyboard,
-  BackHandler
+  BackHandler,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import{Header } from '../components/styles';
