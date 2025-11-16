@@ -203,8 +203,8 @@ function onResults(results){
   else if(ratio<0.8){guidance.innerText='Too far — move forward';drawOverlay(false);stillnessCounter=0;lastPose=null;return;}
   drawOverlay(true);guidance.innerText='Perfect distance! Hold still...';
   const movement=poseDifference(lm,lastPose);lastPose=lm;
-  if(movement<0.0015)stillnessCounter++;else stillnessCounter=0;
-  if(stillnessCounter>(TARGET_FPS*3)){stillnessCounter=0;startCountdown(lm);}
+  if(movement<0.003)stillnessCounter++;else stillnessCounter=0;
+  if(stillnessCounter>(TARGET_FPS*1)){stillnessCounter=0;startCountdown(lm);}
 }
 
 function startCountdown(lm) {
@@ -212,7 +212,7 @@ function startCountdown(lm) {
   const countdownEl = document.getElementById('countdown');
   countdownEl.style.display = 'block';
 
-  let count = 5;
+  let count = 3;
   countdownEl.innerText = count;
 
   function animateNumber(num) {

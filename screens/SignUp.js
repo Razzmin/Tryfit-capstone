@@ -62,8 +62,8 @@ const Signup = () => {
 
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [newUserData, setNewUserData] = useState(null);
+  const [focusedInput, setFocusedInput] = useState(null);
+  const [loading, setLoading] = useState(false); // <-- Added loading state
 
   // Reset form when returning to screen
   useEffect(() => {
@@ -72,93 +72,85 @@ const Signup = () => {
     }
   }, [isFocused]);
 
-  const [focusedInput, setFocusedInput] = useState(null);
-
   // ✅ Firebase Signup Function
   const handleSignup = async (values, { setFieldValue }) => {
+    setLoading(true); // <-- Start loading
     try {
-
-      setIsLoading(true); 
-
       values.username = values.username.trim();
       values.email = values.email.trim();
 
-       if (!values.username || values.username.length < 3) {
-            setPopupMessage("Username must be at least 3 characters long");
-            setPopupVisible(true);
-            return;
-        }
-        if (values.username.length > 50) {
-          setPopupMessage("Username cannot exceed 50 characters");
-            setPopupVisible(true);
-            return;
-        }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!values.email || !emailRegex.test(values.email)) {
-            setPopupMessage("Please enter a valid email address");
-            setPopupVisible(true);
-            return;
-        }
-        if (values.email.length > 100) {
-          setPopupMessage("Email cannot exceed 100 characters");
-            setPopupVisible(true);
-            return;
-        }
-        const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$^&*])[A-Za-z0-9!@#$%^&*]{6,}$/;
-        if (!passwordRegex.test(values.password)) {
-            setPopupMessage("Password must be at least 6 characters long and include at least 1 number and 1 special character");
-            setPopupVisible(true);
-            return;
-        }
-
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      values.email,
-      values.password
-    );
-
-    const user = userCredential.user;
-    const counterRef = doc(db, "counters", "userId");
-    let userId;
-
-    // Transaction to generate unique userId
-    await runTransaction(db, async (transaction) => {
-      const counterDoc = await transaction.get(counterRef);
-
-      let newId;
-      if (!counterDoc.exists()) {
-        transaction.set(counterRef, { lastId: 1 });
-        newId = 1;
-      } else {
-        newId = counterDoc.data().lastId + 1;
-        transaction.update(counterRef, { lastId: newId });
+      if (!values.username || values.username.length < 3) {
+        setPopupMessage("Username must be at least 3 characters long");
+        setPopupVisible(true);
+        setLoading(false);
+        return;
+      }
+      if (values.username.length > 50) {
+        setPopupMessage("Username cannot exceed 50 characters");
+        setPopupVisible(true);
+        setLoading(false);
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!values.email || !emailRegex.test(values.email)) {
+        setPopupMessage("Please enter a valid email address");
+        setPopupVisible(true);
+        setLoading(false);
+        return;
+      }
+      if (values.email.length > 100) {
+        setPopupMessage("Email cannot exceed 100 characters");
+        setPopupVisible(true);
+        setLoading(false);
+        return;
+      }
+      const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$^&*])[A-Za-z0-9!@#$%^&*]{6,}$/;
+      if (!passwordRegex.test(values.password)) {
+        setPopupMessage("Password must be at least 6 characters long and include at least 1 number and 1 special character");
+        setPopupVisible(true);
+        setLoading(false);
+        return;
       }
 
-      // ✅ Generate userId with max size of 10 characters
-      userId = `U${String(newId).padStart(9, "0")}`; // 1 letter + 9 digits = 10 chars total
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+      const counterRef = doc(db, "counters", "userId");
+      let userId;
 
-      // ✅ Optional safety check
-      if (userId.length > 10) {
-        throw new Error("Generated userId exceeds max length of 10 characters!");
-      }
-    });
+      // Transaction to generate unique userId
+      await runTransaction(db, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
 
-    // ✅ Save new user record
-    await setDoc(doc(db, "users", user.uid), {
-      username: values.username,
-      email: values.email,
-      userId,
-      createdAt: serverTimestamp(),
-    });
+        let newId;
+        if (!counterDoc.exists()) {
+          transaction.set(counterRef, { lastId: 1 });
+          newId = 1;
+        } else {
+          newId = counterDoc.data().lastId + 1;
+          transaction.update(counterRef, { lastId: newId });
+        }
 
-    console.log("✅ New user created:", userId);
+        userId = `U${String(newId).padStart(9, "0")}`;
+        if (userId.length > 10) {
+          throw new Error("Generated userId exceeds max length of 10 characters!");
+        }
+      });
 
-    // ✅ Pass user data to BodyMeasurement.js
-    navigation.navigate("BodyMeasurement", {
-      userId,
-      username: values.username,
-      email: values.email,
-    });
+      await setDoc(doc(db, "users", user.uid), {
+        username: values.username,
+        email: values.email,
+        userId,
+        createdAt: serverTimestamp(),
+      });
+
+      console.log("✅ New user created:", userId);
+      setLoading(false); // <-- Stop loading
+
+      navigation.navigate("BodyMeasurement", {
+        userId,
+        username: values.username,
+        email: values.email,
+      });
 
     } catch (error) {
       console.log("Firebase Error:", error);
@@ -186,168 +178,149 @@ const Signup = () => {
 
       setPopupMessage(message);
       setPopupVisible(true);
+      setLoading(false); // <-- Stop loading on error
       formikRef.current?.resetForm();
-    }
-     finally {
-      setIsLoading(false); 
     }
   };
 
   return (
-      <ImageBackground
-        source={require('../assets/bg.png')}
-        style={{ flex: 1}}
-        resizeMode="cover">
+    <ImageBackground
+      source={require('../assets/bg.png')}
+      style={{ flex: 1 }}
+      resizeMode="cover"
+    >
+      <KeyboardAvoidingView behavior="height" style={{ flex: 1 }}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+            <View style={styles.container}>
+              <StatusBar style="dark" />
+              <View style={styles.inner}>
+                <Text style={styles.subtitle}>Create your account</Text>
 
-       <KeyboardAvoidingView
-            behavior = "height" style= {{ flex: 1 }}
-            >
-      
-       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-
-       <ScrollView
-               contentContainerStyle={{ flexGrow: 1}}
-               keyboardShouldPersistTaps="handled">
-
-      <View style={styles.container}>
-        <StatusBar style="dark" />
-        <View style={styles.inner}>
-        
-            <Text style={styles.subtitle}>Create your account</Text>
-
-            <View style = {{ flexDirection: 'row', justifyContent: 'flex-start', paddingLeft: 20, marginBottom: 30}}>
-                <LogInPlainText>Already have an account?</LogInPlainText>
-                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                  <LogInLinkText> Log In</LogInLinkText>
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-start', paddingLeft: 20, marginBottom: 30 }}>
+                  <LogInPlainText>Already have an account?</LogInPlainText>
+                  <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                    <LogInLinkText> Log In</LogInLinkText>
                   </TouchableOpacity>
                 </View>
 
-          <Formik
-            innerRef={formikRef}
-            initialValues={{ username: '', email: '', password: '' }}
-            onSubmit={handleSignup}
-          >
-            {({ handleChange, handleBlur, handleSubmit, values }) => (
-              <View style={styles.formArea}>
-                {/* Username */}
-                <Text style={styles.label}>Username:</Text>
-                <View style={styles.inputWrapper}>
-                  <Octicons name="person" size={24} style={styles.leftIcon} />
-                  <TextInput
-                    label="Username"
-                    placeholder="Enter username"
-                    placeholderTextColor={colors.gray}
-                    style={[
-                      styles.inputArea,
-                       focusedInput === 'username' && {borderColor: colors.purple},
-                        ]}
-                         onFocus={() => setFocusedInput('username')}
-                        onBlur={(e) => 
-                        {handleBlur('email')(e);
-                        setFocusedInput(null);
-                        }}
-                    onChangeText={handleChange('username')}
-                    value={values.username}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-
-                {/* Email */}
-                <Text style={styles.label}>Email Address:</Text>
-                <View style={styles.inputWrapper}>
-                  <Octicons name="mail" size={24} style={styles.leftIcon} />
-                  <TextInput
-                    label ="Email Address"
-                    placeholder="Enter email"
-                    placeholderTextColor={colors.gray}
-                    style={[
-                      styles.inputArea,
-                       focusedInput === 'email' && {borderColor: colors.purple},
-                        ]}
-                        onFocus={() => setFocusedInput('email')}
-                        onBlur={(e) => 
-                        {handleBlur('email')(e);
-                        setFocusedInput(null);
-                        }}
-                    onChangeText={handleChange('email')}
-                    value={values.email}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-
-                {/* Password */}
-                <Text style={styles.label}>Password:</Text>
-                <View style={styles.inputWrapper}>
-                  <FontAwesome name="lock" size={24} style={styles.leftIcon} />
-                  <TextInput
-                    label="Password"
-                    placeholder="Enter password"
-                    placeholderTextColor={colors.gray}
-                    style={[
-                      styles.inputArea,
-                      focusedInput === 'password' && {borderColor: colors.purple},
-                        ]}
-                      onFocus={() => setFocusedInput('password')}
-                        onBlur={(e) => 
-                        {handleBlur('password')(e);
-                        setFocusedInput(null);
-                        }}   
-                    onChangeText={handleChange('password')}
-                    value={values.password}
-                    secureTextEntry={hidePassword}
-                    isPassword={true}
-                    hidePassword={hidePassword}
-                    setHidePassword={setHidePassword}
-                    autoCompleteType="off"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    importantForAutofill="no"
-                  />
-                  <TouchableOpacity
-                    style={styles.rightIcon}
-                    onPress={() => setHidePassword(!hidePassword)}
-                  >
-                    <Ionicons
-                      name={hidePassword ? 'eye-off' : 'eye'}
-                      size={30}
-                      color={colors.main}
-                    />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Next Button */}
-                <SignInButton
-                  onPress={handleSubmit}
-                  disabled={!values.username || !values.email || !values.password}
-                  style={{
-                    opacity: !values.username || !values.email || !values.password ? 0.5 : 1,
-                  }}
+                <Formik
+                  innerRef={formikRef}
+                  initialValues={{ username: '', email: '', password: '' }}
+                  onSubmit={handleSignup}
                 >
-                  <SignInButtonText>Next</SignInButtonText>
-                </SignInButton>
-              </View>
-            )}
-          </Formik>
-        </View>
-        </View>
-        </ScrollView>
-        </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+                  {({ handleChange, handleBlur, handleSubmit, values }) => (
+                    <View style={styles.formArea}>
+                      {/* Username */}
+                      <Text style={styles.label}>Username:</Text>
+                      <View style={styles.inputWrapper}>
+                        <Octicons name="person" size={24} style={styles.leftIcon} />
+                        <TextInput
+                          label="Username"
+                          placeholder="Enter username"
+                          placeholderTextColor={colors.gray}
+                          style={[
+                            styles.inputArea,
+                            focusedInput === 'username' && { borderColor: colors.purple },
+                          ]}
+                          onFocus={() => setFocusedInput('username')}
+                          onBlur={(e) => { handleBlur('username')(e); setFocusedInput(null); }}
+                          onChangeText={handleChange('username')}
+                          value={values.username}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                      </View>
 
-        {/* Popup message */}
-        <Popup
-          visible={popupVisible}
-          message={popupMessage}
-           onClose={() => {
+                      {/* Email */}
+                      <Text style={styles.label}>Email Address:</Text>
+                      <View style={styles.inputWrapper}>
+                        <Octicons name="mail" size={24} style={styles.leftIcon} />
+                        <TextInput
+                          label="Email Address"
+                          placeholder="Enter email"
+                          placeholderTextColor={colors.gray}
+                          style={[
+                            styles.inputArea,
+                            focusedInput === 'email' && { borderColor: colors.purple },
+                          ]}
+                          onFocus={() => setFocusedInput('email')}
+                          onBlur={(e) => { handleBlur('email')(e); setFocusedInput(null); }}
+                          onChangeText={handleChange('email')}
+                          value={values.email}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                      </View>
+
+                      {/* Password */}
+                      <Text style={styles.label}>Password:</Text>
+                      <View style={styles.inputWrapper}>
+                        <FontAwesome name="lock" size={24} style={styles.leftIcon} />
+                        <TextInput
+                          label="Password"
+                          placeholder="Enter password"
+                          placeholderTextColor={colors.gray}
+                          style={[
+                            styles.inputArea,
+                            focusedInput === 'password' && { borderColor: colors.purple },
+                          ]}
+                          onFocus={() => setFocusedInput('password')}
+                          onBlur={(e) => { handleBlur('password')(e); setFocusedInput(null); }}
+                          onChangeText={handleChange('password')}
+                          value={values.password}
+                          secureTextEntry={hidePassword}
+                          isPassword={true}
+                          hidePassword={hidePassword}
+                          setHidePassword={setHidePassword}
+                          autoCompleteType="off"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          importantForAutofill="no"
+                        />
+                        <TouchableOpacity
+                          style={styles.rightIcon}
+                          onPress={() => setHidePassword(!hidePassword)}
+                        >
+                          <Ionicons
+                            name={hidePassword ? 'eye-off' : 'eye'}
+                            size={30}
+                            color={colors.main}
+                          />
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Next Button */}
+                      <SignInButton
+                        onPress={handleSubmit}
+                        disabled={!values.username || !values.email || !values.password || loading}
+                        style={{
+                          opacity: !values.username || !values.email || !values.password || loading ? 0.5 : 1,
+                        }}
+                      >
+                        <SignInButtonText>{loading ? "Processing..." : "Next"}</SignInButtonText>
+                      </SignInButton>
+                    </View>
+                  )}
+                </Formik>
+              </View>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+
+      {/* Popup message */}
+      <Popup
+        visible={popupVisible}
+        message={popupMessage}
+        onClose={() => {
           setPopupVisible(false);
           if (popupMessage === "Account created successfully!") {
             navigation.navigate("BodyMeasurement");
           }
         }}
-        />
+      />
     </ImageBackground>
   );
 };
@@ -405,7 +378,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   rightIcon: {
-     position: "absolute",
+    position: "absolute",
     right: 17,
     top: 15,
     color: colors.bg,
@@ -431,7 +404,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "left",
     marginBottom: 5,
-  },  
+  },
   button: {
     color: colors.white,
     fontSize: 18,
@@ -442,5 +415,4 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   }
-  
 });

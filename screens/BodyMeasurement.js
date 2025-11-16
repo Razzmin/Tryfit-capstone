@@ -1,4 +1,3 @@
-// BodyMeasurement.js
 import React, { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -20,7 +19,6 @@ export default function BodyMeasurement() {
   const navigation = useNavigation();
   const route = useRoute();
   const { userId, username, email } = route.params || {};
-  const animationRef = useRef(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [isNextProcessing, setIsNextProcessing] = useState(false);
   const [isProceedProcessing, setIsProceedProcessing] = useState(false);
@@ -140,7 +138,7 @@ export default function BodyMeasurement() {
           )}
         />
 
-        {/* Modal */}
+        {/* Camera Access Modal */}
         <Modal
           animationType="fade"
           transparent={true}
@@ -155,29 +153,33 @@ export default function BodyMeasurement() {
                 proportions accurately.
               </Text>
 
-              {/* Updated Buttons */}
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    styles.proceedButton,
-                    isProceedProcessing && { opacity: 0.6 },
-                  ]}
-                  onPress={confirmProceed}
-                  disabled={isProceedProcessing}
-                >
-                  <Text style={styles.proceedText}>
-                    {isProceedProcessing ? "Processing..." : "Proceed"}
-                  </Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: "#9747FF" },
+                  isProceedProcessing && { opacity: 0.6 },
+                ]}
+                onPress={confirmProceed}
+                disabled={isProceedProcessing}
+              >
+                <Text style={styles.modalButtonText}>
+                  {isProceedProcessing ? "Processing..." : "Proceed"}
+                </Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.cancelButton]}
-                  onPress={cancelProceed}
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: "#717171" },
+                ]}
+                onPress={cancelProceed}
+              >
+                <Text
+                  style={[styles.modalButtonText, { color: "#000000" }]}
                 >
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -200,6 +202,12 @@ const styles = StyleSheet.create({
     color: "#1f1926",
     fontFamily: "KronaOne",
   },
+  cardContainer: {
+    width: width,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 10,
+  },
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -213,11 +221,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     elevation: 2,
   },
-  cardContainer: {
-    width: width,
+  animationWrapper: {
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 10,
+    height: 250,
+    width: "100%",
+    position: "relative",
+  },
+  animation: {
+    width: 180,
+    height: 180,
+  },
+  scanFrame: {
+    position: "absolute",
+    width: 80,
+    height: 135,
+    borderWidth: 2,
+    borderColor: "#1f1926",
+    borderRadius: 10,
+    opacity: 0.9,
   },
   stepTitle: {
     fontSize: 16,
@@ -232,10 +254,6 @@ const styles = StyleSheet.create({
     color: "#1f1926",
     marginBottom: 20,
     textAlign: "center",
-  },
-  animation: {
-    width: 180,
-    height: 180,
   },
   paginationDot: {
     marginHorizontal: 3,
@@ -255,24 +273,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  animationWrapper: {
-    justifyContent: "center",
-    alignItems: "center",
-    height: 250,
-    width: "100%",
-    position: "relative",
-  },
-  scanFrame: {
-    position: "absolute",
-    width: 80,
-    height: 135,
-    borderWidth: 2,
-    borderColor: "#1f1926",
-    borderRadius: 10,
-    opacity: 0.9,
-  },
-
-  /** Modal Styles **/
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -298,35 +298,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
   },
-
-  /** Updated Button Layout **/
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  modalButton: {
     width: "100%",
-  },
-  actionButton: {
-    flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    marginHorizontal: 5,
+    marginVertical: 5,
     alignItems: "center",
-    justifyContent: "center",
   },
-  proceedButton: {
-    backgroundColor: "#9747FF",
-  },
-  cancelButton: {
-    backgroundColor: "#E0E0E0",
-  },
-  proceedText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "bold",
-  },
-  cancelText: {
-    color: "#000000",
-    fontSize: 15,
-    fontWeight: "bold",
+  modalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
