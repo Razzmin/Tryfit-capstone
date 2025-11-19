@@ -59,6 +59,8 @@ export default function ShoppingCart() {
       setLoading(false);
       return;
     }
+    
+     let unsubscribe = null; 
 
     const fetchCartItems = async () => {
       try {
@@ -83,10 +85,11 @@ export default function ShoppingCart() {
         }
 
         const q = query(collection(db, 'cartItems'), where('userId', '==', customUserId));
-        const unsubscribe = onSnapshot(
+    
+        unsubscribe = onSnapshot(
           q,
           (snapshot) => {
-            const items = snapshot.docs.map(doc => ({
+            const items = snapshot.docs.map((doc) => ({
               id: doc.id,
               ...doc.data(),
               selected: doc.data().selected || false,
@@ -96,25 +99,23 @@ export default function ShoppingCart() {
             setLoading(false);
           },
           (error) => {
-            console.error('Error fetching cart items:', error);
+            console.error("Error fetching cart items:", error);
             setLoading(false);
           }
         );
-
-        return unsubscribe;
       } catch (err) {
-        console.error('Error fetching custom userId:', err);
+        console.error("Error fetching custom userId:", err);
         setLoading(false);
       }
     };
 
-    const unsubscribePromise = fetchCartItems();
+    fetchCartItems();
 
+    // Cleanup: unsubscribe listener on unmount or user change
     return () => {
-      unsubscribePromise && unsubscribePromise instanceof Function && unsubscribePromise();
+      if (unsubscribe) unsubscribe();
     };
   }, [user]);
-
 
   const toggleSelected = async (id, color) => {
     try {

@@ -34,6 +34,29 @@ export default function EditProfile() {
   const [signOutModal, setSignOutModal] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const isFocused = useIsFocused();
+  const [username, setUsername] = useState('');
+
+  useEffect(() => {
+    const fetchUsername = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      try {
+        const db = getFirestore();
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          setUsername(data.username || 'User'); // fallback if username not set
+        }
+      } catch (error) {
+        console.error('Error fetching username:', error);
+      }
+    };
+
+    fetchUsername();
+  }, []);
+
 
   useEffect(() => {
     if (isFocused) {
@@ -189,12 +212,15 @@ export default function EditProfile() {
       </Header>
 
       <View style={styles.profileSection}>
-        <MaterialIcons name="account-circle" size={80} color="#9747FF"
-        style={{
-          marginBottom: 10,
-        }} />
-        <Text style={styles.profileName}>Your Name</Text>
+        <MaterialIcons 
+          name="account-circle" 
+          size={80} 
+          color="#9747FF"
+          style={{ marginBottom: 10 }}
+        />
+        <Text style={styles.profileName}>{username}</Text>
       </View>
+
 
       <View style={styles.menuList}>
         <TouchableOpacity

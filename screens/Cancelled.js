@@ -30,48 +30,58 @@ export default function Cancelled() {
   const [cancelledOrders, setCancelledOrders] = useState([]);
 
   useEffect(() => {
-    const fetchCustomUserId = async () => {
-      if (!user) return;
-
-      try {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          if (userData.userId) {
-            const customId = userData.userId;
-
-            // Listen to cancelled collection for this custom userId
-            const unsubscribe = onSnapshot(
-              collection(db, 'cancelled'), // ✅ fetch from "cancelled" collection
-              (snapshot) => {
-                const fetchedOrders = snapshot.docs
-                  .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-                  .filter(order => order.userId === customId); // ✅ filter by custom userId
-                
-                // Optional: sort by cancelled date if exists
-                fetchedOrders.sort(
-                  (a, b) => (b.cancelledDate?.seconds || 0) - (a.cancelledDate?.seconds || 0)
-                );
-
-                setCancelledOrders(fetchedOrders);
-              },
-              (error) => {
-                console.error('Error fetching cancelled orders:', error);
-                setCancelledOrders([]);
-              }
-            );
-
-            return () => unsubscribe();
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching custom userId:', err);
+      if (!user) {
+        setCancelledOrders([]); // clear on logout
+        return;
       }
-    };
 
-    fetchCustomUserId();
-  }, [user]);
+      let unsubscribe = null; // store listener
+
+      const fetchCustomUserId = async () => {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+
+          if (!userSnap.exists()) return;
+
+          const customId = userSnap.data()?.userId;
+          if (!customId) return;
+
+          const cancelledRef = collection(db, 'cancelled');
+
+          unsubscribe = onSnapshot(
+            cancelledRef,
+            (snapshot) => {
+              const fetchedOrders = snapshot.docs
+                .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+                .filter(order => order.userId === customId);
+
+              // Optional: sort by cancelled date if exists
+              fetchedOrders.sort(
+                (a, b) => (b.cancelledDate?.seconds || 0) - (a.cancelledDate?.seconds || 0)
+              );
+
+              setCancelledOrders(fetchedOrders);
+            },
+            (error) => {
+              console.error('Error fetching cancelled orders:', error);
+              setCancelledOrders([]);
+            }
+          );
+        } catch (err) {
+          console.error('Error fetching custom userId:', err);
+          setCancelledOrders([]);
+        }
+      };
+
+      fetchCustomUserId();
+
+      return () => {
+        // cleanup listener on unmount or user change
+        if (unsubscribe) unsubscribe();
+      };
+    }, [user]);
+
 
 
    const tabRoutes = {
