@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext, useMemo, useRef } from 'react';
 import {FontAwesome, EvilIcons, Ionicons, Feather }  from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect, useIsFocused } from '@react-navigation/native';
-import { collection, getDocs, getDoc, doc, query, where, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, getDoc, doc, query, where, Timestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 import {
@@ -101,142 +101,135 @@ export default function LandingPage() {
     threshold: 0.4,
   }), []);
 
- useEffect(() => {
-    // Fetch "Our Picks" (price <= 250)
-    const fetchProducts = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'products'));
-        const allProducts = [];
+useEffect(() => {
+  // 🔹 Our Picks (price <= 250)
+  const unsubscribeProducts = onSnapshot(
+    collection(db, 'products'),
+    (querySnapshot) => {
+      const allProducts = [];
 
-        querySnapshot.forEach((doc) => {
-          const product = doc.data();
+      querySnapshot.forEach((doc) => {
+        const product = doc.data();
 
-          // Normalize price
-          let numericPrice = null;
-          if (product.price) {
-            numericPrice =
-              typeof product.price === 'string'
-                ? parseInt(product.price.replace(/[^\d]/g, ''))
-                : product.price;
-          }
+        let numericPrice = null;
+        if (product.price) {
+          numericPrice =
+            typeof product.price === 'string'
+              ? parseInt(product.price.replace(/[^\d]/g, ''))
+              : product.price;
+        }
 
-          // Normalize sold
-          let numericSold = null;
-          if (product.sold) {
-            numericSold =
-              typeof product.sold === 'string'
-                ? parseInt(product.sold.replace(/[^\d]/g, ''))
-                : product.sold;
-          }
+        let numericSold = null;
+        if (product.sold) {
+          numericSold =
+            typeof product.sold === 'string'
+              ? parseInt(product.sold.replace(/[^\d]/g, ''))
+              : product.sold;
+        }
 
-          if (numericPrice !== null && numericPrice <= 250) {
-            allProducts.push({ id: doc.id, ...product, price: numericPrice, sold: numericSold });
-          }
-        });
+        if (numericPrice !== null && numericPrice <= 250) {
+          allProducts.push({ id: doc.id, ...product, price: numericPrice, sold: numericSold });
+        }
+      });
 
-        setProducts(allProducts);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      }
-    };
+      setProducts(allProducts);
+    },
+    (error) => console.error('Error fetching products:', error)
+  );
 
-    const fetchNewArrivals = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'products'));
-        const oneMonthAgo = new Date();
-        oneMonthAgo.setDate(oneMonthAgo.getDate() - 31); // 31 days ago
+  // 🔹 New Arrivals (createdAt within last 31 days)
+  const unsubscribeNewArrivals = onSnapshot(
+    collection(db, 'products'),
+    (querySnapshot) => {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setDate(oneMonthAgo.getDate() - 31);
 
-        const newProducts = [];
+      const newProducts = [];
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (!data.createdAt) return;
 
-        querySnapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          if (!data.createdAt) return;
+        const createdAt = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+        if (createdAt >= oneMonthAgo) {
+          newProducts.push({
+            id: docSnap.id,
+            productID: data.productID,
+            productName: data.productName,
+            price: data.price,
+            rating: data.rating,
+            sold: data.sold,
+            delivery: data.delivery,
+            categoryMain: data.categoryMain,
+            categorySub: data.categorySub,
+            sizes: data.sizes,
+            stock: data.stock,
+            colors: data.colors,
+            imageUrl: data.imageUrl,
+            description: data.description,
+            createdAt: data.createdAt,
+            arUrl: data.arUrl || null,
+          });
+        }
+      });
 
-          const createdAt = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
-          if (createdAt >= oneMonthAgo) {
-            newProducts.push({
-              id: docSnap.id,
-              productID: data.productID,
-              productName: data.productName,
-              price: data.price,
-              rating: data.rating,
-              sold: data.sold,
-              delivery: data.delivery,
-              categoryMain: data.categoryMain,
-              categorySub: data.categorySub,
-              sizes: data.sizes,
-              stock: data.stock,
-              colors: data.colors,
-              imageUrl: data.imageUrl,
-              description: data.description,
-              createdAt: data.createdAt,
-              arUrl: data.arUrl || null,
-            });
-          }
-        });
+      setNewArrivals(newProducts);
+    },
+    (error) => console.error('Error fetching new arrivals:', error)
+  );
 
-        setNewArrivals(newProducts);
-      } catch (error) {
-        console.error('Error fetching new arrivals:', error);
-      }
-    };
+  // 🔹 Popular Products (sold >= 1000)
+  const unsubscribePopular = onSnapshot(
+    collection(db, 'products'),
+    (querySnapshot) => {
+      const popularProductsList = [];
 
-    // Fetch "Popular Products" (sold >= 1000) – new separate function
-    const fetchPopularProducts = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'products'));
-        const popularProductsList = [];
+      querySnapshot.forEach((doc) => {
+        const product = doc.data();
 
-        querySnapshot.forEach((doc) => {
-          const product = doc.data();
+        let numericSold = null;
+        if (product.sold) {
+          numericSold =
+            typeof product.sold === 'string'
+              ? parseInt(product.sold.replace(/[^\d]/g, ''))
+              : product.sold;
+        }
 
-          // Normalize sold
-          let numericSold = null;
-          if (product.sold) {
-            numericSold =
-              typeof product.sold === 'string'
-                ? parseInt(product.sold.replace(/[^\d]/g, ''))
-                : product.sold;
-          }
+        if (numericSold !== null && numericSold >= 1000) {
+          popularProductsList.push({ id: doc.id, ...product, sold: numericSold });
+        }
+      });
 
-          if (numericSold !== null && numericSold >= 1000) {
-            popularProductsList.push({ id: doc.id, ...product, sold: numericSold });
-          }
-        });
+      setPopularProducts(popularProductsList);
+    },
+    (error) => console.error('Error fetching popular products:', error)
+  );
 
-        setPopularProducts(popularProductsList);
-      } catch (error) {
-        console.error('Error fetching popular products:', error);
-      }
-    };
+  // 🔹 Product Names for Search Suggestions
+  const unsubscribeNames = onSnapshot(
+    collection(db, 'products'),
+    (querySnapshot) => {
+      const names = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.productName) names.push(data.productName);
+      });
 
-    // Fetch product names for search suggestions
-    const fetchProductNames = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'products'));
-        const names = [];
+      const mergedSuggestions = Array.from(
+        new Set([...SEARCH_SUGGESTIONS, ...names])
+      );
+      setSearchSuggestions(mergedSuggestions);
+    },
+    (error) => console.error('Error fetching product names:', error)
+  );
 
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.productName) names.push(data.productName);
-        });
-
-        const mergedSuggestions = Array.from(
-          new Set([...SEARCH_SUGGESTIONS, ...names])
-        );
-
-        setSearchSuggestions(mergedSuggestions);
-      } catch (error) {
-        console.error('Error fetching product names:', error);
-      }
-    };
-
-    // Call all functions
-    fetchProducts();
-    fetchNewArrivals(); // ✅ unchanged
-    fetchPopularProducts();
-    fetchProductNames();
-  }, []);
+  // Cleanup listeners on unmount
+  return () => {
+    unsubscribeProducts();
+    unsubscribeNewArrivals();
+    unsubscribePopular();
+    unsubscribeNames();
+  };
+}, []);
 
     useFocusEffect(
       React.useCallback(() => {
