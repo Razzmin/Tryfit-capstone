@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import{ Header, LoadingOverlay } from '../components/styles';
 import { FontAwesome, Feather, MaterialIcons, MaterialCommunityIcons, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect, useIsFocused  } from '@react-navigation/native';
-import { auth } from '../firebase/config';
+import { auth, db } from '../firebase/config';
 import { signOut, deleteUser } from 'firebase/auth';
 import {
   doc,
@@ -25,6 +25,7 @@ import {
   where,
   updateDoc,
   getDoc,
+  onSnapshot,
 } from 'firebase/firestore';
 
 export default function EditProfile() {
@@ -35,6 +36,8 @@ export default function EditProfile() {
   const [signingOut, setSigningOut] = useState(false);
   const isFocused = useIsFocused();
   const [username, setUsername] = useState('');
+  const [uniqueUserId, setUniqueUserId] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const fetchUsername = async () => {
@@ -56,6 +59,41 @@ export default function EditProfile() {
 
     fetchUsername();
   }, []);
+
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (!user) return; // 🔥 Prevents crash
+
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        setUniqueUserId(snap.data().userId); 
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+
+  useEffect(() => {
+    if (!uniqueUserId) return;
+
+    const notifRef = collection(db, "notifications");
+
+    const q = query(
+      notifRef,
+      where("userId", "==", uniqueUserId),   
+      where("read", "==", false)
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      setUnreadCount(snap.size);
+    });
+
+    return unsub;
+  }, [uniqueUserId]);
 
 
   useEffect(() => {
@@ -248,16 +286,32 @@ export default function EditProfile() {
         </TouchableOpacity>
 
         <TouchableOpacity
-        activeOpacity={0.9}
-        onPressIn={() => setPressedItem('Notification')}
-        onPressOut={() => setPressedItem(null)}
-         style={[styles.menuItem,
-         pressedItem === 'Notification' && { borderColor: '#9747ff', borderWidth: 1},
-         ]} 
-         onPress={() => navigation.navigate('Notification')}>
-         <Ionicons name="notifications-outline" size={24} color="#9747FF" style={styles.menuIcon} />
-          <Text style={styles.menuText}>Notification</Text>
-        </TouchableOpacity>
+  activeOpacity={0.9}
+  onPressIn={() => setPressedItem('Notification')}
+  onPressOut={() => setPressedItem(null)}
+  style={[styles.menuItem, pressedItem === 'Notification' && { borderColor: '#9747ff', borderWidth: 1 }]}
+  onPress={() => navigation.navigate('Notification')}
+>
+  <View style={{ position: 'relative' }}>
+    <Ionicons name="notifications-outline" size={24} color="#9747FF" />
+    {unreadCount > 0 && (
+      <View
+        style={{
+          width: 12,
+          height: 12,
+          borderRadius: 6,
+          backgroundColor: 'red',
+          position: 'absolute',
+          top: -4,
+          right: -4,
+        }}
+      />
+    )}
+  </View>
+  <Text style={styles.menuText}>Notification</Text>
+</TouchableOpacity>
+
+
 
         <TouchableOpacity
         activeOpacity={0.9}

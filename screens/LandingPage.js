@@ -3,7 +3,7 @@ import {FontAwesome, EvilIcons, Ionicons, Feather }  from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { collection, getDocs, getDoc, doc, query, where, Timestamp, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { auth, db } from '../firebase/config';
 
 import {
   Image,
@@ -46,6 +46,8 @@ export default function LandingPage() {
   const navigation = useNavigation();
   const { cartItems } = useContext(CartContext);
   const isFocused = useIsFocused();
+  const [uniqueUserId, setUniqueUserId] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -136,6 +138,7 @@ useEffect(() => {
     },
     (error) => console.error('Error fetching products:', error)
   );
+
 
   // 🔹 New Arrivals (createdAt within last 31 days)
   const unsubscribeNewArrivals = onSnapshot(
@@ -231,28 +234,62 @@ useEffect(() => {
   };
 }, []);
 
-    useFocusEffect(
-      React.useCallback(() => {
-        const onBackPress = () => {
-          Alert.alert(
-            'Exit App',
-            'Do you want to exit?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Exit', onPress: () => BackHandler.exitApp() },
-            ],
-            { cancelable: true }
-          );
-          return true; // prevent default behavior
-        };
+useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (!user) return; // 🔥 Prevents crash
 
-        // Add event listener and get subscription
-        const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
 
-        // Cleanup using subscription.remove()
-        return () => subscription.remove();
-      }, [])
+      if (snap.exists()) {
+        setUniqueUserId(snap.data().userId); 
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+
+  useEffect(() => {
+    if (!uniqueUserId) return;
+
+    const notifRef = collection(db, "notifications");
+
+    const q = query(
+      notifRef,
+      where("userId", "==", uniqueUserId),   
+      where("read", "==", false)
     );
+
+    const unsub = onSnapshot(q, (snap) => {
+      setUnreadCount(snap.size);
+    });
+
+    return unsub;
+  }, [uniqueUserId]);
+
+useFocusEffect(
+  React.useCallback(() => {
+    const onBackPress = () => {
+      Alert.alert(
+        'Exit App',
+        'Do you want to exit?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Exit', onPress: () => BackHandler.exitApp() },
+        ],
+        { cancelable: true }
+      );
+      return true; // prevent default behavior
+    };
+
+    // Add event listener and get subscription
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+    // Cleanup using subscription.remove()
+    return () => subscription.remove();
+  }, [])
+);
 
   const handleSearchSubmit = () => {
     if (searchText.trim().length > 0) {
@@ -468,6 +505,17 @@ useEffect(() => {
               <Text style = {{ fontSize: 12, color:'#9747FF', fontWeight: 'bold'}}>
                 {cartItems.length}
               </Text>
+            )}
+            {tab === 'Profile' && unreadCount > 0 && (
+              <View style={{
+                width: 10,
+                height: 10,
+                borderRadius: 5,
+                backgroundColor: 'red',
+                position: 'absolute',
+                top: -2,
+                right: -2,
+              }} />
             )}
             </Animated.View>
             </TouchableWithoutFeedback>

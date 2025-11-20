@@ -1,17 +1,19 @@
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, BackHandler  } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, BackHandler, Alert, ActivityIndicator  } from 'react-native';
 import { Feather, Ionicons, AntDesign, MaterialIcons  } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect  } from '@react-navigation/native';
 import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAuth } from "firebase/auth";
 import{Header } from '../components/styles';
-import { getFirestore, collection, query, where, onSnapshot, doc, getDoc  } from "firebase/firestore";
+import { getFirestore, collection, query, where, onSnapshot, doc, getDoc, deleteDoc, updateDoc  } from "firebase/firestore";
 
 export default function Notification() {
   const navigation = useNavigation();
   const [notifications, setNotifications] = useState([]);
   const auth = getAuth();
   const db = getFirestore();
+  const [loading, setLoading] = useState(false);
+
 
   useFocusEffect(
       useCallback(() => {
@@ -28,48 +30,53 @@ export default function Notification() {
       }, [navigation])
     );
     
-useEffect(() => {
-  const user = auth.currentUser;
-  if (!user) return;
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
 
-  let unsubscribe;
+    let unsubscribe;
 
-  const fetchNotifications = async () => {
-    try {
-      // 1. Get custom userId from users collection
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (!userDoc.exists()) return;
+    const fetchNotifications = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (!userDoc.exists()) return;
 
-      const customUserId = userDoc.data().userId;
+        const customUserId = userDoc.data().userId;
 
-      // 2. Query notifications for that user
-      const q = query(
-        collection(db, "notifications"),
-        where("userId", "==", customUserId)
-      );
+        const q = query(
+          collection(db, "notifications"),
+          where("userId", "==", customUserId)
+        );
 
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        const notifs = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          // ✅ Sort newest first (highest timestamp first)
-          .sort((a, b) => b.timestamp?.toMillis() - a.timestamp?.toMillis());
+        unsubscribe = onSnapshot(q, async (snapshot) => {
+          const notifs = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => b.timestamp?.toMillis() - a.timestamp?.toMillis());
 
-        setNotifications(notifs);
-      });
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-    }
-  };
+          setNotifications(notifs);
 
-  fetchNotifications();
+          // ✅ properly define unreadDocs
+          const unreadDocs = snapshot.docs.filter(docSnap => !docSnap.data().read);
 
-  return () => {
-    if (unsubscribe) unsubscribe();
-  };
-}, []);
+          // mark all unread as read in parallel
+          await Promise.all(
+            unreadDocs.map(docSnap => {
+              const notifRef = doc(db, "notifications", docSnap.id);
+              return updateDoc(notifRef, { read: true });
+            })
+          );
+        });
+      } catch (err) {
+        console.error("Error fetching notifications:", err);
+      }
+    };
+
+    fetchNotifications();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
 
   const getIcon = (type) => {
@@ -87,24 +94,85 @@ useEffect(() => {
     }
   };
 
+ const handleClearAll = async () => {
+  if (notifications.length === 0) return;
+
+  Alert.alert(
+    "Clear All Notifications",
+    "Are you sure you want to delete all notifications?",
+    [
+      { text: "Cancel", style: "cancel" },
+      { 
+        text: "Delete", 
+        style: "destructive", 
+        onPress: async () => {
+          try {
+            setLoading(true); // start loading
+
+            // delete all notifications in parallel
+            await Promise.all(
+              notifications.map((notif) => deleteDoc(doc(db, "notifications", notif.id)))
+            );
+
+            setNotifications([]); // clear local state
+          } catch (err) {
+            console.error("Failed to clear notifications:", err);
+          } finally {
+            setLoading(false); // stop loading
+          }
+        } 
+      }
+    ]
+  );
+};
+
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <Header style = {{
-                     flexDirection: 'row',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     paddingHorizontal: 16,
-                     paddingBottom: 10,
-                     backgroundColor: '#fff',
-                   }}>
-                     <TouchableOpacity onPress={() => navigation.goBack()}
-                     style={{position: 'absolute', left: 10, top: -4}}>
-                       <Feather name="arrow-left" size={27} color="black"  />
-                     </TouchableOpacity>
-       
-                      <Text style= {{ fontSize: 15, color: '#000', fontFamily:"KronaOne", textTransform: 'uppercase', alignContent: 'center'}}>Notifications</Text>
-                   </Header>
+    <Header style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+      paddingBottom: 10,
+      backgroundColor: '#fff',
+    }}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={{position: 'absolute', left: 10, top: -4}}>
+        <Feather name="arrow-left" size={27} color="black" />
+      </TouchableOpacity>
+
+      <Text style={{
+        fontSize: 15,
+        color: '#000',
+        fontFamily:"KronaOne",
+        textTransform: 'uppercase',
+        alignContent: 'center'
+      }}>Notifications</Text>
+
+      {notifications.length > 0 && (
+        <TouchableOpacity 
+          onPress={handleClearAll} 
+          style={{ position: 'absolute', right: 10, top: -4 }}
+        >
+          <Text style={{ color: 'red', fontWeight: 'bold' }}>Clear All</Text>
+        </TouchableOpacity>
+      )}
+    </Header>
+
+      {loading && (
+        <View style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.3)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 999,
+        }}>
+          <ActivityIndicator size="large" color="#9747FF" />
+          <Text style={{ color: '#fff', marginTop: 10 }}>Deleting notifications...</Text>
+        </View>
+      )}
 
       {/* Notifications List */}
       {notifications.length === 0 ? (
