@@ -190,6 +190,25 @@ function poseDifference(p1,p2){if(!p1||!p2)return Infinity;let sum=0,len=Math.mi
 function pxToCm(px){const ratio=(poseHeightPx>1)?(BASE_HEIGHT/poseHeightPx):(BASE_HEIGHT/(overlay.height*0.65));return px*ratio;}
 function distCm(p1,p2){const dx=(p1.x-p2.x)*overlay.width,dy=(p1.y-p2.y)*overlay.height,dpx=Math.hypot(dx,dy);return pxToCm(dpx);}
 
+function isBodyInsideBox(lm, x, y, w, h) {
+  const left = x;
+  const right = x + w;
+  const top = y;
+  const bottom = y + h;
+
+  for (let i = 0; i < lm.length; i++) {
+    const px = lm[i].x * overlay.width;
+    const py = lm[i].y * overlay.height;
+
+    // If any landmark is outside the box → return false
+    if (px < left || px > right || py < top || py > bottom) {
+      return false;
+    }
+  }
+
+  return true; // All points are inside
+}
+
 function onResults(results){
   resizeOverlay();
   if(!results.poseLandmarks||measuring){if(!measuring)drawOverlay(false);return;}
@@ -201,7 +220,27 @@ function onResults(results){
   const ratio=poseHeightPx/idealPixelHeight;
   if(ratio>1.2){guidance.innerText='Too close — move backward';drawOverlay(false);stillnessCounter=0;lastPose=null;return;}
   else if(ratio<0.8){guidance.innerText='Too far — move forward';drawOverlay(false);stillnessCounter=0;lastPose=null;return;}
-  drawOverlay(true);guidance.innerText='Perfect distance! Hold still...';
+  // --- Compute the guide box dimensions again (same as drawOverlay) ---
+const w = overlay.width * 0.55;
+const h = overlay.height * 0.78;
+const x = (overlay.width - w) / 2;
+const y = (overlay.height - h) / 2;
+
+// --- Check if whole body is inside the box ---
+const insideBox = isBodyInsideBox(lm, x, y, w, h);
+
+if (!insideBox) {
+  drawOverlay(false);
+  guidance.innerText = "Move inside the box";
+  stillnessCounter = 0;
+  lastPose = null;
+  return;
+}
+
+// Body is fully inside + distance is good → green box
+drawOverlay(true);
+guidance.innerText = "Perfect distance! Hold still...";
+
   const movement=poseDifference(lm,lastPose);lastPose=lm;
   if(movement<0.003)stillnessCounter++;else stillnessCounter=0;
   if(stillnessCounter>(TARGET_FPS*1)){stillnessCounter=0;startCountdown(lm);}
@@ -319,6 +358,17 @@ function showCapturedMeasurements(lm) {
 
   document.querySelector('.action-buttons').style.display = 'flex';
   measuring = false;
+
+   // ✅ Stop the camera now that measurements are captured
+  if (cameraInstance) {
+    try { 
+      cameraInstance.stop(); 
+      cameraInstance = null; // optional: release reference
+      video.srcObject = null; // optional: clear video feed
+    } catch(e) {
+      console.warn("Failed to stop camera:", e);
+    }
+  }
 }
 
 startBtn.addEventListener('click',()=>{
