@@ -1,5 +1,4 @@
-// components/cardstyle.js
-import styled from 'styled-components/native';
+import styled from "styled-components/native";
 
 export const ProductCard = styled.View`
   background-color: #edebebff;

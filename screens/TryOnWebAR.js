@@ -1,9 +1,16 @@
-import React, { useRef, useEffect, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity,Animated } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { WebView } from "react-native-webview";
 import { FontAwesome } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
 
 export default function TryOnWebAR({ route }) {
   const { arUrl } = route.params;
@@ -13,57 +20,60 @@ export default function TryOnWebAR({ route }) {
   const [showNotif, setShowNotif] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => { 
-  const delayTimer = setTimeout(() => {
-    setShowNotif(true);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
-    const hideTimer = setTimeout(() => {
+  useEffect(() => {
+    const delayTimer = setTimeout(() => {
+      setShowNotif(true);
       Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 500,
+        toValue: 1,
+        duration: 300,
         useNativeDriver: true,
-      }).start(() => setShowNotif(false));
-    }, 3000);
+      }).start();
 
-    return () => clearTimeout(hideTimer);
-  }, 500);
+      const hideTimer = setTimeout(() => {
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }).start(() => setShowNotif(false));
+      }, 3000);
 
-  return () => clearTimeout(delayTimer);
-}, []);
+      return () => clearTimeout(hideTimer);
+    }, 500);
+
+    return () => clearTimeout(delayTimer);
+  }, []);
 
   if (!arUrl) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <Text style={{ color: "#fff" }}>No AR link found for this product.</Text>
+        <Text style={{ color: "#fff" }}>
+          No AR link found for this product.
+        </Text>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Notification Popup */}
       {showNotif && (
         <Animated.View style={[styles.notifPopup, { opacity: fadeAnim }]}>
           <Text style={styles.notifText}>
-            This AR experience may take a few moments to load. Please be patient.
+            This AR experience may take a few moments to load. Please be
+            patient.
           </Text>
         </Animated.View>
       )}
 
-      {/* Header with back button */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <FontAwesome name="arrow-left" size={20} color="#fff" />
           <Text style={styles.headerText}>Back to Product</Text>
         </TouchableOpacity>
       </View>
 
-      {/* WebView section */}
       <View style={styles.webContainer}>
         <WebView
           ref={webRef}

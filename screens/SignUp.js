@@ -1,49 +1,40 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { useIsFocused, useNavigation } from '@react-navigation/native';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import Popup from '../components/Popup';
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useRef, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    ScrollView,
-    TouchableWithoutFeedback,
-    Keyboard,
-    ImageBackground,
+  ImageBackground,
+  Keyboard,
+  KeyboardAvoidingView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
+import Popup from "../components/Popup";
 
-// Firebase
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase/config";
-import { doc, setDoc, serverTimestamp, runTransaction } from "firebase/firestore";
-import { db } from "../firebase/config";
+import {
+  doc,
+  runTransaction,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
+import { auth, db } from "../firebase/config";
 
-// Formik for forms
 import { Formik } from "formik";
 
-// Icons
-import { Ionicons, Octicons, FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Ionicons, Octicons } from "@expo/vector-icons";
 
-// Custom styled components
 import {
-  CreateAccountTitle,
-  SignUpStyleInputLabel,
-  SignupFormArea,
-  SignUpTextInput,
-  SignInButton,
-  SignInButtonText,
-  SignUpBottomTextWrapper,
-  LogInButton,
   LogInLinkText,
   LogInPlainText,
-  SignHeader,
-  SignBackBtn,
-  SignTitle,
-  SignUpLeftIcon,
-  SignUpRightIcon,
-  InnerContainer,
+  SignInButton,
+  SignInButtonText,
 } from "./../components/styles";
 
-// Colors
 const colors = {
   bg: "#382a47",
   purple: "#9747FF",
@@ -61,20 +52,18 @@ const Signup = () => {
   const formikRef = useRef();
 
   const [popupVisible, setPopupVisible] = useState(false);
-  const [popupMessage, setPopupMessage] = useState('');
+  const [popupMessage, setPopupMessage] = useState("");
   const [focusedInput, setFocusedInput] = useState(null);
-  const [loading, setLoading] = useState(false); // <-- Added loading state
+  const [loading, setLoading] = useState(false);
 
-  // Reset form when returning to screen
   useEffect(() => {
     if (isFocused && formikRef.current) {
       formikRef.current.resetForm();
     }
   }, [isFocused]);
 
-  // ✅ Firebase Signup Function
   const handleSignup = async (values, { setFieldValue }) => {
-    setLoading(true); // <-- Start loading
+    setLoading(true);
     try {
       values.username = values.username.trim();
       values.email = values.email.trim();
@@ -104,20 +93,26 @@ const Signup = () => {
         setLoading(false);
         return;
       }
-      const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$^&*])[A-Za-z0-9!@#$%^&*]{6,}$/;
+      const passwordRegex =
+        /^(?=.*[0-9])(?=.*[!@#$^&*])[A-Za-z0-9!@#$%^&*]{6,}$/;
       if (!passwordRegex.test(values.password)) {
-        setPopupMessage("Password must be at least 6 characters long and include at least 1 number and 1 special character");
+        setPopupMessage(
+          "Password must be at least 6 characters long and include at least 1 number and 1 special character"
+        );
         setPopupVisible(true);
         setLoading(false);
         return;
       }
 
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        values.email,
+        values.password
+      );
       const user = userCredential.user;
       const counterRef = doc(db, "counters", "userId");
       let userId;
 
-      // Transaction to generate unique userId
       await runTransaction(db, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
 
@@ -132,7 +127,9 @@ const Signup = () => {
 
         userId = `U${String(newId).padStart(9, "0")}`;
         if (userId.length > 10) {
-          throw new Error("Generated userId exceeds max length of 10 characters!");
+          throw new Error(
+            "Generated userId exceeds max length of 10 characters!"
+          );
         }
       });
 
@@ -144,14 +141,13 @@ const Signup = () => {
       });
 
       console.log("✅ New user created:", userId);
-      setLoading(false); // <-- Stop loading
+      setLoading(false);
 
       navigation.navigate("BodyMeasurement", {
         userId,
         username: values.username,
         email: values.email,
       });
-
     } catch (error) {
       console.log("Firebase Error:", error);
       let message = "";
@@ -178,75 +174,103 @@ const Signup = () => {
 
       setPopupMessage(message);
       setPopupVisible(true);
-      setLoading(false); // <-- Stop loading on error
+      setLoading(false);
       formikRef.current?.resetForm();
     }
   };
 
   return (
     <ImageBackground
-      source={require('../assets/bg.png')}
+      source={require("../assets/bg.png")}
       style={{ flex: 1 }}
       resizeMode="cover"
     >
       <KeyboardAvoidingView behavior="height" style={{ flex: 1 }}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.container}>
               <StatusBar style="dark" />
               <View style={styles.inner}>
                 <Text style={styles.subtitle}>Create your account</Text>
 
-                <View style={{ flexDirection: 'row', justifyContent: 'flex-start', paddingLeft: 20, marginBottom: 30 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "flex-start",
+                    paddingLeft: 20,
+                    marginBottom: 30,
+                  }}
+                >
                   <LogInPlainText>Already have an account?</LogInPlainText>
-                  <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate("Login")}
+                  >
                     <LogInLinkText> Log In</LogInLinkText>
                   </TouchableOpacity>
                 </View>
 
                 <Formik
                   innerRef={formikRef}
-                  initialValues={{ username: '', email: '', password: '' }}
+                  initialValues={{ username: "", email: "", password: "" }}
                   onSubmit={handleSignup}
                 >
                   {({ handleChange, handleBlur, handleSubmit, values }) => (
                     <View style={styles.formArea}>
-                      {/* Username */}
                       <Text style={styles.label}>Username:</Text>
                       <View style={styles.inputWrapper}>
-                        <Octicons name="person" size={24} style={styles.leftIcon} />
+                        <Octicons
+                          name="person"
+                          size={24}
+                          style={styles.leftIcon}
+                        />
                         <TextInput
                           label="Username"
                           placeholder="Enter username"
                           placeholderTextColor={colors.gray}
                           style={[
                             styles.inputArea,
-                            focusedInput === 'username' && { borderColor: colors.purple },
+                            focusedInput === "username" && {
+                              borderColor: colors.purple,
+                            },
                           ]}
-                          onFocus={() => setFocusedInput('username')}
-                          onBlur={(e) => { handleBlur('username')(e); setFocusedInput(null); }}
-                          onChangeText={handleChange('username')}
+                          onFocus={() => setFocusedInput("username")}
+                          onBlur={(e) => {
+                            handleBlur("username")(e);
+                            setFocusedInput(null);
+                          }}
+                          onChangeText={handleChange("username")}
                           value={values.username}
                           autoCapitalize="none"
                           autoCorrect={false}
                         />
                       </View>
 
-                      {/* Email */}
                       <Text style={styles.label}>Email Address:</Text>
                       <View style={styles.inputWrapper}>
-                        <Octicons name="mail" size={24} style={styles.leftIcon} />
+                        <Octicons
+                          name="mail"
+                          size={24}
+                          style={styles.leftIcon}
+                        />
                         <TextInput
                           label="Email Address"
                           placeholder="Enter email"
                           placeholderTextColor={colors.gray}
                           style={[
                             styles.inputArea,
-                            focusedInput === 'email' && { borderColor: colors.purple },
+                            focusedInput === "email" && {
+                              borderColor: colors.purple,
+                            },
                           ]}
-                          onFocus={() => setFocusedInput('email')}
-                          onBlur={(e) => { handleBlur('email')(e); setFocusedInput(null); }}
-                          onChangeText={handleChange('email')}
+                          onFocus={() => setFocusedInput("email")}
+                          onBlur={(e) => {
+                            handleBlur("email")(e);
+                            setFocusedInput(null);
+                          }}
+                          onChangeText={handleChange("email")}
                           value={values.email}
                           keyboardType="email-address"
                           autoCapitalize="none"
@@ -254,21 +278,29 @@ const Signup = () => {
                         />
                       </View>
 
-                      {/* Password */}
                       <Text style={styles.label}>Password:</Text>
                       <View style={styles.inputWrapper}>
-                        <FontAwesome name="lock" size={24} style={styles.leftIcon} />
+                        <FontAwesome
+                          name="lock"
+                          size={24}
+                          style={styles.leftIcon}
+                        />
                         <TextInput
                           label="Password"
                           placeholder="Enter password"
                           placeholderTextColor={colors.gray}
                           style={[
                             styles.inputArea,
-                            focusedInput === 'password' && { borderColor: colors.purple },
+                            focusedInput === "password" && {
+                              borderColor: colors.purple,
+                            },
                           ]}
-                          onFocus={() => setFocusedInput('password')}
-                          onBlur={(e) => { handleBlur('password')(e); setFocusedInput(null); }}
-                          onChangeText={handleChange('password')}
+                          onFocus={() => setFocusedInput("password")}
+                          onBlur={(e) => {
+                            handleBlur("password")(e);
+                            setFocusedInput(null);
+                          }}
+                          onChangeText={handleChange("password")}
                           value={values.password}
                           secureTextEntry={hidePassword}
                           isPassword={true}
@@ -284,22 +316,34 @@ const Signup = () => {
                           onPress={() => setHidePassword(!hidePassword)}
                         >
                           <Ionicons
-                            name={hidePassword ? 'eye-off' : 'eye'}
+                            name={hidePassword ? "eye-off" : "eye"}
                             size={30}
                             color={colors.main}
                           />
                         </TouchableOpacity>
                       </View>
 
-                      {/* Next Button */}
                       <SignInButton
                         onPress={handleSubmit}
-                        disabled={!values.username || !values.email || !values.password || loading}
+                        disabled={
+                          !values.username ||
+                          !values.email ||
+                          !values.password ||
+                          loading
+                        }
                         style={{
-                          opacity: !values.username || !values.email || !values.password || loading ? 0.5 : 1,
+                          opacity:
+                            !values.username ||
+                            !values.email ||
+                            !values.password ||
+                            loading
+                              ? 0.5
+                              : 1,
                         }}
                       >
-                        <SignInButtonText>{loading ? "Processing..." : "Next"}</SignInButtonText>
+                        <SignInButtonText>
+                          {loading ? "Processing..." : "Next"}
+                        </SignInButtonText>
                       </SignInButton>
                     </View>
                   )}
@@ -310,7 +354,6 @@ const Signup = () => {
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
 
-      {/* Popup message */}
       <Popup
         visible={popupVisible}
         message={popupMessage}
@@ -330,25 +373,25 @@ export default Signup;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    position: 'relative',
+    position: "relative",
     paddingHorizontal: 15,
     paddingTop: 70,
-    fontFamily: 'System',
+    fontFamily: "System",
   },
   inner: {
     maxWidth: 330,
-    alignSelf: 'center',
-    width: '100%',
+    alignSelf: "center",
+    width: "100%",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20,
     gap: 17,
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.main,
     marginLeft: 5,
     fontFamily: "KronaOne",
@@ -356,7 +399,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 19,
     marginTop: 90,
-    fontWeight:'600',
+    fontWeight: "600",
     color: colors.main,
     textAlign: "left",
     padding: 20,
@@ -408,11 +451,11 @@ const styles = StyleSheet.create({
   button: {
     color: colors.white,
     fontSize: 18,
-    textAlign: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 3},
+    textAlign: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
-  }
+  },
 });

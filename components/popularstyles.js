@@ -1,6 +1,5 @@
-import styled from 'styled-components/native';
-import { ScrollView, View, Text, Image, TouchableOpacity } from 'react-native';
-import { Colors } from './styles';
+import styled from "styled-components/native";
+import { Colors } from "./styles";
 
 const { black, gray, secondary } = Colors;
 

@@ -1,18 +1,17 @@
-// BodyMeasurement.js
-import React, { useEffect, useRef, useState } from "react";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import LottieView from "lottie-react-native";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
+  Alert,
+  Dimensions,
+  ImageBackground,
+  Modal,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ImageBackground,
-  Dimensions,
-  Modal,
+  View,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
 import { SwiperFlatList } from "react-native-swiper-flatlist";
-import LottieView from "lottie-react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -91,7 +90,6 @@ export default function BodyMeasurement() {
       resizeMode="cover"
     >
       <View style={styles.overlay}>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Body Measurement</Text>
         </View>
@@ -140,7 +138,6 @@ export default function BodyMeasurement() {
           )}
         />
 
-        {/* Modal */}
         <Modal
           animationType="fade"
           transparent={true}
@@ -155,7 +152,6 @@ export default function BodyMeasurement() {
                 proportions accurately.
               </Text>
 
-              {/* Updated Buttons */}
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={[
@@ -272,7 +268,6 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
 
-  /** Modal Styles **/
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -299,7 +294,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  /** Updated Button Layout **/
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",

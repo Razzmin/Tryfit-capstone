@@ -1,97 +1,109 @@
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { collection, getDocs } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
   Image,
-  TouchableOpacity,
-  StyleSheet,
   ImageBackground,
-} from 'react-native';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { Ionicons } from '@expo/vector-icons';
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { db } from "../firebase/config";
 
-const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/130x180.png?text=No+Image';
-const KNOWN_LABELS = ['t-shirt', 'longsleeve', 'shorts', 'pants'];
+const PLACEHOLDER_IMAGE =
+  "https://via.placeholder.com/130x180.png?text=No+Image";
+const KNOWN_LABELS = ["t-shirt", "longsleeve", "shorts", "pants"];
 
 export default function SearchResults({ route, navigation }) {
   const { query } = route.params;
   const [results, setResults] = useState([]);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [displayTerm, setDisplayTerm] = useState(query);
 
-useEffect(() => {
-  const fetchProducts = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, 'products'));
-      const allProducts = [];
-      querySnapshot.forEach((doc) => {
-        allProducts.push({ id: doc.id, ...doc.data() });
-      });
-
-      const lowerQuery = query.toLowerCase().trim();
-
-
-      if (lowerQuery.length > 0 && lowerQuery.length <= 3) { 
-        const subsequenceMatch = (text, pattern) => {
-          let i = 0, j = 0;
-          while (i < text.length && j < pattern.length) {
-            if (text[i] === pattern[j]) j++;
-            i++;
-          }
-          return j === pattern.length; // true if letters appear in order
-        };
-
-        const filteredProducts = allProducts.filter((p) => {
-          const name = p.productName?.toLowerCase() || '';
-          const category = p.categorySub?.toLowerCase() || '';
-          return subsequenceMatch(name, lowerQuery) || subsequenceMatch(category, lowerQuery);
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const allProducts = [];
+        querySnapshot.forEach((doc) => {
+          allProducts.push({ id: doc.id, ...doc.data() });
         });
 
-        if (filteredProducts.length > 0) {
-          setResults(filteredProducts);
-          setMessage(`No exact results for "${query}". Showing closest matches instead.`);
-        } else { 
+        const lowerQuery = query.toLowerCase().trim();
 
-          const shuffled = [...allProducts].sort(() => Math.random() - 0.5);
-          const randomProducts = shuffled.slice(0, 10);
-          setResults(randomProducts);
-          setMessage(`No exact results for "${query}". Showing similar products instead.`);
+        if (lowerQuery.length > 0 && lowerQuery.length <= 3) {
+          const subsequenceMatch = (text, pattern) => {
+            let i = 0,
+              j = 0;
+            while (i < text.length && j < pattern.length) {
+              if (text[i] === pattern[j]) j++;
+              i++;
+            }
+            return j === pattern.length;
+          };
+
+          const filteredProducts = allProducts.filter((p) => {
+            const name = p.productName?.toLowerCase() || "";
+            const category = p.categorySub?.toLowerCase() || "";
+            return (
+              subsequenceMatch(name, lowerQuery) ||
+              subsequenceMatch(category, lowerQuery)
+            );
+          });
+
+          if (filteredProducts.length > 0) {
+            setResults(filteredProducts);
+            setMessage(
+              `No exact results for "${query}". Showing closest matches instead.`
+            );
+          } else {
+            const shuffled = [...allProducts].sort(() => Math.random() - 0.5);
+            const randomProducts = shuffled.slice(0, 10);
+            setResults(randomProducts);
+            setMessage(
+              `No exact results for "${query}". Showing similar products instead.`
+            );
+          }
+
+          setDisplayTerm(query);
+          return;
         }
 
-        setDisplayTerm(query);
-        return;
-      }
+        const directMatches = allProducts.filter((p) =>
+          p.productName
+            ?.toLowerCase()
+            .replace(/[-\s]/g, "")
+            .includes(lowerQuery.replace(/[-\s]/g, ""))
+        );
 
-      // Normal logic for 4+ characters
-      const directMatches = allProducts.filter((p) =>
-        p.productName
-          ?.toLowerCase()
-          .replace(/[-\s]/g, '')
-          .includes(lowerQuery.replace(/[-\s]/g, ''))
-      );
+        const categoryMatches = allProducts.filter((p) =>
+          p.categorySub
+            ?.toLowerCase()
+            .replace(/[-\s]/g, "")
+            .includes(lowerQuery.replace(/[-\s]/g, ""))
+        );
 
-      const categoryMatches = allProducts.filter((p) =>
-        p.categorySub
-          ?.toLowerCase()
-          .replace(/[-\s]/g, '')
-          .includes(lowerQuery.replace(/[-\s]/g, ''))
-      );
+        const combinedResults = [
+          ...new Map(
+            [...directMatches, ...categoryMatches].map((item) => [
+              item.id,
+              item,
+            ])
+          ).values(),
+        ];
 
-      const combinedResults = [
-        ...new Map(
-          [...directMatches, ...categoryMatches].map((item) => [item.id, item])
-        ).values(),
-      ];
-
-      if (combinedResults.length > 0) {
-        setResults(combinedResults);
-        setMessage('');
-        setDisplayTerm(query);
-      } else {
-          const { closest, distance } = getClosestMatch(lowerQuery, KNOWN_LABELS);
-          const similarityThreshold = 3; // smaller = stricter
+        if (combinedResults.length > 0) {
+          setResults(combinedResults);
+          setMessage("");
+          setDisplayTerm(query);
+        } else {
+          const { closest, distance } = getClosestMatch(
+            lowerQuery,
+            KNOWN_LABELS
+          );
+          const similarityThreshold = 3;
 
           if (distance <= similarityThreshold) {
             const fuzzyMatches = allProducts.filter(
@@ -111,34 +123,32 @@ useEffect(() => {
               setDisplayTerm(query);
             }
           } else {
-            // If query is too different → no results
             setResults([]);
             setMessage(`No results found for "${query}".`);
             setDisplayTerm(query);
           }
         }
-    } catch (error) {
-      console.error('Error fetching products:', error);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      }
+    };
+
+    fetchProducts();
+  }, [query]);
+
+  const getClosestMatch = (input, options) => {
+    let closest = options[0];
+    let minDistance = levenshtein(input, closest);
+
+    for (let i = 1; i < options.length; i++) {
+      const dist = levenshtein(input, options[i]);
+      if (dist < minDistance) {
+        closest = options[i];
+        minDistance = dist;
+      }
     }
+    return { closest, distance: minDistance };
   };
-
-  fetchProducts();
-}, [query]);
-
-
-const getClosestMatch = (input, options) => {
-  let closest = options[0];
-  let minDistance = levenshtein(input, closest);
-
-  for (let i = 1; i < options.length; i++) {
-    const dist = levenshtein(input, options[i]);
-    if (dist < minDistance) {
-      closest = options[i];
-      minDistance = dist;
-    }
-  }
-  return { closest, distance: minDistance };
-};
 
   const levenshtein = (a, b) => {
     const matrix = Array.from({ length: a.length + 1 }, () =>
@@ -166,19 +176,18 @@ const getClosestMatch = (input, options) => {
 
   return (
     <ImageBackground
-      source={require('../assets/bg.png')}
+      source={require("../assets/bg.png")}
       style={{ flex: 1 }}
       resizeMode="cover"
     >
       <View style={styles.container}>
-        {/* Header */}
         <View
           style={{
-            width: '124%',
+            width: "124%",
             height: 50,
-            justifyContent: 'center',
-            alignItems: 'center',
-            position: 'relative',
+            justifyContent: "center",
+            alignItems: "center",
+            position: "relative",
             marginTop: 12,
             paddingHorizontal: 20,
             marginBottom: 30,
@@ -186,7 +195,7 @@ const getClosestMatch = (input, options) => {
         >
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{ position: 'absolute', left: 20, padding: 4 }}
+            style={{ position: "absolute", left: 20, padding: 4 }}
           >
             <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
@@ -194,10 +203,10 @@ const getClosestMatch = (input, options) => {
           <Text
             style={{
               fontSize: 17,
-              color: 'black',
-              fontFamily: 'KronaOne',
-              textTransform: 'uppercase',
-              alignSelf: 'center',
+              color: "black",
+              fontFamily: "KronaOne",
+              textTransform: "uppercase",
+              alignSelf: "center",
               marginRight: 70,
             }}
           >
@@ -205,11 +214,9 @@ const getClosestMatch = (input, options) => {
           </Text>
         </View>
 
-       
-        <ScrollView contentContainerStyle={styles.grid}> 
-        
-        <Text style={styles.title}>Search Results for "{displayTerm}"</Text>
-        {message ? <Text style={styles.message}>{message}</Text> : null}
+        <ScrollView contentContainerStyle={styles.grid}>
+          <Text style={styles.title}>Search Results for "{displayTerm}"</Text>
+          {message ? <Text style={styles.message}>{message}</Text> : null}
 
           {results.length > 0 ? (
             results.map((product) => (
@@ -217,11 +224,11 @@ const getClosestMatch = (input, options) => {
                 key={product.id}
                 style={styles.card}
                 onPress={() =>
-                  navigation.navigate('ProductDetail', {
+                  navigation.navigate("ProductDetail", {
                     product: {
                       ...product,
                       images: [product.imageUrl],
-                      colors: ['#FF0000', '#00FF00', '#0000FF'],
+                      colors: ["#FF0000", "#00FF00", "#0000FF"],
                     },
                   })
                 }
@@ -230,7 +237,7 @@ const getClosestMatch = (input, options) => {
                   source={{ uri: product.imageUrl || PLACEHOLDER_IMAGE }}
                   style={styles.image}
                 />
-                {/* ✅ FIXED: display productName instead of name */}
+
                 <Text style={styles.name}>{product.productName}</Text>
                 <Text style={styles.price}>{product.price}</Text>
                 <Text style={styles.meta}>
@@ -255,59 +262,59 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     paddingHorizontal: 20,
     paddingBottom: 5,
   },
   message: {
-  fontSize: 13,
-  color: '#555',
-  paddingHorizontal: 20,
-  marginBottom: 10,
-  fontStyle: 'italic',
-  textAlign: 'center',
+    fontSize: 13,
+    color: "#555",
+    paddingHorizontal: 20,
+    marginBottom: 10,
+    fontStyle: "italic",
+    textAlign: "center",
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
   },
   card: {
-    width: '48%',
-    backgroundColor: '#f9f9f9',
+    width: "48%",
+    backgroundColor: "#f9f9f9",
     borderRadius: 10,
     padding: 10,
     marginBottom: 16,
   },
   image: {
-    width: '100%',
+    width: "100%",
     height: 200,
     borderRadius: 8,
     marginBottom: 10,
   },
   name: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   price: {
-    color: '#9747FF',
-    fontWeight: '600',
+    color: "#9747FF",
+    fontWeight: "600",
     marginVertical: 4,
   },
   meta: {
     fontSize: 12,
-    color: '#555',
+    color: "#555",
   },
   delivery: {
     fontSize: 12,
-    color: 'green',
+    color: "green",
   },
   noResults: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginTop: 50,
-    textAlign: 'center',
-    width: '100%',
+    textAlign: "center",
+    width: "100%",
   },
 });
