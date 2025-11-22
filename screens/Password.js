@@ -284,6 +284,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "#fff",
     borderRadius: 10,
+    color: "#333",
     padding: 15,
     paddingRight: 40,
     paddingVertical: 14,
