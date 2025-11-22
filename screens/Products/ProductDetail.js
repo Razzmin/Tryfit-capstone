@@ -33,6 +33,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { db, auth } from "../../firebase/config.js";
 
 import {
   Content,
@@ -64,8 +65,7 @@ import {
   FontAwesome,
 } from "@expo/vector-icons";
 
-const db = getFirestore();
-const auth = getAuth();
+
 const avatarColors = [
   "#D98EFF",
   "#BDBDBD",
@@ -186,6 +186,7 @@ export default function ProductDetail() {
 
   const sizeOrder = product.sizes || [];
 
+
   const saveCartItem = async () => {
     if (isSaving) return;
     setIsSaving(true);
@@ -225,21 +226,23 @@ export default function ProductDetail() {
         return;
       }
 
+       
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
       if (!userDocSnap.exists()) {
-        Alert.alert("Error", "User data not found.");
+        Alert.alert('Error', 'User data not found.');
         return;
       }
       const customUserId = userDocSnap.data().userId;
 
+      
       const cartItemCode = doc(collection(db, "cartItems")).id;
 
       const cartItem = {
         cartItemCode,
-        userId: customUserId,
+        userId: customUserId, 
         productId: product.id,
-        productID: product.productID,
+        productID: product.productID, 
         productName: product.productName,
         imageUrl: product.imageUrl,
         size: selectedSize,
@@ -249,38 +252,48 @@ export default function ProductDetail() {
         timestamp: serverTimestamp(),
       };
 
-      await addDoc(collection(db, "notifications"), {
-        notifID: `CRT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        userId: customUserId,
-        title: "Item Added to Cart",
-        message: `${product.productName} (${selectedSize}) was added to your cart.`,
-        productID: product.productID,
-        productName: product.productName,
-        size: selectedSize,
-        timestamp: serverTimestamp(),
-        read: false,
-      });
+        await Promise.all([
+          setDoc(doc(cartRef, cartItemCode), cartItem),
+          addDoc(collection(db, "notifications"), {
+            notifID: `CRT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            userId: customUserId,
+            title: "Item Added to Cart",
+            message: `${product.productName} (${selectedSize}) was added to your cart.`,
+            productID: product.productID,
+            productName: product.productName,
+            size: selectedSize,
+            timestamp: serverTimestamp(),
+            read: false,
+          }),
+        ]);
 
-      addNotification(`${product.productName} added to cart`);
-      Alert.alert("Success", "Item has been added to your cart.", [
-        {
-          text: "OK",
-          onPress: () => {
-            setModalVisible(false);
-            setModalQuantity(1);
-            setSelectedSize(null);
-            setIsSaving(false);
-          },
-        },
-      ]);
+
+     addNotification(`${product.productName} added to cart`);
+        Alert.alert(
+          "Success",
+          "Item has been added to your cart.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                
+                setModalVisible(false);
+                setModalQuantity(1);
+                setSelectedSize(null);
+                setIsSaving(false); 
+              },
+            },
+          ]
+        );
 
       setModalVisible(false);
       setModalQuantity(1);
       setSelectedSize(null);
+
     } catch (error) {
-      Alert.alert("Error", "Failed to add item to cart.");
-      console.error("Add to cart error:", error);
-    }
+      Alert.alert('Error', 'Failed to add item to cart.');
+      console.error('Add to cart error:', error);
+    } 
   };
 
   const incrementQuantity = () => {
