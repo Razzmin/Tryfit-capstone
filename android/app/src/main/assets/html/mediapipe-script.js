@@ -261,13 +261,13 @@ function showCapturedMeasurements(lm) {
   resultsBox.style.display = 'block';
   resultsBox.innerHTML = `
     <div style="font-size:18px; color:#9747FF; font-weight:700; margin-bottom:8px; font-family: 'Krona One', sans-serif;">Captured Measurements</div>
-    <strong>Height:</strong> ${BASE_HEIGHT.toFixed(1)} cm<br>
-    <strong>Weight:</strong> ${BASE_WEIGHT.toFixed(1)} kg<br>
-    <strong>Waist:</strong> ${BASE_WAIST.toFixed(1)} cm<br><br>
-    <strong>Shoulder:</strong> ${finalShoulder.toFixed(1)} cm<br>
-    <strong>Chest:</strong> ${finalChest.toFixed(1)} cm<br>
-    <strong>Hips:</strong> ${finalHips.toFixed(1)} cm<br>
-    <strong>Bust:</strong> ${finalBust.toFixed(1)} cm<br><br>
+    <strong>Height:</strong> ${Math.round(BASE_HEIGHT)} cm<br>
+    <strong>Weight:</strong> ${Math.round(BASE_WEIGHT)} kg<br>
+    <strong>Waist:</strong> ${Math.round(BASE_WAIST)} cm<br><br>
+    <strong>Shoulder:</strong> ${Math.round(finalShoulder)} cm<br>
+    <strong>Chest:</strong> ${Math.round(finalChest)} cm<br>
+    <strong>Hips:</strong> ${Math.round(finalHips)} cm<br>
+    <strong>Bust:</strong> ${Math.round(finalBust)} cm<br><br>
     <strong>Recommended Top Size:</strong> ${topSize}<br>
     <strong>Recommended Bottom Size:</strong> ${bottomSize}
   `;
