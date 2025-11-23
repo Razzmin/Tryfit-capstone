@@ -1,5 +1,22 @@
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
+import { getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
@@ -15,23 +32,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getFirestore,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  where,
-  getDocs,
-  writeBatch,
-} from "firebase/firestore";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const BOT_NAME = "Tryfit Admin";
 const CONVO_DELETED_KEY = "conversationDeleted";
@@ -40,7 +40,6 @@ const ChatSupportScreen = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [started, setStarted] = useState(false);
   const navigation = useNavigation();
 
   const db = getFirestore(getApp());
@@ -51,31 +50,38 @@ const ChatSupportScreen = () => {
   const isSending = useRef(false);
 
   useEffect(() => {
-    let unsubscribe;
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return;
 
     const fetchMessages = async () => {
-      const deletedFlag = await AsyncStorage.getItem(CONVO_DELETED_KEY);
-      convoDeletedRef.current = deletedFlag === "true";
-
-      if (convoDeletedRef.current) {
-        setMessages([]);
-        setStarted(false);
-        return;
-      }
-
-      const firebaseUser = auth.currentUser;
-      if (!firebaseUser) return;
-
       try {
         const userDocRef = doc(db, "users", firebaseUser.uid);
         const userDocSnap = await getDoc(userDocRef);
-
-        if (!userDocSnap.exists()) {
-          console.error("No user found in users collection!");
-          return;
-        }
+        if (!userDocSnap.exists()) return;
 
         const customUserId = userDocSnap.data().userId;
+
+        const markAdminMessagesAsRead = async () => {
+          const adminQuery = query(
+            chatCollection,
+            where("userId", "==", customUserId),
+            where("sender", "==", "admin"),
+            where("read", "==", false)
+          );
+
+          const snapshot = await getDocs(adminQuery);
+          if (snapshot.empty) return;
+
+          const batch = writeBatch(db);
+          snapshot.forEach((docSnap) => {
+            batch.update(docSnap.ref, { read: true });
+          });
+
+          await batch.commit();
+          console.log("Admin messages marked as read.");
+        };
+
+        await markAdminMessagesAsRead();
 
         const q = query(
           chatCollection,
@@ -83,17 +89,7 @@ const ChatSupportScreen = () => {
           orderBy("timestamp", "asc")
         );
 
-        unsubscribe = onSnapshot(q, async (querySnapshot) => {
-          const deletedNow = await AsyncStorage.getItem(CONVO_DELETED_KEY);
-          convoDeletedRef.current = deletedNow === "true";
-
-          if (convoDeletedRef.current) {
-            setMessages([]);
-            setStarted(false);
-            if (unsubscribe) unsubscribe();
-            return;
-          }
-
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
           const loadedMessages = querySnapshot.docs.map((docSnap) => {
             const data = docSnap.data();
             return {
@@ -104,22 +100,20 @@ const ChatSupportScreen = () => {
               userId: data.userId,
               username: data.username,
               timestamp: data.timestamp?.toDate?.() || new Date(),
+              read: data.read ?? false,
             };
           });
 
           setMessages(loadedMessages);
-          setStarted(loadedMessages.length > 0);
         });
+
+        return unsubscribe;
       } catch (error) {
         console.error("Error fetching messages:", error);
       }
     };
 
     fetchMessages();
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
   }, []);
 
   const sendMessage = async () => {
@@ -178,7 +172,6 @@ const ChatSupportScreen = () => {
         },
       ]);
 
-      setStarted(true);
       setInput("");
     } catch (error) {
       console.error("Error sending message:", error);
@@ -199,7 +192,6 @@ const ChatSupportScreen = () => {
 
       const customUserId = userDoc.data().userId;
 
-      // Query all messages belonging to this user
       const q = query(chatCollection, where("userId", "==", customUserId));
       const snapshot = await getDocs(q);
 
@@ -217,7 +209,6 @@ const ChatSupportScreen = () => {
     }
   };
 
-
   const renderItem = ({ item }) => (
     <View
       style={[
@@ -230,18 +221,15 @@ const ChatSupportScreen = () => {
   );
 
   const confirmDelete = async () => {
-    await deleteConversation();          // delete from Firestore
+    await deleteConversation();
     await AsyncStorage.setItem(CONVO_DELETED_KEY, "true");
 
     setMessages([]);
-    setStarted(false);
     setModalVisible(false);
   };
 
-
   const closeModal = () => setModalVisible(false);
   const onStartConversation = async () => {
-    setStarted(true);
     await AsyncStorage.removeItem(CONVO_DELETED_KEY);
   };
 
@@ -300,50 +288,44 @@ const ChatSupportScreen = () => {
             </TouchableWithoutFeedback>
           </Modal>
 
-          {!started && messages.length === 0 && (
-            <View style={styles.startContainer}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
+          >
+            {messages.length === 0 && (
+              <View style={styles.placeholderContainer}>
+                <Text style={styles.placeholderText}>
+                  Start your conversation...
+                </Text>
+              </View>
+            )}
+
+            <FlatList
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={styles.chatContainer}
+              initialNumToRender={20}
+              windowSize={10}
+            />
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                value={input}
+                onChangeText={setInput}
+                placeholder="Type a message..."
+                style={styles.textInput}
+              />
               <TouchableOpacity
-                style={styles.startBtn}
-                onPress={onStartConversation}
+                style={[styles.sendBtn, isSending.current && { opacity: 0.5 }]}
+                onPress={sendMessage}
+                disabled={isSending.current}
               >
-                <Text style={styles.startBtnText}>Start Conversation</Text>
+                <Ionicons name="send" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
-          )}
-
-          {started && (
-            <KeyboardAvoidingView
-              style={{ flex: 1 }}
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
-            >
-              <FlatList
-                data={messages}
-                keyExtractor={(item) => item.id}
-                renderItem={renderItem}
-                contentContainerStyle={styles.chatContainer}
-              />
-
-              <View style={styles.inputContainer}>
-                <TextInput
-                  value={input}
-                  onChangeText={setInput}
-                  placeholder="Type a message..."
-                  style={styles.textInput}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.sendBtn,
-                    isSending.current && { opacity: 0.5 },
-                  ]}
-                  onPress={sendMessage}
-                  disabled={isSending.current}
-                >
-                  <Ionicons name="send" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            </KeyboardAvoidingView>
-          )}
+          </KeyboardAvoidingView>
         </View>
       </TouchableWithoutFeedback>
     </SafeAreaView>
@@ -479,6 +461,18 @@ const styles = StyleSheet.create({
   confirmBtnText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  placeholderContainer: {
+    position: "absolute",
+    top: "40%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 1,
+  },
+  placeholderText: {
+    color: "#999",
+    fontSize: 24,
   },
 });
 

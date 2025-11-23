@@ -99,7 +99,7 @@ export default function EditProfile() {
     const unsubscribe = onSnapshot(
       q,
       (snap) => {
-        if (!auth.currentUser) return; // ⚡ check user is logged in
+        if (!auth.currentUser) return;
         setUnreadCount(snap.size);
       },
       (error) => console.warn("Snapshot error:", error.message)

@@ -13,8 +13,8 @@ import {
   query,
   where,
 } from "firebase/firestore";
+import Fuse from "fuse.js";
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { auth, db } from "../firebase/config";
 import {
   Alert,
   Animated,
@@ -30,7 +30,7 @@ import {
   View,
 } from "react-native";
 import { CartContext } from "../content/shoppingcartcontent";
-import Fuse from "fuse.js";
+import { auth, db } from "../firebase/config";
 
 const colors = {
   bg: "#382a47",
@@ -56,8 +56,10 @@ export default function LandingPage() {
   const { cartItems } = useContext(CartContext);
   const isFocused = useIsFocused();
   const [uniqueUserId, setUniqueUserId] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadAdminMessages, setUnreadAdminMessages] = useState(0);
   const notifUnsubRef = useRef(null);
+  const adminMsgUnsubRef = useRef(null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -289,17 +291,42 @@ export default function LandingPage() {
 
     const unsubscribe = onSnapshot(
       q,
-      (snap) => setUnreadCount(snap.size),
+      (snap) => setUnreadNotifications(snap.size),
       (error) => console.warn("Snapshot error:", error.message)
     );
 
-    // Save to ref so you can unsubscribe on logout
     notifUnsubRef.current = unsubscribe;
 
     return () => {
       if (notifUnsubRef.current) {
         notifUnsubRef.current();
         notifUnsubRef.current = null;
+      }
+    };
+  }, [uniqueUserId]);
+
+  useEffect(() => {
+    if (!uniqueUserId) return;
+
+    const q = query(
+      collection(db, "chatMessages"),
+      where("userId", "==", uniqueUserId),
+      where("sender", "==", "admin"),
+      where("read", "==", false)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => setUnreadAdminMessages(snap.size),
+      (error) => console.warn("Error fetching unread admin messages:", error)
+    );
+
+    adminMsgUnsubRef.current = unsubscribe;
+
+    return () => {
+      if (adminMsgUnsubRef.current) {
+        adminMsgUnsubRef.current();
+        adminMsgUnsubRef.current = null;
       }
     };
   }, [uniqueUserId]);
@@ -415,6 +442,19 @@ export default function LandingPage() {
                 onPress={() => navigation.navigate("ChatSupport")}
               >
                 <Ionicons name="chatbubbles-outline" size={28} color="black" />
+                {unreadAdminMessages > 0 && (
+                  <View
+                    style={{
+                      width: 11,
+                      height: 11,
+                      borderRadius: 5,
+                      backgroundColor: "red",
+                      position: "absolute",
+                      top: -2,
+                      left: 18,
+                    }}
+                  />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -599,7 +639,7 @@ export default function LandingPage() {
                       {cartItems.length}
                     </Text>
                   )}
-                  {tab === "Profile" && unreadCount > 0 && (
+                  {tab === "Profile" && unreadNotifications > 0 && (
                     <View
                       style={{
                         width: 10,
