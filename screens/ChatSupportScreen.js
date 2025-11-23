@@ -160,6 +160,7 @@ const ChatSupportScreen = () => {
         sender: "user",
         userId: customUserId,
         username: username,
+        read: false,
         timestamp: serverTimestamp(),
       });
 
@@ -172,6 +173,7 @@ const ChatSupportScreen = () => {
           sender: "user",
           userId: customUserId,
           username: username,
+          read: false,
           timestamp: new Date(),
         },
       ]);
@@ -363,7 +365,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   startBtn: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#9747FF",
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 25,
@@ -381,7 +383,7 @@ const styles = StyleSheet.create({
   },
   userMessage: {
     alignSelf: "flex-end",
-    backgroundColor: "#DCF8C6",
+    backgroundColor: "#dfcdf5ff",
   },
   botMessage: {
     alignSelf: "flex-start",
@@ -409,7 +411,7 @@ const styles = StyleSheet.create({
   },
   sendBtn: {
     marginLeft: 10,
-    backgroundColor: "#007AFF",
+    backgroundColor: "#9747FF",
     borderRadius: 20,
     paddingHorizontal: 16,
     justifyContent: "center",
