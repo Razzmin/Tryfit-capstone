@@ -28,6 +28,8 @@ import {
   query,
   serverTimestamp,
   where,
+  getDocs,
+  writeBatch,
 } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -185,6 +187,35 @@ const ChatSupportScreen = () => {
     }
   };
 
+  const deleteConversation = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (!userDoc.exists()) return;
+
+      const customUserId = userDoc.data().userId;
+
+      // Query all messages belonging to this user
+      const q = query(chatCollection, where("userId", "==", customUserId));
+      const snapshot = await getDocs(q);
+
+      const batch = writeBatch(db);
+
+      snapshot.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+
+      await batch.commit();
+
+      console.log("Conversation deleted from Firestore.");
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+    }
+  };
+
+
   const renderItem = ({ item }) => (
     <View
       style={[
@@ -197,11 +228,14 @@ const ChatSupportScreen = () => {
   );
 
   const confirmDelete = async () => {
+    await deleteConversation();          // delete from Firestore
+    await AsyncStorage.setItem(CONVO_DELETED_KEY, "true");
+
     setMessages([]);
     setStarted(false);
     setModalVisible(false);
-    await AsyncStorage.setItem(CONVO_DELETED_KEY, "true");
   };
+
 
   const closeModal = () => setModalVisible(false);
   const onStartConversation = async () => {
