@@ -160,13 +160,13 @@ export default function ToShip() {
           alignItems: "center",
           justifyContent: "center",
           paddingHorizontal: 16,
-          paddingBottom: 20,
+          paddingVertical: 11,
           backgroundColor: "#fff",
         }}
       >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={{ position: "absolute", left: 10, top: -4 }}
+          style={{ position: "absolute", left: 2, bottom: 8}}
         >
           <Feather name="arrow-left" size={27} color="black" />
         </TouchableOpacity>
@@ -184,11 +184,15 @@ export default function ToShip() {
         </Text>
       </Header>
 
+
+      <View style={{ height: 56, width: '100%', flex: 0, justifyContent: 'center' }}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.tabContainer}
-        contentContainerStyle={{ paddingHorizontal: 20 }}
+        style={styles.tabScroll}
+        contentContainerStyle={{flexGrow: 0,
+          alignItems: "center",
+          paddingHorizontal: 20,  }}
       >
         {Object.keys(tabRoutes).map((tab) => (
           <TouchableOpacity
@@ -215,6 +219,7 @@ export default function ToShip() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+      </View>
 
       <ScrollView style={{ marginBottom: 40 }}>
         {orders.length === 0 ? (
@@ -376,7 +381,13 @@ const styles = StyleSheet.create({
   },
   tabWrap: {
     alignItems: "center",
-    marginRight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    height: '100%',
+    marginRight: 10,
+  },
+  tabScroll: {
+    flex: 1, 
   },
   tabText: {
     fontSize: 14,

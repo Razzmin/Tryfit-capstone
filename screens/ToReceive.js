@@ -196,13 +196,13 @@ export default function ToReceive() {
           alignItems: "center",
           justifyContent: "center",
           paddingHorizontal: 16,
-          paddingBottom: 20,
+          paddingVertical: 11,
           backgroundColor: "#fff",
         }}
       >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={{ position: "absolute", left: 10, top: -4 }}
+          style={{ position: "absolute", left: 2, bottom: 8 }}
         >
           <Feather name="arrow-left" size={27} color="black" />
         </TouchableOpacity>
@@ -220,11 +220,12 @@ export default function ToReceive() {
         </Text>
       </Header>
 
+           <View style={{ height: 56, width: '100%', flex: 0, justifyContent: 'center' }}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.tabContainer}
-        contentContainerStyle={{ paddingHorizontal: 20 }}
+        style={styles.tabScroll}
+        contentContainerStyle={{ paddingHorizontal: 20, alignItems: 'center', flexGrow: 0  }}
       >
         {Object.keys(tabRoutes).map((tab) => (
           <TouchableOpacity
@@ -251,8 +252,9 @@ export default function ToReceive() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+      </View>
 
-      <ScrollView style={{ marginBottom: 30 }}>
+      <ScrollView style={{ marginBottom: 40 }}>
         {orders.length === 0 ? (
           <Text style={{ textAlign: "center", marginTop: 20, color: "#555" }}>
             No "To Receive" orders found.
@@ -330,7 +332,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     paddingTop: 30,
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
   },
   tabContainer: {
     flexDirection: "row",
@@ -338,7 +340,13 @@ const styles = StyleSheet.create({
   },
   tabWrap: {
     alignItems: "center",
-    marginRight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    height: '100%', 
+    marginRight: 10,
+  },
+  tabScroll: {
+    flex: 1,
   },
   tabText: {
     fontSize: 14,

@@ -230,13 +230,13 @@ export default function Orders() {
           alignItems: "center",
           justifyContent: "center",
           paddingHorizontal: 16,
-          paddingBottom: 20,
+          paddingVertical: 11,
           backgroundColor: "#fff",
         }}
       >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={{ position: "absolute", left: 2, top: -4 }}
+          style={{ position: "absolute", left: 2, bottom: 8}}
         >
           <Feather name="arrow-left" size={27} color="black" />
         </TouchableOpacity>
@@ -253,16 +253,17 @@ export default function Orders() {
           MY PURCHASES
         </Text>
       </Header>
-
+        
+        <View style={{ height: 56, width: '100%', flex: 0, justifyContent: 'center' }}>
       <ScrollView
         contentContainerStyle={{
-          flexGrow: 1,
-          alignItems: "stretch",
-          paddingBottom: 20,
+          flexGrow: 0,
+          alignItems: "center",
+          paddingHorizontal: 20,
         }}
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.tabContainer}
+        style={styles.tabScroll}
       >
         {Object.keys(tabRoutes).map((tab) => (
           <TouchableOpacity
@@ -289,8 +290,9 @@ export default function Orders() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+      </View>
 
-      <ScrollView style={{ marginTop: 10 }}>
+      <ScrollView style={{ marginBottom: 40 }}>
         {orders.length === 0 ? (
           <Text style={{ textAlign: "center", marginTop: 20, color: "#555" }}>
             No orders found.
@@ -396,9 +398,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginBottom: 0,
   },
+  tabScroll: {
+    flex: 1,
+  },
   tabWrap: {
     alignItems: "center",
-    marginRight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    height: '100%', 
+    marginRight: 10,
   },
   tabText: {
     fontSize: 14,

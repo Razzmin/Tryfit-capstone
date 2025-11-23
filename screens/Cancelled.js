@@ -103,13 +103,13 @@ export default function Cancelled() {
           alignItems: "center",
           justifyContent: "center",
           paddingHorizontal: 16,
-          paddingBottom: 20,
+          paddingVertical: 11,
           backgroundColor: "#fff",
         }}
       >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={{ position: "absolute", left: 10, top: -4 }}
+          style={{ position: "absolute", left: 2, bottom: 8 }}
         >
           <Feather name="arrow-left" size={27} color="black" />
         </TouchableOpacity>
@@ -126,11 +126,13 @@ export default function Cancelled() {
           MY PURCHASES
         </Text>
       </Header>
-
+        
+        <View style={{ height: 56, width: '100%', flex: 0, justifyContent: 'center' }}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.tabContainer}
+        style={styles.tabScroll}
+        contentContainerStyle={{ paddingHorizontal: 20, alignItems: 'center', flexGrow: 0  }}
       >
         {Object.keys(tabRoutes).map((tab) => (
           <TouchableOpacity
@@ -157,6 +159,7 @@ export default function Cancelled() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+      </View>
 
       <ScrollView>
         {cancelledOrders.length === 0 ? (
@@ -256,8 +259,12 @@ const styles = StyleSheet.create({
   },
   tabWrap: {
     alignItems: "center",
-    marginRight: 40,
+    marginRight: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    height: '100%', 
   },
+  
   tabText: {
     fontSize: 14,
     color: "#333",
