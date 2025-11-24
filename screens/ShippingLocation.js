@@ -417,36 +417,31 @@ export default function ShippingLocation() {
               />
 
               <Text style={styles.label}>Phone Number:</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  focusedField === "phone" && { borderColor: "#9747FF" },
-                ]}
-                value={phone}
-                onChangeText={(text) => {
-                  let cleaned = text.replace(/\D/g, "");
+<TextInput
+  style={[
+    styles.input,
+    focusedField === "phone" && { borderColor: "#9747FF" },
+  ]}
+  value={phone}
+  onChangeText={(text) => {
+    let cleaned = text.replace(/\D/g, "");
+    if (cleaned.length > 11) cleaned = cleaned.slice(0, 11);
+    let formatted = cleaned;
+    if (cleaned.length > 4 && cleaned.length <= 7) {
+      formatted = cleaned.replace(/(\d{4})(\d{1,3})/, "$1 $2");
+    } else if (cleaned.length > 7) {
+      formatted = cleaned.replace(/(\d{4})(\d{3})(\d{1,4})/, "$1 $2 $3");
+    }
+    setPhone(formatted);
+  }}
+  keyboardType="numeric"
+  placeholder="e.g. 09xx xxx xxxx"
+  onFocus={() => setFocusedField("phone")}
+  onBlur={() => setFocusedField("")}
+  maxLength={13} 
+  selection={{ start: phone.length, end: phone.length }} 
+/>
 
-                  if (cleaned.length > 11) {
-                    cleaned = cleaned.slice(0, 11);
-                  }
-
-                  let formatted = cleaned;
-                  if (cleaned.length > 4 && cleaned.length <= 7) {
-                    formatted = cleaned.replace(/(\d{4})(\d{1,3})/, "$1 $2");
-                  } else if (cleaned.length > 7) {
-                    formatted = cleaned.replace(
-                      /(\d{4})(\d{3})(\d{1,4})/,
-                      "$1 $2 $3"
-                    );
-                  }
-
-                  setPhone(formatted);
-                }}
-                keyboardType="numeric"
-                placeholder="e.g. 09xx xxx xxxx"
-                onFocus={() => setFocusedField("phone")}
-                onBlur={() => setFocusedField("")}
-              />
 
               <Text style={styles.label}>House No., Street / Building:</Text>
               <TextInput
