@@ -239,10 +239,21 @@ function showCapturedMeasurements(lm) {
     } catch(e){}
   }
 
-  const finalShoulder = shoulder_raw + offsets.shoulder;
-  const finalChest = chest_raw + offsets.chest;
-  const finalHips = hips_raw + offsets.hips;
-  const finalBust = bust_raw + offsets.bust;
+let shoulder_adj = shoulder_raw;
+let hips_adj = hips_raw;
+
+if (!cal_shoulder.value || cal_shoulder.value.trim() === "") {
+  shoulder_adj += 16;
+}
+
+if (!cal_hips.value || cal_hips.value.trim() === "") {
+  hips_adj += 10;
+}
+const finalShoulder = shoulder_adj + offsets.shoulder;
+const finalChest = chest_raw + offsets.chest;
+const finalHips = hips_adj + offsets.hips;
+const finalBust = bust_raw + offsets.bust;
+
 
   const topSize = recommendedTopSizeArray({
     height: BASE_HEIGHT,
