@@ -212,6 +212,33 @@ export default function ShippingLocation() {
     fetchShippingLocation();
   }, []);
 
+  const validateField = (field, value) => {
+    let error = "";
+    switch (field) {
+      case "name":
+        if (!value.trim()) error = "Name is required";
+        else if (/\d/.test(value)) error = "Name cannot contain numbers";
+        break;
+      case "phone":
+        if (!value.trim()) error = "Phone is required";
+        break;
+      case "house":
+        if (!value.trim()) error = "House/Street is required";
+        break;
+      case "municipality":
+        if (!value.trim()) error = "Select a municipality";
+        break;
+      case "barangay":
+        if (!value.trim()) error = "Select a barangay";
+        break;
+      case "postal":
+        if (!value.trim()) error = "Postal code required";
+        break;
+    }
+    setErrors((prev) => ({ ...prev, [field]: error }));
+    return error === "";
+  };
+
   const handlePickerChange = (value) => {
     if (stage === "municipality") {
       setMunicipality(value);
@@ -221,7 +248,7 @@ export default function ShippingLocation() {
       const composed = `${value}, ${municipality}, Tarlac`;
       setFinalAddress(composed);
       setStage("final");
-    } else if (stage === "final") {
+    } else {
       setMunicipality("");
       setBarangay("");
       setFinalAddress("");
@@ -260,42 +287,18 @@ export default function ShippingLocation() {
   };
 
   const handleSave = async () => {
+    const fields = ["name", "phone", "house", "municipality", "barangay", "postal"];
+    let valid = true;
+    fields.forEach((f) => {
+      const value = { name, phone, house, municipality, barangay, postal }[f];
+      if (!validateField(f, value)) valid = false;
+    });
+    if (!valid) return;
+
     const cleanedName = name.trim();
     const cleanedPhone = phone.replace(/\s+/g, "");
     const cleanedHouse = house.trim();
     const cleanedPostal = postal.trim();
-
-    if (!cleanedName || !/^[A-Za-z\s.]+$/.test(cleanedName)) {
-      return Alert.alert(
-        "Validation Error",
-        "Please enter a valid name(letters only)."
-      );
-    }
-
-    if (!cleanedPhone || !/^(09\d{9}|(\+639)\d{9})$/.test(cleanedPhone)) {
-      return Alert.alert(
-        "Validation Error",
-        "Please enter a valid mobile number(e.g., 09xxx)."
-      );
-    }
-    if (!cleanedHouse || cleanedHouse.length < 5) {
-      return Alert.alert(
-        "Validation Error",
-        "Please enter a more complete house/street/building information"
-      );
-    }
-    if (!municipality) {
-      return Alert.alert("Validation Error", "Please select a municipality.");
-    }
-    if (!barangay) {
-      return Alert.alert("Validation Error", "Please select a barangay.");
-    }
-    if (!cleanedPostal || !/^\d{4}$/.test(cleanedPostal)) {
-      return Alert.alert(
-        "Validation Error",
-        "Please enter a valid 4-digit postal code."
-      );
-    }
 
     try {
       setSaving(true);
@@ -402,164 +405,168 @@ export default function ShippingLocation() {
                 alignSelf: "center",
               }}
             >
-              <Text style={styles.label}>Name (Receiver):</Text>
+              {/* Name */}
+              <Text style={styles.label}>
+                Name (Receiver): {(!name || errors.name) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
               <TextInput
-                style={[
-                  styles.input,
-                  focusedField === "name" && { borderColor: "#9747FF" },
-                ]}
+                style={[styles.input, errors.name && { borderColor: "red" }]}
                 value={name}
-                onChangeText={setName}
+                onChangeText={(text) => {
+                  const clean = text.replace(/\d/g, "");
+                  setName(clean);
+                  validateField("name", clean);
+                }}
                 placeholder="e.g. Juan Dela Cruz"
                 onFocus={() => setFocusedField("name")}
                 onBlur={() => setFocusedField("")}
                 maxLength={40}
               />
 
-              <Text style={styles.label}>Phone Number:</Text>
-<TextInput
-  style={[
-    styles.input,
-    focusedField === "phone" && { borderColor: "#9747FF" },
-  ]}
-  value={phone}
-  onChangeText={(text) => {
-    let cleaned = text.replace(/\D/g, "");
-    if (cleaned.length > 11) cleaned = cleaned.slice(0, 11);
-    let formatted = cleaned;
-    if (cleaned.length > 4 && cleaned.length <= 7) {
-      formatted = cleaned.replace(/(\d{4})(\d{1,3})/, "$1 $2");
-    } else if (cleaned.length > 7) {
-      formatted = cleaned.replace(/(\d{4})(\d{3})(\d{1,4})/, "$1 $2 $3");
-    }
-    setPhone(formatted);
-  }}
-  keyboardType="numeric"
-  placeholder="e.g. 09xx xxx xxxx"
-  onFocus={() => setFocusedField("phone")}
-  onBlur={() => setFocusedField("")}
-  maxLength={13} 
-  selection={{ start: phone.length, end: phone.length }} 
-/>
-
-
-              <Text style={styles.label}>House No., Street / Building:</Text>
+              {/* Phone */}
+              <Text style={styles.label}>
+                Phone Number: {(!phone || errors.phone) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
               <TextInput
-                style={[
-                  styles.input,
-                  focusedField === "house" && { borderColor: "#9747FF" },
-                  errors.name && { borderColor: "red" },
-                ]}
+                style={[styles.input, errors.phone && { borderColor: "red" }]}
+                value={phone}
+                onChangeText={(text) => {
+                  setPhone(text);
+                  validateField("phone", text);
+                }}
+                keyboardType="numeric"
+                placeholder="e.g. 09xx xxx xxxx"
+                onFocus={() => setFocusedField("phone")}
+                onBlur={() => setFocusedField("")}
+                maxLength={11}
+              />
+
+              {/* House */}
+              <Text style={styles.label}>
+                House No., Street / Building: {(!house || errors.house) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
+              <TextInput
+                style={[styles.input, errors.house && { borderColor: "red" }]}
                 value={house}
-                onChangeText={setHouse}
+                onChangeText={(text) => {
+                  setHouse(text);
+                  validateField("house", text);
+                }}
                 placeholder="e.g., Kamanggahan, Care"
                 onFocus={() => setFocusedField("house")}
                 onBlur={() => setFocusedField("")}
                 maxLength={150}
               />
 
-              <View style={{ marginBottom: 10 }}>
-                <Text style={styles.label}>Municipality:</Text>
-                <View
+              {/* Municipality */}
+              <Text style={styles.label}>
+                Municipality: {(!municipality || errors.municipality) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: errors.municipality ? "red" : "#ccc",
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  marginBottom: 10,
+                }}
+              >
+                <TextInput
+                  style={{ flex: 1, padding: 12 }}
+                  value={municipality}
+                  editable={false}
+                  placeholder="Select Municipality"
+                />
+                <Feather
+                  name="chevron-down"
+                  size={20}
+                  color="#999"
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    borderWidth: 1,
-                    borderColor: "#ccc",
-                    borderRadius: 10,
-                    overflow: "hidden",
+                    position: "absolute",
+                    right: 10,
+                    pointerEvents: "none",
+                  }}
+                />
+                <Picker
+                  selectedValue={municipality}
+                  style={{ width: 150, opacity: 0.01 }}
+                  onValueChange={(value) => {
+                    setMunicipality(value);
+                    validateField("municipality", value);
+                    setBarangay("");
                   }}
                 >
-                  <TextInput
-                    style={{ flex: 1, padding: 12 }}
-                    value={municipality}
-                    editable={false}
-                    placeholder="Select Municipality"
-                  />
+                  <Picker.Item label="Select Municipality" value="" />
+                  {Object.keys(MUNICIPALITIES).map((m) => (
+                    <Picker.Item key={m} label={m} value={m} />
+                  ))}
+                </Picker>
+              </View>
 
-                  <Feather
-                    name="chevron-down"
-                    size={20}
-                    color="#999"
-                    style={{
-                      position: "absolute",
-                      right: 10,
-                      pointerEvents: "none",
-                    }}
+              {/* Barangay */}
+              <Text style={styles.label}>
+                Barangay: {(!barangay || errors.barangay) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: errors.barangay ? "red" : "#ccc",
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  marginBottom: 10,
+                }}
+              >
+                <TextInput
+                  style={{ flex: 1, padding: 12 }}
+                  value={barangay}
+                  editable={false}
+                  placeholder="Select Barangay"
+                />
+                <Feather
+                  name="chevron-down"
+                  size={20}
+                  color="#999"
+                  style={{
+                    position: "absolute",
+                    right: 10,
+                    pointerEvents: "none",
+                  }}
+                />
+                <Picker
+                  selectedValue={barangay}
+                  style={{ width: 150, opacity: 0.01 }}
+                  onValueChange={(value) => {
+                    setBarangay(value);
+                    validateField("barangay", value);
+                  }}
+                  enabled={municipality !== ""}
+                >
+                  <Picker.Item
+                    label={`Select Barangay in ${municipality || "..."}`}
+                    value=""
                   />
-
-                  <Picker
-                    selectedValue={municipality}
-                    style={{ width: 150, opacity: 0.01 }}
-                    onValueChange={(value) => {
-                      setMunicipality(value);
-                      setBarangay("");
-                    }}
-                  >
-                    <Picker.Item label="Select Municipality" value="" />
-                    {Object.keys(MUNICIPALITIES).map((m) => (
-                      <Picker.Item key={m} label={m} value={m} />
+                  {municipality &&
+                    MUNICIPALITIES[municipality].map((b) => (
+                      <Picker.Item key={b} label={b} value={b} />
                     ))}
-                  </Picker>
-                </View>
+                </Picker>
               </View>
 
-              <View style={{ marginBottom: 10 }}>
-                <Text style={styles.label}>Barangay:</Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    borderWidth: 1,
-                    borderColor: "#ccc",
-                    borderRadius: 10,
-                    overflow: "hidden",
-                  }}
-                >
-                  <TextInput
-                    style={{ flex: 1, padding: 12 }}
-                    value={barangay}
-                    editable={false}
-                    placeholder="Select Barangay"
-                  />
-
-                  <Feather
-                    name="chevron-down"
-                    size={20}
-                    color="#999"
-                    style={{
-                      position: "absolute",
-                      right: 10,
-                      pointerEvents: "none",
-                    }}
-                  />
-
-                  <Picker
-                    selectedValue={barangay}
-                    style={{ width: 150, opacity: 0.01 }}
-                    onValueChange={(value) => setBarangay(value)}
-                    enabled={municipality !== ""}
-                  >
-                    <Picker.Item
-                      label={`Select Barangay in ${municipality || "..."}`}
-                      value=""
-                    />
-                    {municipality &&
-                      MUNICIPALITIES[municipality].map((b) => (
-                        <Picker.Item key={b} label={b} value={b} />
-                      ))}
-                  </Picker>
-                </View>
-              </View>
-
-              <Text style={styles.label}>Postal Code:</Text>
+              {/* Postal */}
+              <Text style={styles.label}>
+                Postal Code: {(!postal || errors.postal) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
               <TextInput
-                style={[
-                  styles.input,
-                  focusedField === "postal" && { borderColor: "#9747FF" },
-                ]}
+                style={[styles.input, errors.postal && { borderColor: "red" }]}
                 value={postal}
-                onChangeText={setPostal}
+                onChangeText={(text) => {
+                  setPostal(text);
+                  validateField("postal", text);
+                }}
                 keyboardType="numeric"
                 placeholder="e.g., 2300"
                 onFocus={() => setFocusedField("postal")}
@@ -616,7 +623,8 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     color: "#333",
   },
-  input: {
+ 
+ input: {
     backgroundColor: "#FFFFFF",
     borderRadius: 10,
     padding: 12,

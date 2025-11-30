@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { getAuth } from "firebase/auth";
 import {
@@ -24,6 +25,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Header } from "../components/styles";
+import ReturnRefund from "./Return/ReturnRefund";
 
 const db = getFirestore();
 const auth = getAuth();
@@ -220,6 +222,7 @@ export default function Orders() {
     "To Receive": "ToReceive",
     Completed: "Completed",
     Cancelled: "Cancelled",
+    "Return/Refund": "ReturnRefund",
   };
 
   return (

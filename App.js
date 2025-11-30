@@ -24,11 +24,17 @@ import ChatSupportScreen from "./screens/ChatSupportScreen";
 import SearchResults from "./screens/SearchResults";
 import CheckoutSummary from "./screens/CheckoutSummary";
 import ReCheckout from "./screens/ReCheckout";
+
+// Purchases Screen
 import Orders from "./screens/Orders";
 import ToShip from "./screens/ToShip";
 import ToReceive from "./screens/ToReceive";
+import RequestRefund from "./screens/Return/RequestRefund";
+import RefundDetails from "./screens/Return/RefundDetails";
 import Completed from "./screens/Completed";
 import Cancelled from "./screens/Cancelled";
+import ReturnRefund from "./screens/Return/ReturnRefund";
+
 import SplashScreen from "./screens/splashscreen";
 import ToRate from "./screens/ToRate";
 import TryOnWebAR from "./screens/TryOnWebAR";
@@ -88,6 +94,18 @@ export default function App() {
               <Stack.Screen name="Orders" component={Orders} />
               <Stack.Screen name="ToShip" component={ToShip} />
               <Stack.Screen name="ToReceive" component={ToReceive} />
+              <Stack.Screen
+                name="RequestRefund"
+                component={RequestRefund}
+              />
+               <Stack.Screen
+                name="RefundDetails"
+                component={RefundDetails}
+              />
+                <Stack.Screen
+                name="ReturnRefund"
+                component={ReturnRefund}
+              />
               <Stack.Screen name="Completed" component={Completed} />
               <Stack.Screen name="Cancelled" component={Cancelled} />
               <Stack.Screen name="Checkout" component={Checkout} />

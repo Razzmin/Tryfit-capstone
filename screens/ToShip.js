@@ -34,7 +34,6 @@ const randomSizes = ["small", "medium", "large", "xl", "xxl"];
 export default function ToShip() {
   const navigation = useNavigation();
   const user = auth.currentUser;
-
   const activeTab = "To Ship";
 
   const [orders, setOrders] = useState([]);
@@ -73,11 +72,35 @@ export default function ToShip() {
 
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
+      async (snapshot) => {
         const fetched = [];
-        snapshot.forEach((docSnap) => {
-          fetched.push({ id: docSnap.id, ...docSnap.data() });
-        });
+
+        for (const docSnap of snapshot.docs) {
+          const order = { id: docSnap.id, ...docSnap.data() };
+
+          let expectedDelivery = "TBD";
+
+          // Fetch expected delivery from product
+          if (order.items && order.items.length > 0) {
+            const firstItem = order.items[0];
+            if (firstItem.productId) {
+              try {
+                const productRef = doc(db, "products", firstItem.productId);
+                const productSnap = await getDoc(productRef);
+                if (productSnap.exists()) {
+                  const productData = productSnap.data();
+                  if (productData.delivery) {
+                    expectedDelivery = productData.delivery;
+                  }
+                }
+              } catch (err) {
+                console.error("Error fetching delivery:", err);
+              }
+            }
+          }
+
+          fetched.push({ ...order, expectedDelivery });
+        }
 
         fetched.sort((a, b) => {
           if (a.createdAt && b.createdAt)
@@ -93,32 +116,6 @@ export default function ToShip() {
       }
     );
 
-    const handleCancelOrder = (orderId) => {
-      Alert.alert(
-        "Confirm Cancellation?",
-        "Are you sure you want to cancel this order?",
-        [
-          { text: "No", style: "cancel" },
-          {
-            text: "Yes",
-            onPress: async () => {
-              try {
-                await deleteDoc(doc(db, "toShip", orderId));
-                Alert.alert(
-                  "Cancelled",
-                  "Your order has been cancelled and removed."
-                );
-              } catch (err) {
-                console.error("Error cancelling order:", err);
-                Alert.alert("Error", "Failed to cancel the order.");
-              }
-            },
-            style: "destructive",
-          },
-        ]
-      );
-    };
-
     return () => unsubscribe();
   }, [customUserId]);
 
@@ -132,7 +129,7 @@ export default function ToShip() {
       const itemsWithDelivery = await Promise.all(
         order.items.map(async (item) => ({
           ...item,
-          expectedDelivery: "TBD",
+          expectedDelivery: order.expectedDelivery ?? "TBD",
         }))
       );
 
@@ -150,6 +147,7 @@ export default function ToShip() {
     "To Receive": "ToReceive",
     Completed: "Completed",
     Cancelled: "Cancelled",
+    "Return/Refund": "ReturnRefund",
   };
 
   return (
@@ -166,7 +164,7 @@ export default function ToShip() {
       >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={{ position: "absolute", left: 2, bottom: 8}}
+          style={{ position: "absolute", left: 2, bottom: 8 }}
         >
           <Feather name="arrow-left" size={27} color="black" />
         </TouchableOpacity>
@@ -184,41 +182,49 @@ export default function ToShip() {
         </Text>
       </Header>
 
-
-      <View style={{ height: 56, width: '100%', flex: 0, justifyContent: 'center' }}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabScroll}
-        contentContainerStyle={{flexGrow: 0,
-          alignItems: "center",
-          paddingHorizontal: 20,  }}
+      <View
+        style={{
+          height: 56,
+          width: "100%",
+          flex: 0,
+          justifyContent: "center",
+        }}
       >
-        {Object.keys(tabRoutes).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => {
-              if (tab !== activeTab) navigation.replace(tabRoutes[tab]);
-            }}
-            style={styles.tabWrap}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab && styles.activeTabText,
-              ]}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabScroll}
+          contentContainerStyle={{
+            flexGrow: 0,
+            alignItems: "center",
+            paddingHorizontal: 20,
+          }}
+        >
+          {Object.keys(tabRoutes).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => {
+                if (tab !== activeTab) navigation.replace(tabRoutes[tab]);
+              }}
+              style={styles.tabWrap}
             >
-              {tab}
-            </Text>
-            <View
-              style={[
-                styles.underline,
-                activeTab === tab && styles.activeUnderline,
-              ]}
-            />
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
+              >
+                {tab}
+              </Text>
+              <View
+                style={[
+                  styles.underline,
+                  activeTab === tab && styles.activeUnderline,
+                ]}
+              />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <ScrollView style={{ marginBottom: 40 }}>
@@ -248,19 +254,41 @@ export default function ToShip() {
                 </View>
 
                 <View style={styles.productRow}>
-                  <Image
-                    source={{ uri: imageUri }}
-                    style={styles.productImage}
-                  />
+                  <View>
+                    <Image
+                      source={{ uri: imageUri }}
+                      style={styles.productImage}
+                    />
+
+                    {/* ⭐ EXPECTED DELIVERY — PURPLE + BOLD */}
+                    <View style={{ marginTop: 8 }}>
+                      <Text style={{ fontSize: 12, color: "#444" }}>
+                        Expected Delivery:
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: "#9747FF",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {order.expectedDelivery || "TBD"}
+                      </Text>
+                    </View>
+                  </View>
+
                   <View style={styles.productInfo}>
                     <Text style={styles.productName}>{productName}</Text>
                     <Text style={styles.productSize}>Size: {size}</Text>
                     <Text style={styles.productQty}>
                       Qty: {item.quantity || 1}
                     </Text>
+
                     <View style={styles.totalRow}>
                       <Text style={styles.productTotal}>Total Payment:</Text>
-                      <Text style={[styles.totalPrice, { marginLeft: 90 }]}>
+                      <Text
+                        style={[styles.totalPrice, { marginLeft: 90 }]}
+                      >
                         ₱{order.total ?? "N/A"}
                       </Text>
                     </View>
@@ -271,6 +299,7 @@ export default function ToShip() {
                   <Text style={styles.waitingMessage}>
                     Waiting for courier to confirm{"\n"}shipment
                   </Text>
+
                   <TouchableOpacity
                     style={styles.shippingBtn}
                     onPress={() => handleViewShippingDetails(order)}
@@ -297,6 +326,7 @@ export default function ToShip() {
         )}
       </ScrollView>
 
+      {/* SHIPPING DETAILS MODAL */}
       <Modal
         visible={shippingModalVisible}
         transparent
@@ -335,10 +365,17 @@ export default function ToShip() {
                   <Text>Product: {item.productName || "N/A"}</Text>
                   <Text>Quantity: {item.quantity || 1}</Text>
                   <Text>Size: {item.size || "N/A"}</Text>
-                  <Text style={styles.modalText}>
-                    <Text style={{ fontWeight: "bold" }}>Delivery:</Text>{" "}
-                    {shippingDetails?.delivery || "N/A"}{" "}
-                  </Text>
+
+                  {/* ⭐ FIXED EXPECTED DELIVERY — PURPLE + BOLD */}
+                  <View style={styles.expectedDelivery}>
+                    <Text style={styles.expectedText}>
+                      Expected Delivery:
+                    </Text>
+                    <Text style={styles.deliveryDate}>
+                      {shippingDetails.expectedDelivery || "TBD"}
+                    </Text>
+                  </View>
+
                   <Text>Status: Waiting to be shipped...</Text>
                   <View style={styles.itemDivider} />
                 </View>
@@ -358,6 +395,8 @@ export default function ToShip() {
   );
 }
 
+/* --- STYLES --- */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -365,29 +404,16 @@ const styles = StyleSheet.create({
     paddingTop: 30,
     paddingHorizontal: 10,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 30,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-  },
-  tabContainer: {
-    flexDirection: "row",
-    marginBottom: 20,
-  },
+
   tabWrap: {
     alignItems: "center",
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 18,
-    height: '100%',
+    height: "100%",
     marginRight: 10,
   },
   tabScroll: {
-    flex: 1, 
+    flex: 1,
   },
   tabText: {
     fontSize: 14,
@@ -406,6 +432,7 @@ const styles = StyleSheet.create({
   activeUnderline: {
     backgroundColor: "#9747FF",
   },
+
   orderCard: {
     backgroundColor: "#F7F7F7",
     borderRadius: 10,
@@ -424,6 +451,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginLeft: 1,
   },
+
   productRow: {
     flexDirection: "row",
     marginBottom: 10,
@@ -434,6 +462,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#ccc",
   },
+
+  expectedDelivery: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  expectedText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#444",
+    marginBottom: 2,
+  },
+  deliveryDate: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#9747FF",
+  },
+
   productInfo: {
     marginLeft: 10,
     justifyContent: "center",
@@ -468,6 +513,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#9747FF",
   },
+
   shippingRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -490,6 +536,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
   },
+
   divider: {
     height: 1,
     backgroundColor: "#ccc",
@@ -503,24 +550,6 @@ const styles = StyleSheet.create({
   orderIdText: {
     fontSize: 13,
     color: "#333",
-  },
-  cancelBtn: {
-    backgroundColor: "#F7F7F7",
-    borderColor: "#9747FF",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    marginTop: 15,
-    alignItems: "center",
-  },
-  cancelBtnText: {
-    color: "#9747FF",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  orderDate: {
-    fontSize: 12,
-    color: "#666",
   },
 
   modalOverlay: {

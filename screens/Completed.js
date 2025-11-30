@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Header } from "../components/styles";
+import ReturnRefund from "./Return/ReturnRefund";
 
 const db = getFirestore();
 const auth = getAuth();
@@ -80,6 +81,7 @@ export default function Completed() {
     "To Receive": "ToReceive",
     Completed: "Completed",
     Cancelled: "Cancelled",
+    "Return/Refund": "ReturnRefund",
   };
 
   return (

@@ -5,7 +5,6 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   BackHandler,
   Keyboard,
   KeyboardAvoidingView,
@@ -32,43 +31,50 @@ export default function EditProfile() {
   const [email, setEmail] = useState("");
   const [focusedField, setFocusedField] = useState("");
   const [isSaving, setSaving] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const [errors, setErrors] = useState({}); 
+
+  const validateField = (field, value) => {
+    let error = "";
+    switch (field) {
+      case "name":
+        if (!value.trim()) error = "Name is required";
+        else if (!/^[a-zA-Z\s]+$/.test(value.trim()))
+          error = "Name cannot contain numbers";
+        break;
+      case "username":
+        if (!value.trim()) error = "Username is required";
+        break;
+      case "gender":
+        if (!value || value === "Select Gender") error = "Gender is required";
+        break;
+      case "phone":
+        const cleanedPhone = value.replace(/\s/g, "");
+        if (!cleanedPhone) error = "Phone number is required";
+        else if (!/^(09\d{9}|(\+639)\d{9})$/.test(cleanedPhone))
+          error = "Enter a valid mobile number (e.g., 09xxx)";
+        break;
+      case "email":
+        if (!value.trim()) error = "Email is required";
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+          error = "Enter a valid email address";
+        break;
+      default:
+        break;
+    }
+    setErrors((prev) => ({ ...prev, [field]: error }));
+    return error === "";
+  };
 
   const validateInputs = () => {
-    const cleanedPhone = phone.replace(/\s/g, "");
-
-    if (!name.trim()) {
-      Alert.alert("Missing Field", "Please enter your name.");
-      return false;
-    }
-    if (!username.trim()) {
-      Alert.alert("Missing Field", "Please enter your username.");
-      return false;
-    }
-    if (!gender || gender === "Select Gender") {
-      Alert.alert("Missing Field", "Please select your gender.");
-      return false;
-    }
-    if (!cleanedPhone.trim()) {
-      Alert.alert("Missing Field", "Please enter your phone number.");
-      return false;
-    }
-
-    if (!cleanedPhone || !/^(09\d{9}|(\+639)\d{9})$/.test(cleanedPhone)) {
-      return Alert.alert(
-        "Validation Error",
-        "Please enter a valid mobile number(e.g., 09xxx)."
-      );
-    }
-    if (!email.trim()) {
-      Alert.alert("Missing Field", "Please enter your email.");
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Alert.alert("Missing Field", "Please enter valid email address.");
-      return false;
-    }
-
-    return true;
+    const fields = ["name", "username", "gender", "phone", "email"];
+    let valid = true;
+    fields.forEach((field) => {
+      const value = { name, username, gender, phone, email }[field];
+      if (!validateField(field, value)) valid = false;
+    });
+    return valid;
   };
 
   useFocusEffect(
@@ -119,7 +125,6 @@ export default function EditProfile() {
       setSaving(true);
       try {
         const userRef = doc(db, "users", currentUser.uid);
-
         const userSnap = await getDoc(userRef);
         let userId = "";
         if (userSnap.exists()) {
@@ -135,10 +140,12 @@ export default function EditProfile() {
           userId,
         });
 
-        Alert.alert("Success", "Profile updated successfully");
+        setShowSuccessModal(true);
+        setTimeout(() => setShowSuccessModal(false), 2000);
+
       } catch (error) {
         console.log("Error updating profile:", error);
-        Alert.alert("Error", "Failed to update profile");
+        alert("Failed to update profile");
       } finally {
         setSaving(false);
       }
@@ -186,50 +193,73 @@ export default function EditProfile() {
               </Text>
             </Header>
 
+            {/* Name */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Name</Text>
+              <Text style={styles.label}>
+                Name {(!name || errors.name) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
               <TextInput
                 style={[
                   styles.input,
                   focusedField === "name" && { borderColor: "#9747FF" },
+                  errors.name && { borderColor: "red" },
                 ]}
                 value={name}
-                onChangeText={setName}
+                onChangeText={(text) => {
+                  const clean = text.replace(/[0-9]/g, "");
+                  setName(clean);
+                  validateField("name", clean);
+                }}
                 placeholder="Enter your name"
                 onFocus={() => setFocusedField("name")}
                 onBlur={() => setFocusedField("")}
                 maxLength={40}
               />
+              {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
             </View>
 
+            {/* Username */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Username</Text>
+              <Text style={styles.label}>
+                Username {(!username || errors.username) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
               <TextInput
                 style={[
                   styles.input,
                   focusedField === "username" && { borderColor: "#9747FF" },
+                  errors.username && { borderColor: "red" },
                 ]}
                 value={username}
-                onChangeText={setUsername}
+                onChangeText={(text) => {
+                  setUsername(text);
+                  validateField("username", text);
+                }}
                 placeholder="Enter your username"
                 onFocus={() => setFocusedField("username")}
                 onBlur={() => setFocusedField("")}
                 maxLength={40}
               />
+              {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
             </View>
 
+            {/* Gender */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gender</Text>
-              <View style={styles.pickerWrapper}>
+              <Text style={styles.label}>
+                Gender {(!gender || errors.gender) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
+              <View
+                style={[
+                  styles.pickerWrapper,
+                  errors.gender && { borderColor: "red" },
+                ]}
+              >
                 <Picker
                   selectedValue={gender}
-                  onValueChange={(itemValue) => setGender(itemValue)}
-                  style={[
-                    styles.picker,
-                    focusedField === "gender" && { borderColor: "#9747FF" },
-                  ]}
-                  onFocus={() => setFocusedField("gender")}
-                  onBlur={() => setFocusedField("")}
+                  onValueChange={(itemValue) => {
+                    setGender(itemValue);
+                    validateField("gender", itemValue);
+                  }}
+                  style={[styles.picker]}
                 >
                   <Picker.Item label="Select Gender" value="" enabled={false} />
                   <Picker.Item label="Female" value="Female" />
@@ -241,56 +271,65 @@ export default function EditProfile() {
                   />
                 </Picker>
               </View>
+              {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
             </View>
 
+            {/* Phone */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number (Recovery)</Text>
+              <Text style={styles.label}>
+                Phone Number (Recovery) {(!phone || errors.phone) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
               <TextInput
                 style={[
                   styles.input,
                   focusedField === "phone" && { borderColor: "#9747FF" },
+                  errors.phone && { borderColor: "red" },
                 ]}
                 value={phone}
                 onChangeText={(text) => {
                   let cleaned = text.replace(/\D/g, "");
-
-                  if (cleaned.length > 11) {
-                    cleaned = cleaned.slice(0, 11);
-                  }
+                  if (cleaned.length > 11) cleaned = cleaned.slice(0, 11);
 
                   let formatted = cleaned;
                   if (cleaned.length > 4 && cleaned.length <= 7) {
                     formatted = cleaned.replace(/(\d{4})(\d{1,3})/, "$1 $2");
                   } else if (cleaned.length > 7) {
-                    formatted = cleaned.replace(
-                      /(\d{4})(\d{3})(\d{1,4})/,
-                      "$1 $2 $3"
-                    );
+                    formatted = cleaned.replace(/(\d{4})(\d{3})(\d{1,4})/, "$1 $2 $3");
                   }
 
                   setPhone(formatted);
+                  validateField("phone", formatted);
                 }}
                 keyboardType="phone-pad"
                 placeholder="Enter your phone number"
                 onFocus={() => setFocusedField("phone")}
                 onBlur={() => setFocusedField("")}
               />
+              {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
             </View>
 
+            {/* Email */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Address</Text>
+              <Text style={styles.label}>
+                Email Address {(!email || errors.email) && <Text style={{ color: "red" }}>*</Text>}
+              </Text>
               <TextInput
                 style={[
                   styles.input,
                   focusedField === "email" && { borderColor: "#9747FF" },
+                  errors.email && { borderColor: "red" },
                 ]}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  validateField("email", text);
+                }}
                 keyboardType="email-address"
                 placeholder="Enter your email"
                 onFocus={() => setFocusedField("email")}
                 onBlur={() => setFocusedField("")}
               />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
             <TouchableOpacity
@@ -311,6 +350,26 @@ export default function EditProfile() {
                 <Text style={styles.saveButtonText}>Save</Text>
               )}
             </TouchableOpacity>
+
+            {/* SIMPLE SUCCESS POPUP */}
+            {showSuccessModal && (
+              <View style={{
+                position: "absolute",
+                top: 0, left: 0, right: 0, bottom: 0,
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "rgba(0,0,0,0.3)"
+              }}>
+                <View style={{
+                  backgroundColor: "#fff",
+                  padding: 20,
+                  borderRadius: 10,
+                }}>
+                  <Text style={{ fontSize: 16, color: "#000" }}>Profile Updated</Text>
+                </View>
+              </View>
+            )}
+
           </SafeAreaView>
         </ScrollView>
       </TouchableWithoutFeedback>
@@ -324,9 +383,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingTop: 30,
     paddingHorizontal: 20,
-  },
-  formContent: {
-    paddingBottom: 40,
   },
   inputGroup: {
     marginBottom: 20,
@@ -383,5 +439,11 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: "KronaOne",
     letterSpacing: 1,
+  },
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginLeft: 20,
+    marginTop: 4,
   },
 });

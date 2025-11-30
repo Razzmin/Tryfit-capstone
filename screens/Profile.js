@@ -34,10 +34,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  TextInput
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Header, LoadingOverlay } from "../components/styles";
 import { auth, db } from "../firebase/config";
+import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 export default function EditProfile() {
   const navigation = useNavigation();
@@ -49,8 +51,10 @@ export default function EditProfile() {
   const [username, setUsername] = useState("");
   const [uniqueUserId, setUniqueUserId] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [notifUnsub, setNotifUnsub] = useState(null);
   const notifUnsubRef = useRef(null);
+
+  const [deletePassword, setDeletePassword] = useState("");
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
 
   useEffect(() => {
     const fetchUsername = async () => {
@@ -72,6 +76,7 @@ export default function EditProfile() {
 
     fetchUsername();
   }, []);
+
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
       if (!user) return;
@@ -147,13 +152,19 @@ export default function EditProfile() {
     if (!user) return;
 
     try {
+      const credential = EmailAuthProvider.credential(
+      user.email,
+      deletePassword
+    );
+
+    await reauthenticateWithCredential(user, credential);
+
       const db = getFirestore();
 
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
-      if (!userDocSnap.exists()) {
-        throw new Error("User document not found.");
-      }
+
+      if (!userDocSnap.exists()) throw new Error("User document not found.");
       const userData = userDocSnap.data();
       const userUniqueId = userData.userId || user.uid;
 
@@ -192,7 +203,10 @@ export default function EditProfile() {
       }
 
       const ordersRef = collection(db, "orders");
-      const ordersQuery = query(ordersRef, where("userId", "==", userUniqueId));
+      const ordersQuery = query(
+        ordersRef,
+        where("userId", "==", userUniqueId)
+      );
       const ordersSnapshot = await getDocs(ordersQuery);
       for (const docSnap of ordersSnapshot.docs) {
         const data = docSnap.data();
@@ -233,15 +247,11 @@ export default function EditProfile() {
   };
 
   const handleSignOut = () => {
-    if (notifUnsub) notifUnsub();
     Alert.alert(
       "Sign Out",
       "Are you sure you want to log out?",
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Yes, Log Out",
           style: "destructive",
@@ -252,7 +262,6 @@ export default function EditProfile() {
                 notifUnsubRef.current = null;
               }
               await signOut(auth);
-
               navigation.reset({
                 index: 0,
                 routes: [{ name: "Login" }],
@@ -269,6 +278,7 @@ export default function EditProfile() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* HEADER */}
       <Header
         style={{
           flexDirection: "row",
@@ -299,6 +309,7 @@ export default function EditProfile() {
         </Text>
       </Header>
 
+      {/* PROFILE */}
       <View style={styles.profileSection}>
         <MaterialIcons
           name="account-circle"
@@ -309,6 +320,7 @@ export default function EditProfile() {
         <Text style={styles.profileName}>{username}</Text>
       </View>
 
+      {/* MENU LIST */}
       <View style={styles.menuList}>
         <TouchableOpacity
           activeOpacity={0.9}
@@ -453,6 +465,7 @@ export default function EditProfile() {
         </TouchableOpacity>
       </View>
 
+      {/* SIGNOUT BUTTON */}
       <View style={styles.signOutWrapper}>
         <TouchableOpacity
           style={styles.signOutButton}
@@ -462,6 +475,7 @@ export default function EditProfile() {
         </TouchableOpacity>
       </View>
 
+      {/* DELETE ACCOUNT MODAL */}
       <Modal
         visible={showModal}
         animationType="fade"
@@ -489,6 +503,34 @@ export default function EditProfile() {
               </Text>
             </View>
             <Text style={styles.modalText}>will be permanently removed.</Text>
+
+            {/* PASSWORD FIELD ⬇️ */}
+            <View style={styles.passwordContainer}>
+              <TextInput
+                secureTextEntry={!showDeletePassword}
+                placeholder="Enter your password"
+                value={deletePassword}
+                onChangeText={setDeletePassword}
+                style={styles.passwordInput}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowDeletePassword(!showDeletePassword)}
+              >
+                <Feather
+                  name={showDeletePassword ? "eye-off" : "eye"}
+                  size={20}
+                  color="#555"
+                />
+              </TouchableOpacity>
+            </View>
+
+            <Text
+              style={{ fontSize: 12, color: "#777", marginBottom: 10 }}
+            >
+              Required for verification
+            </Text>
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelBtn}
@@ -496,9 +538,16 @@ export default function EditProfile() {
               >
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.deleteBtn}
-                onPress={handleDeleteAccount}
+                onPress={() => {
+                  if (!deletePassword.trim()) {
+                    alert("Please enter your password.");
+                    return;
+                  }
+                  handleDeleteAccount(deletePassword);
+                }}
               >
                 <Text style={styles.deleteText}>Delete</Text>
               </TouchableOpacity>
@@ -507,6 +556,7 @@ export default function EditProfile() {
         </View>
       </Modal>
 
+      {/* SIGN OUT MODAL (UNCHANGED) */}
       <Modal
         visible={signOutModal}
         transparent
@@ -560,7 +610,7 @@ export default function EditProfile() {
       {signingOut && (
         <LoadingOverlay>
           <ActivityIndicator size="large" color="#9747FF" />
-          <Text style={{ marginTop: 10 }}>Signing out in...</Text>
+          <Text style={{ marginTop: 10 }}>Signing out...</Text>
         </LoadingOverlay>
       )}
     </SafeAreaView>
@@ -608,9 +658,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "400",
     color: "#333",
-
     marginLeft: 15,
   },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -655,6 +705,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 4,
   },
+
   cancelBtn: {
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -676,6 +727,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "500",
   },
+
   signOutWrapper: {
     marginTop: 40,
     paddingVertical: 20,
@@ -693,6 +745,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     fontFamily: "KronaOne",
   },
+
   popupOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.3)",
@@ -730,5 +783,25 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     minWidth: 120,
     alignItems: "center",
+  },
+
+  passwordContainer: {
+    width: "100%",
+    position: "relative",
+    marginBottom: 10,
+  },
+  passwordInput: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 12,
+    paddingRight: 40,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 10,
+    top: 22,
   },
 });
