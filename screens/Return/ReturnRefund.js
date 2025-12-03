@@ -20,7 +20,6 @@ export default function ReturnRefund() {
   const { confirmedItems } = route.params || {};
   const [refundOrders, setRefundOrders] = useState([]);
 
-  // Tabs
   const activeTab = "Return/Refund";
   const tabRoutes = {
     Orders: "Orders",
@@ -34,25 +33,22 @@ export default function ReturnRefund() {
   useEffect(() => {
     const fetchRefundOrders = async () => {
       try {
-        // 1️⃣ Get current auth user
         const authUser = auth.currentUser;
         if (!authUser) return;
 
-        // 2️⃣ Fetch user document to get the userId FIELD (not doc id)
         const userDocRef = doc(db, "users", authUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         const userData = userDocSnap.exists() ? userDocSnap.data() : {};
-        const savedUserId = userData.userId; // <-- The userId field from users collection
+        const savedUserId = userData.userId;
 
-        // 3️⃣ Fetch all return_refund items
         const snapshot = await getDocs(collection(db, "return_refund"));
 
-        // 4️⃣ Filter only items that belong to this savedUserId
         const orders = snapshot.docs
-          .map((doc) => {
-            const data = doc.data();
+          .map((docSnap) => {
+            const data = docSnap.data();
+
             return {
-              id: doc.id,
+              id: docSnap.id,
               ...data,
               items: [
                 {
@@ -68,7 +64,12 @@ export default function ReturnRefund() {
               ],
             };
           })
-          .filter((order) => order.userId === savedUserId); // 🔥 Filter here
+          .filter((order) => order.userId === savedUserId)
+          .sort((a, b) => {
+            const aDate = a.requestDate?.toDate() || new Date(0);
+            const bDate = b.requestDate?.toDate() || new Date(0);
+            return bDate - aDate; // most recent first
+          });
 
         setRefundOrders(orders);
       } catch (error) {
@@ -93,8 +94,9 @@ export default function ReturnRefund() {
       ]
     );
   };
+
   const formatDateTime = (date) => {
-    if (!date) return "-"; // fallback if date is missing
+    if (!date) return "-";
     const d = date.getDate().toString().padStart(2, "0");
     const m = (date.getMonth() + 1).toString().padStart(2, "0");
     const y = date.getFullYear().toString().slice(-2);
@@ -103,9 +105,16 @@ export default function ReturnRefund() {
     return `${d}/${m}/${y} ${hh}:${mm}`;
   };
 
+  const formatDateOnly = (date) => {
+    if (!date) return "-";
+    const d = date.getDate().toString().padStart(2, "0");
+    const m = (date.getMonth() + 1).toString().padStart(2, "0");
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.replace("LandingPage")}
@@ -164,11 +173,11 @@ export default function ReturnRefund() {
         ) : (
           refundOrders.map((order) => (
             <View key={order.id} style={styles.orderCard}>
-              {/* Top Row: Pending & Date/Time */}
+              {/* Top Row */}
               <View style={styles.topRow}>
                 <Text style={styles.orderStatus}>{order.status}</Text>
                 <Text style={styles.orderDateTime}>
-                  {formatDateTime(order.dateTime)}
+                  {formatDateTime(order.requestDate?.toDate())}
                 </Text>
               </View>
 
@@ -198,7 +207,7 @@ export default function ReturnRefund() {
                 </View>
               ))}
 
-              {/* Shipping Info under image */}
+              {/* Shipping Info */}
               {order.items.map((item, index) => (
                 <View key={index} style={styles.shippingInfoUnder}>
                   <Text>
@@ -207,14 +216,16 @@ export default function ReturnRefund() {
                       {order.returnMethod === "pickup" ? "Pick Up" : "Drop Off"}
                     </Text>
                   </Text>
+
                   {order.returnMethod === "pickup" && (
                     <Text>
                       Pickup Date:{" "}
                       <Text style={styles.orderDateTime}>
-                        {formatDateTime(order.requestDate?.toDate())}
+                        {formatDateOnly(order.requestDate?.toDate())}
                       </Text>
                     </Text>
                   )}
+
                   {order.returnMethod === "dropoff" && (
                     <Text>
                       Drop Off Service:{" "}
@@ -226,15 +237,17 @@ export default function ReturnRefund() {
                 </View>
               ))}
 
-              {/* Cancel Button */}
-              <View style={styles.cardFooter}>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => handleCancel(order.id)}
-                >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
+              {/* CANCEL BUTTON */}
+              {order.status === "Pending" && (
+                <View style={styles.cardFooter}>
+                  <TouchableOpacity
+                    style={styles.cancelBtn}
+                    onPress={() => handleCancel(order.id)}
+                  >
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           ))
         )}
@@ -250,7 +263,6 @@ const styles = StyleSheet.create({
     paddingTop: 30,
     paddingHorizontal: 10,
   },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -259,7 +271,6 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     backgroundColor: "#fff",
   },
-
   headerTitle: {
     fontSize: 15,
     color: "#000",
@@ -267,18 +278,15 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     alignContent: "center",
   },
-
   tabsContainer: {
     height: 56,
     width: "100%",
     flex: 0,
     justifyContent: "center",
   },
-
   tabScroll: {
     flex: 1,
   },
-
   tabWrap: {
     alignItems: "center",
     justifyContent: "center",
@@ -286,105 +294,87 @@ const styles = StyleSheet.create({
     height: "100%",
     marginRight: 10,
   },
-
   tabText: {
     fontSize: 14,
     color: "#333",
   },
-
   activeTabText: {
     color: "#9747FF",
     fontWeight: "600",
   },
-
   underline: {
     height: 3,
     backgroundColor: "transparent",
     width: "100%",
     marginTop: 4,
   },
-
   activeUnderline: {
     backgroundColor: "#9747FF",
   },
-
   orderCard: {
     backgroundColor: "#F7F7F7",
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
   },
-
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 10,
   },
-
   orderStatus: {
     fontWeight: "bold",
     color: "#9747FF",
     textTransform: "uppercase",
     fontSize: 13,
   },
-
   orderDateTime: {
     fontSize: 12,
-    color: "#555",
+    fontWeight: "600",
+    color: "#9747FF",
   },
-
   productRow: {
     flexDirection: "row",
     marginBottom: 10,
   },
-
   productImage: {
     width: 80,
     height: 80,
     borderRadius: 8,
     backgroundColor: "#ccc",
   },
-
   productInfo: {
     marginLeft: 10,
     justifyContent: "center",
     flex: 1,
   },
-
   productName: {
     fontSize: 14,
     fontWeight: "500",
     marginBottom: 2,
   },
-
   productSize: {
     fontSize: 12,
     color: "#666",
     marginBottom: 2,
   },
-
   productQty: {
     fontSize: 12,
     color: "#666",
   },
-
   shippingInfoUnder: {
     marginTop: 5,
     flexDirection: "column",
-    marginLeft: 0,
   },
-
   shippingValue: {
     color: "#9747FF",
     fontWeight: "600",
   },
-
   cardFooter: {
     flexDirection: "row",
     justifyContent: "flex-end",
     marginTop: 10,
   },
-
   cancelBtn: {
     borderWidth: 1,
     borderColor: "#9747FF",
@@ -393,7 +383,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: "transparent",
   },
-
   cancelBtnText: {
     color: "#9747FF",
     fontWeight: "600",

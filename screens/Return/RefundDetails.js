@@ -310,7 +310,7 @@ export default function RefundDetails({ route, navigation }) {
         size: item.size,
         quantity: item.quantity,
         price: item.price,
-        refund: item.refund ?? item.price * item.quantity ?? 0,
+        refund: (item.refund ?? (item.price * item.quantity ?? 0)) + 58,        
         returnMethod,
         status: "Pending",
         pickupDate: returnMethod === "pickup" ? pickupTime : null,
