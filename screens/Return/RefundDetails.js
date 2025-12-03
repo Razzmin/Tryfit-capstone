@@ -293,6 +293,11 @@ export default function RefundDetails({ route, navigation }) {
     }
 
     try {
+      const authUser = auth.currentUser;
+      const userDocRef = doc(db, "users", authUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      const userData = userDocSnap.exists() ? userDocSnap.data() : {};
+      const savedUserId = userData.userId;
       const docRef = doc(db, "toReceive", toreceiveID);
       const docSnap = await getDoc(docRef);
       const toReceiveData = docSnap.exists() ? docSnap.data() : {};
@@ -307,6 +312,7 @@ export default function RefundDetails({ route, navigation }) {
         price: item.price,
         refund: item.refund ?? item.price * item.quantity ?? 0,
         returnMethod,
+        status: "Pending",
         pickupDate: returnMethod === "pickup" ? pickupTime : null,
         dropOffService: returnMethod === "dropoff" ? dropOffService : null,
         name: pickupAddress.name,
@@ -319,7 +325,8 @@ export default function RefundDetails({ route, navigation }) {
         toreceiveID: toreceiveID,
         requestDate: new Date(),
         reason: reason || "", // <-- save reason
-        description: description || "", // <-- save description
+        description: description || "",
+        userId: savedUserId || "",
       }));
 
       // Save each item in return_refund collection

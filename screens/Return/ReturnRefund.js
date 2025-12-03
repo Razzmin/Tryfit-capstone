@@ -11,8 +11,8 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../../firebase/config";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../../firebase/config";
 
 export default function ReturnRefund() {
   const navigation = useNavigation();
@@ -34,26 +34,42 @@ export default function ReturnRefund() {
   useEffect(() => {
     const fetchRefundOrders = async () => {
       try {
+        // 1️⃣ Get current auth user
+        const authUser = auth.currentUser;
+        if (!authUser) return;
+
+        // 2️⃣ Fetch user document to get the userId FIELD (not doc id)
+        const userDocRef = doc(db, "users", authUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        const userData = userDocSnap.exists() ? userDocSnap.data() : {};
+        const savedUserId = userData.userId; // <-- The userId field from users collection
+
+        // 3️⃣ Fetch all return_refund items
         const snapshot = await getDocs(collection(db, "return_refund"));
-        const orders = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            items: [
-              {
-                imageUrl: data.imageUrl,
-                productName: data.productName,
-                size: data.size,
-                quantity: data.quantity,
-                price: data.price,
-                refund: data.refund,
-                pickupDate: data.pickupDate,
-                dropOffService: data.dropOffService,
-              },
-            ],
-          };
-        });
+
+        // 4️⃣ Filter only items that belong to this savedUserId
+        const orders = snapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              items: [
+                {
+                  imageUrl: data.imageUrl,
+                  productName: data.productName,
+                  size: data.size,
+                  quantity: data.quantity,
+                  price: data.price,
+                  refund: data.refund,
+                  pickupDate: data.pickupDate,
+                  dropOffService: data.dropOffService,
+                },
+              ],
+            };
+          })
+          .filter((order) => order.userId === savedUserId); // 🔥 Filter here
+
         setRefundOrders(orders);
       } catch (error) {
         console.error("Error fetching return/refund orders:", error);
@@ -176,7 +192,7 @@ export default function ReturnRefund() {
                         color: "#9747FF",
                       }}
                     >
-                      Refund Amount: ₱{item.refundAmount}
+                      Refund Amount: ₱{item.refund}
                     </Text>
                   </View>
                 </View>
