@@ -97,7 +97,7 @@ export default function Completed() {
         }}
       >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.replace("LandingPage")}
           style={{ position: "absolute", left: 2, bottom: 8 }}
         >
           <Feather name="arrow-left" size={27} color="black" />
@@ -115,39 +115,45 @@ export default function Completed() {
           MY PURCHASES
         </Text>
       </Header>
-        
-        <View style={{ height: 56, width: '100%', flex: 0, justifyContent: 'center' }}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabScroll}
-        contentContainerStyle={{ paddingHorizontal: 20, alignItems: 'center', flexGrow: 0  }}
+
+      <View
+        style={{ height: 56, width: "100%", flex: 0, justifyContent: "center" }}
       >
-        {Object.keys(tabRoutes).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => {
-              if (tab !== activeTab) navigation.replace(tabRoutes[tab]);
-            }}
-            style={styles.tabWrap}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab && styles.activeTabText,
-              ]}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabScroll}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            alignItems: "center",
+            flexGrow: 0,
+          }}
+        >
+          {Object.keys(tabRoutes).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => {
+                if (tab !== activeTab) navigation.replace(tabRoutes[tab]);
+              }}
+              style={styles.tabWrap}
             >
-              {tab}
-            </Text>
-            <View
-              style={[
-                styles.underline,
-                activeTab === tab && styles.activeUnderline,
-              ]}
-            />
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
+              >
+                {tab}
+              </Text>
+              <View
+                style={[
+                  styles.underline,
+                  activeTab === tab && styles.activeUnderline,
+                ]}
+              />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <ScrollView style={{ marginBottom: 40 }}>
@@ -262,12 +268,12 @@ const styles = StyleSheet.create({
   tabWrap: {
     alignItems: "center",
     marginRight: 10,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 18,
-    height: '100%', 
+    height: "100%",
   },
   tabScroll: {
-    flex: 1, 
+    flex: 1,
   },
   tabText: {
     fontSize: 14,

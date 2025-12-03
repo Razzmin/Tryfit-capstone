@@ -1,21 +1,141 @@
 import React, { useState, useEffect } from "react";
-import { 
-  View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, TextInput 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  ScrollView,
+  TextInput,
 } from "react-native";
 import Modal from "react-native-modal";
 import RNPickerSelect from "react-native-picker-select";
 import { Feather } from "@expo/vector-icons";
 import { getAuth } from "firebase/auth";
-import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  deleteDoc,
+} from "firebase/firestore";
 
 const MUNICIPALITIES = {
-  Bamban: ["Anupul","Banaba","Bangcu","Culubasa","La Paz","Lourdes","San Nicolas","San Pedro","San Rafael","San Vicente","Santo Niño"],
-  Capas: ["Aranguren","Cub-cub","Dolores","Estrada","Lawy","Manga","Maruglu","O’Donnell","Santa Juliana","Santa Lucia","Santa Rita","Santo Domingo","Santo Rosario","Talaga"],
-  "Tarlac City": ["Aguso","Alvindia Segundo","Amucao","Armenia","Asturias","Atioc","Balanti","Balete","Balibago I","Balibago II","Balingcanaway","Banaba","Bantog","Baras-baras","Batang-batang","Binauganan","Bora","Buenavista","Buhilit","Burot","Calingcuan","Capehan","Carangian","Care","Central","Culipat","Cut-cut I","Cut-cut II","Dalayap","Dela Paz","Dolores","Laoang","Ligtasan","Lourdes","Mabini","Maligaya","Maliwalo","Mapalacsiao","Mapalad","Matatalaib","Paraiso","Poblacion","Salapungan","San Carlos","San Francisco","San Isidro","San Jose","San Jose de Urquico","San Juan Bautista","San Juan de Mata","San Luis","San Manuel","San Miguel","San Nicolas","San Pablo","San Pascual","San Rafael","San Roque","San Sebastian","San Vicente","Santa Cruz","Santa Maria","Santo Cristo","Santo Domingo","Santo Niño","Sapang Maragul","Sapang Tagalog","Sepung Calzada","Sinait","Suizo","Tariji","Tibag","Tibagan","Trinidad","Ungot","Villa Bacolor"],
+  Bamban: [
+    "Anupul",
+    "Banaba",
+    "Bangcu",
+    "Culubasa",
+    "La Paz",
+    "Lourdes",
+    "San Nicolas",
+    "San Pedro",
+    "San Rafael",
+    "San Vicente",
+    "Santo Niño",
+  ],
+  Capas: [
+    "Aranguren",
+    "Cub-cub",
+    "Dolores",
+    "Estrada",
+    "Lawy",
+    "Manga",
+    "Maruglu",
+    "O’Donnell",
+    "Santa Juliana",
+    "Santa Lucia",
+    "Santa Rita",
+    "Santo Domingo",
+    "Santo Rosario",
+    "Talaga",
+  ],
+  "Tarlac City": [
+    "Aguso",
+    "Alvindia Segundo",
+    "Amucao",
+    "Armenia",
+    "Asturias",
+    "Atioc",
+    "Balanti",
+    "Balete",
+    "Balibago I",
+    "Balibago II",
+    "Balingcanaway",
+    "Banaba",
+    "Bantog",
+    "Baras-baras",
+    "Batang-batang",
+    "Binauganan",
+    "Bora",
+    "Buenavista",
+    "Buhilit",
+    "Burot",
+    "Calingcuan",
+    "Capehan",
+    "Carangian",
+    "Care",
+    "Central",
+    "Culipat",
+    "Cut-cut I",
+    "Cut-cut II",
+    "Dalayap",
+    "Dela Paz",
+    "Dolores",
+    "Laoang",
+    "Ligtasan",
+    "Lourdes",
+    "Mabini",
+    "Maligaya",
+    "Maliwalo",
+    "Mapalacsiao",
+    "Mapalad",
+    "Matatalaib",
+    "Paraiso",
+    "Poblacion",
+    "Salapungan",
+    "San Carlos",
+    "San Francisco",
+    "San Isidro",
+    "San Jose",
+    "San Jose de Urquico",
+    "San Juan Bautista",
+    "San Juan de Mata",
+    "San Luis",
+    "San Manuel",
+    "San Miguel",
+    "San Nicolas",
+    "San Pablo",
+    "San Pascual",
+    "San Rafael",
+    "San Roque",
+    "San Sebastian",
+    "San Vicente",
+    "Santa Cruz",
+    "Santa Maria",
+    "Santo Cristo",
+    "Santo Domingo",
+    "Santo Niño",
+    "Sapang Maragul",
+    "Sapang Tagalog",
+    "Sepung Calzada",
+    "Sinait",
+    "Suizo",
+    "Tariji",
+    "Tibag",
+    "Tibagan",
+    "Trinidad",
+    "Ungot",
+    "Villa Bacolor",
+  ],
 };
 
 export default function RefundDetails({ route, navigation }) {
-  const { order } = route.params;
+  const { order, toreceiveID } = route.params;
 
   const [returnMethod, setReturnMethod] = useState("pickup");
   const [courier, setCourier] = useState("SPX Express Return Pick Up");
@@ -110,6 +230,26 @@ export default function RefundDetails({ route, navigation }) {
     setPickupOptions(options);
   }, []);
 
+  useEffect(() => {
+    if (!toreceiveID) return;
+
+    const fetchToReceiveItem = async () => {
+      try {
+        const docRef = doc(db, "toReceive", toreceiveID);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          console.log("ToReceive item:", docSnap.data());
+        } else {
+          console.log("No such document in toReceive!");
+        }
+      } catch (err) {
+        console.error("Error fetching toReceive item:", err);
+      }
+    };
+
+    fetchToReceiveItem();
+  }, [toreceiveID]);
+
   const handleSaveAddress = () => {
     const newErrors = {
       name: !pickupAddress.name ? "Required" : "",
@@ -118,7 +258,7 @@ export default function RefundDetails({ route, navigation }) {
       municipality: !pickupAddress.municipality ? "Required" : "",
       barangay: !pickupAddress.barangay ? "Required" : "",
     };
-    setErrors(prev => ({ ...prev, ...newErrors }));
+    setErrors((prev) => ({ ...prev, ...newErrors }));
     setTouched({
       name: true,
       street: true,
@@ -127,7 +267,7 @@ export default function RefundDetails({ route, navigation }) {
       barangay: true,
     });
 
-    if (!Object.values(newErrors).some(e => e)) {
+    if (!Object.values(newErrors).some((e) => e)) {
       setShowAddressModal(false);
     }
   };
@@ -138,54 +278,90 @@ export default function RefundDetails({ route, navigation }) {
 
   const handleConfirm = () => {
     if (returnMethod === "pickup" && !pickupTime) {
-      setErrors(prev => ({ ...prev, pickupDate: "Required" }));
-      setTouched(prev => ({ ...prev, pickupDate: true }));
+      setErrors((prev) => ({ ...prev, pickupDate: "Required" }));
+      setTouched((prev) => ({ ...prev, pickupDate: true }));
       return;
     }
     setShowConfirmModal(true);
   };
 
-  const handleConfirmShipping = () => {
+  const handleConfirmShipping = async () => {
     setShowConfirmModal(false);
+    if (!toreceiveID) {
+      console.error("No toreceiveID found!");
+      return;
+    }
 
-    const confirmedItems = order.items.map(item => ({
-      imageUrl: item.imageUrl,
-      productName: item.productName,
-      size: item.size,
-      quantity: item.quantity,
-      price: item.price,
-      refund: item.refund,
-      returnMethod,
-      pickupDate: returnMethod === "pickup" ? pickupTime : null,
-      dropOffService: returnMethod === "dropoff" ? dropOffService : null,
-      name: pickupAddress.name,
-      street: pickupAddress.street,
-      barangay: pickupAddress.barangay,
-      municipality: pickupAddress.municipality,
-      contact: pickupAddress.contact,
-    }));
+    try {
+      const docRef = doc(db, "toReceive", toreceiveID);
+      const docSnap = await getDoc(docRef);
+      const toReceiveData = docSnap.exists() ? docSnap.data() : {};
 
-    navigation.navigate("ReturnRefund", { confirmedItems });
+      const { reason, description, address, delivery } = route.params; // <-- get reason & description
+
+      const confirmedItems = order.items.map((item) => ({
+        imageUrl: item.imageUrl,
+        productName: item.productName,
+        size: item.size,
+        quantity: item.quantity,
+        price: item.price,
+        refund: item.refund ?? item.price * item.quantity ?? 0,
+        returnMethod,
+        pickupDate: returnMethod === "pickup" ? pickupTime : null,
+        dropOffService: returnMethod === "dropoff" ? dropOffService : null,
+        name: pickupAddress.name,
+        street: pickupAddress.street,
+        barangay: pickupAddress.barangay,
+        municipality: pickupAddress.municipality,
+        contact: pickupAddress.contact,
+        delivery: delivery || "",
+        address: address || "",
+        toreceiveID: toreceiveID,
+        requestDate: new Date(),
+        reason: reason || "", // <-- save reason
+        description: description || "", // <-- save description
+      }));
+
+      // Save each item in return_refund collection
+      for (let data of confirmedItems) {
+        await addDoc(collection(db, "return_refund"), data);
+      }
+
+      // Delete the original toReceive document
+      await deleteDoc(doc(db, "toReceive", toreceiveID));
+
+      // Navigate to ReturnRefund screen and pass confirmedItems
+      navigation.navigate("ReturnRefund", { confirmedItems });
+    } catch (err) {
+      console.error("Error processing return/refund:", err);
+    }
   };
 
   const handleMunicipalityChange = (municipality) => {
     setSelectedMunicipality(municipality);
-    setPickupAddress(prev => ({ ...prev, municipality, barangay: "" }));
+    setPickupAddress((prev) => ({ ...prev, municipality, barangay: "" }));
     setAvailableBarangays(MUNICIPALITIES[municipality] || []);
-    if (touched.municipality) setErrors(prev => ({ ...prev, municipality: "" }));
+    if (touched.municipality)
+      setErrors((prev) => ({ ...prev, municipality: "" }));
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+        >
           <Feather name="arrow-left" size={27} color="black" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Return/Refund Details</Text>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 220 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 220 }}
+      >
         {/* Return Method Tabs */}
         <Text style={styles.sectionTitle}>Select Return Method</Text>
         <View style={styles.tabs}>
@@ -193,13 +369,31 @@ export default function RefundDetails({ route, navigation }) {
             style={[styles.tab, returnMethod === "pickup" && styles.activeTab]}
             onPress={() => setReturnMethod("pickup")}
           >
-            <Text style={[styles.tabText, returnMethod === "pickup" ? styles.activeTabText : styles.inactiveTabText]}>Pick Up</Text>
+            <Text
+              style={[
+                styles.tabText,
+                returnMethod === "pickup"
+                  ? styles.activeTabText
+                  : styles.inactiveTabText,
+              ]}
+            >
+              Pick Up
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, returnMethod === "dropoff" && styles.activeTab]}
             onPress={() => setReturnMethod("dropoff")}
           >
-            <Text style={[styles.tabText, returnMethod === "dropoff" ? styles.activeTabText : styles.inactiveTabText]}>Drop Off</Text>
+            <Text
+              style={[
+                styles.tabText,
+                returnMethod === "dropoff"
+                  ? styles.activeTabText
+                  : styles.inactiveTabText,
+              ]}
+            >
+              Drop Off
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -211,25 +405,36 @@ export default function RefundDetails({ route, navigation }) {
 
               {/* Pickup Date */}
               <Text style={styles.pickupLabel}>
-                Pickup Date {(!pickupTime && touched.pickupDate) && <Text style={{ color: "red" }}>*</Text>}
+                Pickup Date{" "}
+                {!pickupTime && touched.pickupDate && (
+                  <Text style={{ color: "red" }}>*</Text>
+                )}
               </Text>
               <RNPickerSelect
-                onValueChange={(value) => { 
-                  setPickupTime(value); 
-                  if (touched.pickupDate) setErrors(prev => ({ ...prev, pickupDate: "" }));
+                onValueChange={(value) => {
+                  setPickupTime(value);
+                  if (touched.pickupDate)
+                    setErrors((prev) => ({ ...prev, pickupDate: "" }));
                 }}
-                items={pickupOptions.map(day => ({ label: day, value: day }))}
+                items={pickupOptions.map((day) => ({ label: day, value: day }))}
                 placeholder={{ label: "Select a pickup day", value: "" }}
                 value={pickupTime}
               />
-              {(touched.pickupDate && errors.pickupDate) && <Text style={{ color: "red" }}>{errors.pickupDate}</Text>}
-              {(!errors.pickupDate && !pickupTime && touched.pickupDate) && <Text style={{ color: "red" }}>Required</Text>}
+              {touched.pickupDate && errors.pickupDate && (
+                <Text style={{ color: "red" }}>{errors.pickupDate}</Text>
+              )}
+              {!errors.pickupDate && !pickupTime && touched.pickupDate && (
+                <Text style={{ color: "red" }}>Required</Text>
+              )}
 
               <Text style={styles.pickupLabel}>Receiver Name</Text>
               <Text>{pickupAddress.name || "No name provided"}</Text>
 
               <Text style={styles.pickupLabel}>Pickup Address</Text>
-              <TouchableOpacity style={styles.addressRow} onPress={() => setShowAddressModal(true)}>
+              <TouchableOpacity
+                style={styles.addressRow}
+                onPress={() => setShowAddressModal(true)}
+              >
                 <Text>{`${pickupAddress.street}, ${pickupAddress.barangay}, ${pickupAddress.municipality}`}</Text>
                 <Feather name="chevron-right" size={20} color="#333" />
               </TouchableOpacity>
@@ -256,13 +461,19 @@ export default function RefundDetails({ route, navigation }) {
       <View style={styles.stickyBottom}>
         {order?.items?.map((item, index) => (
           <View key={index} style={styles.itemCard}>
-            <Image source={{ uri: item.imageUrl || "https://placehold.co/100x100" }} style={styles.itemImage} />
+            <Image
+              source={{ uri: item.imageUrl || "https://placehold.co/100x100" }}
+              style={styles.itemImage}
+            />
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={{ fontWeight: "700" }}>{item.productName}</Text>
               <Text>Size: {item.size}</Text>
               <Text>Quantity: {item.quantity}</Text>
-              <Text style={{ marginTop: 5, fontWeight: "700", color: "#9747FF" }}>
-                Refund Amount: ₱{item.refund ?? (order.total ?? 0) * item.quantity}
+              <Text
+                style={{ marginTop: 5, fontWeight: "700", color: "#9747FF" }}
+              >
+                Refund Amount: ₱
+                {item.refund ?? (order.total ?? 0) * item.quantity}
               </Text>
             </View>
           </View>
@@ -279,7 +490,10 @@ export default function RefundDetails({ route, navigation }) {
       </View>
 
       {/* Address Modal */}
-      <Modal isVisible={showAddressModal} onBackdropPress={() => setShowAddressModal(false)}>
+      <Modal
+        isVisible={showAddressModal}
+        onBackdropPress={() => setShowAddressModal(false)}
+      >
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Edit Pickup Address</Text>
 
@@ -292,9 +506,12 @@ export default function RefundDetails({ route, navigation }) {
             value={pickupAddress.name}
             maxLength={50}
             onChangeText={(text) => {
-              const cleaned = text.replace(/[^a-zA-Z\s]/g, ""); 
-              setPickupAddress(prev => ({ ...prev, name: cleaned }));
-              setErrors(prev => ({ ...prev, name: cleaned.trim() === "" ? "Required" : "" }));
+              const cleaned = text.replace(/[^a-zA-Z\s]/g, "");
+              setPickupAddress((prev) => ({ ...prev, name: cleaned }));
+              setErrors((prev) => ({
+                ...prev,
+                name: cleaned.trim() === "" ? "Required" : "",
+              }));
             }}
           />
 
@@ -306,38 +523,53 @@ export default function RefundDetails({ route, navigation }) {
             style={[styles.input, errors.street && { borderColor: "red" }]}
             value={pickupAddress.street}
             onChangeText={(text) => {
-              setPickupAddress(prev => ({ ...prev, street: text }));
-              setErrors(prev => ({ ...prev, street: text.trim() === "" ? "Required" : "" }));
+              setPickupAddress((prev) => ({ ...prev, street: text }));
+              setErrors((prev) => ({
+                ...prev,
+                street: text.trim() === "" ? "Required" : "",
+              }));
             }}
           />
 
           {/* MUNICIPALITY */}
           <Text style={styles.inputLabel}>
-            Municipality {errors.municipality && <Text style={{ color: "red" }}>*</Text>}
+            Municipality{" "}
+            {errors.municipality && <Text style={{ color: "red" }}>*</Text>}
           </Text>
           <RNPickerSelect
             onValueChange={handleMunicipalityChange}
-            items={Object.keys(MUNICIPALITIES).map(m => ({ label: m, value: m }))}
+            items={Object.keys(MUNICIPALITIES).map((m) => ({
+              label: m,
+              value: m,
+            }))}
             placeholder={{ label: "Select municipality", value: "" }}
             value={selectedMunicipality}
           />
-          {touched.municipality && errors.municipality ? <Text style={{ color: "red" }}>{errors.municipality}</Text> : null}
+          {touched.municipality && errors.municipality ? (
+            <Text style={{ color: "red" }}>{errors.municipality}</Text>
+          ) : null}
 
           {/* BARANGAY */}
           <Text style={styles.inputLabel}>
-            Barangay {errors.barangay && <Text style={{ color: "red" }}>*</Text>}
+            Barangay{" "}
+            {errors.barangay && <Text style={{ color: "red" }}>*</Text>}
           </Text>
           <RNPickerSelect
-            onValueChange={(value) => setPickupAddress(prev => ({ ...prev, barangay: value }))}
-            items={availableBarangays.map(b => ({ label: b, value: b }))}
+            onValueChange={(value) =>
+              setPickupAddress((prev) => ({ ...prev, barangay: value }))
+            }
+            items={availableBarangays.map((b) => ({ label: b, value: b }))}
             placeholder={{ label: "Select barangay", value: "" }}
             value={pickupAddress.barangay}
           />
-          {touched.barangay && errors.barangay ? <Text style={{ color: "red" }}>{errors.barangay}</Text> : null}
+          {touched.barangay && errors.barangay ? (
+            <Text style={{ color: "red" }}>{errors.barangay}</Text>
+          ) : null}
 
           {/* CONTACT NUMBER */}
           <Text style={styles.inputLabel}>
-            Contact Number {errors.contact && <Text style={{ color: "red" }}>*</Text>}
+            Contact Number{" "}
+            {errors.contact && <Text style={{ color: "red" }}>*</Text>}
           </Text>
           <TextInput
             style={[styles.input, errors.contact && { borderColor: "red" }]}
@@ -346,8 +578,11 @@ export default function RefundDetails({ route, navigation }) {
             maxLength={11}
             onChangeText={(text) => {
               const cleaned = text.replace(/[^0-9]/g, "");
-              setPickupAddress(prev => ({ ...prev, contact: cleaned }));
-              setErrors(prev => ({ ...prev, contact: cleaned.length < 11 ? "Invalid" : "" }));
+              setPickupAddress((prev) => ({ ...prev, contact: cleaned }));
+              setErrors((prev) => ({
+                ...prev,
+                contact: cleaned.length < 11 ? "Invalid" : "",
+              }));
             }}
           />
 
@@ -358,7 +593,10 @@ export default function RefundDetails({ route, navigation }) {
       </Modal>
 
       {/* Confirmation Modal */}
-      <Modal isVisible={showConfirmModal} onBackdropPress={() => setShowConfirmModal(false)}>
+      <Modal
+        isVisible={showConfirmModal}
+        onBackdropPress={() => setShowConfirmModal(false)}
+      >
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Confirm Shipping Option</Text>
           <Text>Please check your shipping information before proceeding</Text>
@@ -395,10 +633,16 @@ export default function RefundDetails({ route, navigation }) {
           </View>
 
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowConfirmModal(false)}>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => setShowConfirmModal(false)}
+            >
               <Text style={{ color: "#9747FF" }}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmShipping}>
+            <TouchableOpacity
+              style={styles.confirmBtn}
+              onPress={handleConfirmShipping}
+            >
               <Text style={{ color: "#fff" }}>Confirm</Text>
             </TouchableOpacity>
           </View>

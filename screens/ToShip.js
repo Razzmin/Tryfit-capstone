@@ -163,7 +163,7 @@ export default function ToShip() {
         }}
       >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.replace("LandingPage")}
           style={{ position: "absolute", left: 2, bottom: 8 }}
         >
           <Feather name="arrow-left" size={27} color="black" />
@@ -286,9 +286,7 @@ export default function ToShip() {
 
                     <View style={styles.totalRow}>
                       <Text style={styles.productTotal}>Total Payment:</Text>
-                      <Text
-                        style={[styles.totalPrice, { marginLeft: 90 }]}
-                      >
+                      <Text style={[styles.totalPrice, { marginLeft: 90 }]}>
                         ₱{order.total ?? "N/A"}
                       </Text>
                     </View>
@@ -368,9 +366,7 @@ export default function ToShip() {
 
                   {/* ⭐ FIXED EXPECTED DELIVERY — PURPLE + BOLD */}
                   <View style={styles.expectedDelivery}>
-                    <Text style={styles.expectedText}>
-                      Expected Delivery:
-                    </Text>
+                    <Text style={styles.expectedText}>Expected Delivery:</Text>
                     <Text style={styles.deliveryDate}>
                       {shippingDetails.expectedDelivery || "TBD"}
                     </Text>

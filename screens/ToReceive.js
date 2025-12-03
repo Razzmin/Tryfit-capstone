@@ -44,7 +44,7 @@ export default function ToReceive() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedReason, setSelectedReason] = useState(null);
   const [arrowAnimations, setArrowAnimations] = useState([]);
-  const [selectedOrder, setSelectedOrder] = useState(null); 
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
     const fetchCustomUserId = async () => {
@@ -230,7 +230,7 @@ export default function ToReceive() {
         }}
       >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.replace("LandingPage")}
           style={{ position: "absolute", left: 2, bottom: 8 }}
         >
           <Feather name="arrow-left" size={27} color="black" />
@@ -445,7 +445,10 @@ export default function ToReceive() {
               },
               {
                 title: "Did not receive some/all of the items",
-                options: ["Did not receive some of the item(s)", "Did not receive all of the item(s)"],
+                options: [
+                  "Did not receive some of the item(s)",
+                  "Did not receive all of the item(s)",
+                ],
               },
             ].map((cat, index) => {
               const rotation = arrowAnimations[index]?.interpolate({
@@ -520,6 +523,9 @@ export default function ToReceive() {
                   order: selectedOrder,
                   items: selectedOrder?.items || [],
                   orderId: selectedOrder?.orderId,
+                  toreceiveID: selectedOrder?.toreceiveID,
+                  address: selectedOrder?.address,
+                  delivery: selectedOrder?.delivery,
                   category: selectedCategory,
                   reason: selectedReason,
                 });

@@ -11,6 +11,8 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../firebase/config";
 
 export default function ReturnRefund() {
   const navigation = useNavigation();
@@ -30,24 +32,36 @@ export default function ReturnRefund() {
   };
 
   useEffect(() => {
-    if (confirmedItems && confirmedItems.length > 0) {
-      const orders = [
-        {
-          id: `RR-${Date.now()}`,
-          status: "Pending",
-          returnMethod: confirmedItems[0].returnMethod || "pickup",
-          pickupDate: confirmedItems[0].pickupDate || "",
-          dropOffService: confirmedItems[0].dropOffService || "",
-          dateTime: new Date(), // current date & time
-          items: confirmedItems.map((item) => ({
-            ...item,
-            refundAmount: item.refund ?? (item.price ?? 0) * (item.quantity ?? 1),
-          })),
-        },
-      ];
-      setRefundOrders(orders);
-    }
-  }, [confirmedItems]);
+    const fetchRefundOrders = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "return_refund"));
+        const orders = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            items: [
+              {
+                imageUrl: data.imageUrl,
+                productName: data.productName,
+                size: data.size,
+                quantity: data.quantity,
+                price: data.price,
+                refund: data.refund,
+                pickupDate: data.pickupDate,
+                dropOffService: data.dropOffService,
+              },
+            ],
+          };
+        });
+        setRefundOrders(orders);
+      } catch (error) {
+        console.error("Error fetching return/refund orders:", error);
+      }
+    };
+
+    fetchRefundOrders();
+  }, []);
 
   const handleCancel = (orderId) => {
     Alert.alert(
@@ -63,8 +77,8 @@ export default function ReturnRefund() {
       ]
     );
   };
-
   const formatDateTime = (date) => {
+    if (!date) return "-"; // fallback if date is missing
     const d = date.getDate().toString().padStart(2, "0");
     const m = (date.getMonth() + 1).toString().padStart(2, "0");
     const y = date.getFullYear().toString().slice(-2);
@@ -78,7 +92,7 @@ export default function ReturnRefund() {
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.replace("LandingPage")}
           style={{ position: "absolute", left: 2, bottom: 8 }}
         >
           <Feather name="arrow-left" size={27} color="black" />
@@ -92,7 +106,11 @@ export default function ReturnRefund() {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.tabScroll}
-          contentContainerStyle={{ paddingHorizontal: 20, alignItems: "center", flexGrow: 0 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            alignItems: "center",
+            flexGrow: 0,
+          }}
         >
           {Object.keys(tabRoutes).map((tab) => (
             <TouchableOpacity
@@ -102,10 +120,20 @@ export default function ReturnRefund() {
               }}
               style={styles.tabWrap}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
+              >
                 {tab}
               </Text>
-              <View style={[styles.underline, activeTab === tab && styles.activeUnderline]} />
+              <View
+                style={[
+                  styles.underline,
+                  activeTab === tab && styles.activeUnderline,
+                ]}
+              />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -123,21 +151,31 @@ export default function ReturnRefund() {
               {/* Top Row: Pending & Date/Time */}
               <View style={styles.topRow}>
                 <Text style={styles.orderStatus}>{order.status}</Text>
-                <Text style={styles.orderDateTime}>{formatDateTime(order.dateTime)}</Text>
+                <Text style={styles.orderDateTime}>
+                  {formatDateTime(order.dateTime)}
+                </Text>
               </View>
 
               {/* Items */}
               {order.items.map((item, index) => (
                 <View key={index} style={styles.productRow}>
                   <Image
-                    source={{ uri: item.imageUrl || "https://placehold.co/100x100" }}
+                    source={{
+                      uri: item.imageUrl || "https://placehold.co/100x100",
+                    }}
                     style={styles.productImage}
                   />
                   <View style={styles.productInfo}>
                     <Text style={styles.productName}>{item.productName}</Text>
                     <Text style={styles.productSize}>Size: {item.size}</Text>
                     <Text style={styles.productQty}>Qty: {item.quantity}</Text>
-                    <Text style={{ marginTop: 5, fontWeight: "700", color: "#9747FF" }}>
+                    <Text
+                      style={{
+                        marginTop: 5,
+                        fontWeight: "700",
+                        color: "#9747FF",
+                      }}
+                    >
                       Refund Amount: ₱{item.refundAmount}
                     </Text>
                   </View>
@@ -156,13 +194,17 @@ export default function ReturnRefund() {
                   {order.returnMethod === "pickup" && (
                     <Text>
                       Pickup Date:{" "}
-                      <Text style={styles.shippingValue}>{item.pickupDate || order.pickupDate}</Text>
+                      <Text style={styles.orderDateTime}>
+                        {formatDateTime(order.requestDate?.toDate())}
+                      </Text>
                     </Text>
                   )}
                   {order.returnMethod === "dropoff" && (
                     <Text>
                       Drop Off Service:{" "}
-                      <Text style={styles.shippingValue}>{item.dropOffService || order.dropOffService}</Text>
+                      <Text style={styles.shippingValue}>
+                        {item.dropOffService || order.dropOffService}
+                      </Text>
                     </Text>
                   )}
                 </View>
@@ -341,4 +383,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-

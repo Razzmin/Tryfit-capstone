@@ -34,7 +34,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-  TextInput
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Header, LoadingOverlay } from "../components/styles";
@@ -152,97 +152,83 @@ export default function EditProfile() {
     if (!user) return;
 
     try {
+      // Reauthenticate user
       const credential = EmailAuthProvider.credential(
-      user.email,
-      deletePassword
-    );
-
-    await reauthenticateWithCredential(user, credential);
+        user.email,
+        deletePassword
+      );
+      await reauthenticateWithCredential(user, credential);
 
       const db = getFirestore();
+      const batch = writeBatch(db);
 
+      // Get user document
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
-
       if (!userDocSnap.exists()) throw new Error("User document not found.");
+
       const userData = userDocSnap.data();
       const userUniqueId = userData.userId || user.uid;
 
-      await deleteDoc(userDocRef);
+      // Map of original collections to archive collections
+      const collectionsMap = {
+        users: "usersArchive",
+        shippingLocations: "shippingLocationsArchive",
+        chatMessages: "chatMessagesArchive",
+        completed: "completedArchive",
+        cancelled: "cancelledArchive",
+        cartItems: "cartItemsArchive",
+        measurements: "measurementsArchive",
+        notifications: "notificationsArchive",
+        orders: "ordersArchive",
+        return_refund: "return_refundArchive",
+        toReceive: "toreceiveArchive",
+        toShip: "toshipArchive",
+      };
 
-      const collectionsToAnonymize = ["chatMessages", "productReviews"];
-      for (const collectionName of collectionsToAnonymize) {
+      // Archive user document
+      const userArchiveRef = doc(collection(db, collectionsMap["users"]));
+      batch.set(userArchiveRef, {
+        ...userData,
+        originalDocId: userDocRef.id,
+        archivedAt: serverTimestamp(),
+      });
+      batch.delete(userDocRef);
+
+      // Archive all related collections
+      for (const [col, archiveCol] of Object.entries(collectionsMap)) {
+        if (col === "users") continue;
+
         const q = query(
-          collection(db, collectionName),
+          collection(db, col),
           where("userId", "==", userUniqueId)
         );
-        const querySnapshot = await getDocs(q);
-        for (const docSnap of querySnapshot.docs) {
-          await updateDoc(docSnap.ref, {
-            userId: null,
-            username: "Anonymous",
+        const snapshot = await getDocs(q);
+
+        snapshot.docs.forEach((docItem) => {
+          const archiveRef = doc(collection(db, archiveCol));
+          batch.set(archiveRef, {
+            ...docItem.data(),
+            archivedAt: serverTimestamp(),
           });
-        }
+          batch.delete(doc(db, col, docItem.id));
+        });
       }
 
-      const collectionsToDelete = [
-        "cartItems",
-        "measurements",
-        "notifications",
-        "shippingLocations",
-      ];
-      for (const collectionName of collectionsToDelete) {
-        const q = query(
-          collection(db, collectionName),
-          where("userId", "==", userUniqueId)
-        );
-        const querySnapshot = await getDocs(q);
-        for (const docSnap of querySnapshot.docs) {
-          await deleteDoc(docSnap.ref);
-        }
-      }
+      // Commit the batch
+      await batch.commit();
 
-      const ordersRef = collection(db, "orders");
-      const ordersQuery = query(
-        ordersRef,
-        where("userId", "==", userUniqueId)
-      );
-      const ordersSnapshot = await getDocs(ordersQuery);
-      for (const docSnap of ordersSnapshot.docs) {
-        const data = docSnap.data();
-        if (data.status === "pending") {
-          await deleteDoc(docSnap.ref);
-        } else {
-          await updateDoc(docSnap.ref, {
-            name: "User not found",
-            address: null,
-            userId: null,
-          });
-        }
-      }
-
-      const toUpdateCollections = ["toReceive", "toShip"];
-      for (const collectionName of toUpdateCollections) {
-        const q = query(
-          collection(db, collectionName),
-          where("userId", "==", userUniqueId)
-        );
-        const querySnapshot = await getDocs(q);
-        for (const docSnap of querySnapshot.docs) {
-          await updateDoc(docSnap.ref, {
-            name: "User not found",
-            address: null,
-            userId: null,
-          });
-        }
-      }
-
+      // Delete Firebase Auth user
       await deleteUser(user);
 
       setShowModal(false);
       navigation.replace("Login");
+
+      console.log(
+        `User ${userUniqueId} and all related data archived successfully.`
+      );
     } catch (error) {
-      alert("Error deleting account: " + error.message);
+      alert("Error archiving account: " + error.message);
     }
   };
 
@@ -525,9 +511,7 @@ export default function EditProfile() {
               </TouchableOpacity>
             </View>
 
-            <Text
-              style={{ fontSize: 12, color: "#777", marginBottom: 10 }}
-            >
+            <Text style={{ fontSize: 12, color: "#777", marginBottom: 10 }}>
               Required for verification
             </Text>
 

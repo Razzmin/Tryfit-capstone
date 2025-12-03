@@ -2,7 +2,15 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import Popup from "../components/Popup";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  query,
+  collection,
+  where,
+  getDocs,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { auth, db } from "../firebase/config";
 import { Formik } from "formik";
 import { Ionicons, Octicons } from "@expo/vector-icons";
@@ -80,12 +88,30 @@ const Login = () => {
       );
       const user = userCredential.user;
 
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
+      // Query Firestore by email instead of doc ID
+      const q = query(
+        collection(db, "users"),
+        where("email", "==", user.email)
+      );
 
-      if (userDoc.exists()) {
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const userDoc = snapshot.docs[0];
         const userData = userDoc.data();
         console.log("User Firestore data:", userData);
+
+        const logId = `ULOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+        await setDoc(doc(db, "userLogInAndOut", logId), {
+          action: "Admin logged in",
+          userlogID: logId,
+          user: userData.userName || userData.name || "Unknown",
+          email: user.email,
+          timestamp: serverTimestamp(),
+        });
+
+        console.log("Login log saved:", logId);
       } else {
         console.log("No Firestore data found for this user.");
         Alert.alert("Note", "Logged in, but user data not found.");

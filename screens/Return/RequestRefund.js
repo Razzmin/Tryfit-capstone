@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  ScrollView, 
-  Image
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Image,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -16,7 +16,7 @@ export default function RequestRefund() {
   const navigation = useNavigation();
   const route = useRoute();
 
-  const { reason, order } = route.params;
+  const { reason, order, toreceiveID, address, delivery } = route.params;
 
   const [description, setDescription] = useState("");
   const maxChars = 2000;
@@ -31,6 +31,9 @@ export default function RequestRefund() {
       reason,
       description,
       order,
+      toreceiveID,
+      address,
+      delivery,
     });
   };
 
@@ -53,7 +56,9 @@ export default function RequestRefund() {
           <View key={index} style={styles.card}>
             <View style={styles.productRow}>
               <Image
-                source={{ uri: item.imageUrl || "https://placehold.co/100x100" }}
+                source={{
+                  uri: item.imageUrl || "https://placehold.co/100x100",
+                }}
                 style={styles.productImage}
               />
               <View style={styles.productInfo}>
@@ -62,7 +67,9 @@ export default function RequestRefund() {
                 <Text style={styles.productDetails}>Qty: {item.quantity}</Text>
                 <View style={styles.totalRow}>
                   <Text style={styles.productTotal}>Total Payment:</Text>
-                  <Text style={styles.totalPrice}>₱{order.total ?? "0.00"}</Text>
+                  <Text style={styles.totalPrice}>
+                    ₱{order.total ?? "0.00"}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -79,7 +86,10 @@ export default function RequestRefund() {
         {/* DESCRIPTION (REQUIRED) */}
         <View style={styles.card}>
           <Text style={styles.label}>
-            Description {description.length < minChars && <Text style={{ color: "red" }}>*</Text>}
+            Description{" "}
+            {description.length < minChars && (
+              <Text style={{ color: "red" }}>*</Text>
+            )}
           </Text>
 
           <TextInput
@@ -89,7 +99,7 @@ export default function RequestRefund() {
                 ? { borderColor: "red" }
                 : description.length >= minChars
                 ? { borderColor: "green" }
-                : {}
+                : {},
             ]}
             placeholder="Describe the problem you faced"
             multiline
@@ -109,7 +119,9 @@ export default function RequestRefund() {
             <Text style={styles.reqGreen}>Looks good!</Text>
           )}
 
-          <Text style={styles.charCount}>{description.length}/{maxChars}</Text>
+          <Text style={styles.charCount}>
+            {description.length}/{maxChars}
+          </Text>
         </View>
 
         {/* REFUND METHOD */}
@@ -125,17 +137,18 @@ export default function RequestRefund() {
         </View>
 
         {/* NEXT BUTTON */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
             styles.submitBtn,
-            description.length >= minChars ? {} : { backgroundColor: "#C5A5F5" }
+            description.length >= minChars
+              ? {}
+              : { backgroundColor: "#C5A5F5" },
           ]}
           disabled={description.length < minChars}
           onPress={handleSubmit}
         >
           <Text style={styles.submitText}>Next</Text>
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );
