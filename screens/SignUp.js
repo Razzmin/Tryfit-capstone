@@ -12,10 +12,11 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  Alert,
 } from "react-native";
 import Popup from "../components/Popup";
 
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut, deleteUser } from "firebase/auth";
 import { doc, runTransaction, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebase/config";
 
@@ -129,15 +130,56 @@ const Signup = () => {
         if (userId.length > 10) throw new Error("Generated userId exceeds max length of 10 characters!");
       });
 
-      await setDoc(doc(db, "users", user.uid), {
-        username,
-        email,
-        userId,
-        createdAt: serverTimestamp(),
-      });
+      // Save user profile to Firestore first
+      let profileSaved = false;
+      try {
+        await setDoc(doc(db, "users", user.uid), {
+          username,
+          email,
+          userId,
+          createdAt: serverTimestamp(),
+        });
+        profileSaved = true;
+      } catch (firestoreErr) {
+        console.log("Error saving user profile to Firestore:", firestoreErr);
+        // Attempt to clean up the created auth user to avoid orphaned accounts
+        try {
+          await deleteUser(user);
+        } catch (delErr) {
+          console.log("Failed to delete auth user after Firestore error:", delErr);
+        }
+        setPopupMessage("Failed to save user data. Please try again later.");
+        setPopupVisible(true);
+        setLoading(false);
+        return;
+      }
 
-      setLoading(false);
-      navigation.navigate("BodyMeasurement", { userId, username, email });
+      // Only send verification after profile was saved successfully
+      if (profileSaved) {
+        try {
+          await sendEmailVerification(user);
+        } catch (sendError) {
+          console.log("Error sending verification email:", sendError);
+          Alert.alert(
+            "Verification failed",
+            "We couldn't send a verification email. Please try resending from the login screen."
+          );
+        }
+
+        try {
+          await signOut(auth);
+        } catch (signOutError) {
+          console.log("Error signing out after signup:", signOutError);
+        }
+
+        setLoading(false);
+        Alert.alert(
+          "Verify your email",
+          "A verification email has been sent. Please check your email and verify your account before logging in."
+        );
+
+        navigation.navigate("Login");
+      }
     } catch (error) {
       console.log("Firebase Error:", error);
       let message = "";

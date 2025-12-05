@@ -1,15 +1,17 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import Popup from "../components/Popup";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendEmailVerification, signOut } from "firebase/auth";
 import {
   doc,
   query,
   collection,
   where,
   getDocs,
+  getDoc,
   setDoc,
   serverTimestamp,
+  limit,
 } from "firebase/firestore";
 import { auth, db } from "../firebase/config";
 import { Formik } from "formik";
@@ -24,6 +26,7 @@ import {
   Text,
   TouchableWithoutFeedback,
   View,
+  Alert,
 } from "react-native";
 import { useCallback, useState } from "react";
 import {
@@ -88,36 +91,102 @@ const Login = () => {
       );
       const user = userCredential.user;
 
-      // Query Firestore by email instead of doc ID
-      const q = query(
-        collection(db, "users"),
-        where("email", "==", user.email)
-      );
+      // If the user's email is not verified, send a verification email and prevent login
+      if (!user.emailVerified) {
+        try {
+          await sendEmailVerification(user);
+        } catch (sendErr) {
+          console.log("Error resending verification email:", sendErr);
+        }
 
-      const snapshot = await getDocs(q);
+        try {
+          await signOut(auth);
+        } catch (soErr) {
+          console.log("Error signing out unverified user:", soErr);
+        }
 
-      if (!snapshot.empty) {
-        const userDoc = snapshot.docs[0];
-        const userData = userDoc.data();
-        console.log("User Firestore data:", userData);
-
-        const logId = `ULOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-        await setDoc(doc(db, "userLogInAndOut", logId), {
-          action: "Admin logged in",
-          userlogID: logId,
-          user: userData.userName || userData.name || "Unknown",
-          email: user.email,
-          timestamp: serverTimestamp(),
-        });
-
-        console.log("Login log saved:", logId);
-      } else {
-        console.log("No Firestore data found for this user.");
-        Alert.alert("Note", "Logged in, but user data not found.");
+        setLoading(false);
+        Alert.alert(
+          "Email not verified",
+          "Your email address is not verified. A verification email has been sent. Please verify your email before logging in."
+        );
+        return;
       }
 
-      navigation.navigate("LandingPage");
+      // Query Firestore by email instead of doc ID
+        // First try to read the `users` document by auth UID (more reliable)
+        let userData = null;
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            userData = userDocSnap.data();
+            console.log("User Firestore data (by uid):", userData);
+          }
+        } catch (uidErr) {
+          console.log("Error fetching users doc by uid:", uidErr);
+        }
+
+        // If not found by uid, fall back to query by email
+        if (!userData) {
+          const q = query(collection(db, "users"), where("email", "==", user.email));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const userDoc = snapshot.docs[0];
+            userData = userDoc.data();
+            console.log("User Firestore data (by email):", userData);
+          }
+        }
+
+        if (userData) {
+          const logId = `ULOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+          await setDoc(doc(db, "userLogInAndOut", logId), {
+            action: "User logged in",
+            userlogID: logId,
+            user: userData.username || userData.userName || userData.name || "Unknown",
+            email: user.email,
+            timestamp: serverTimestamp(),
+          });
+
+          console.log("Login log saved:", logId);
+
+          // Check whether measurements exist for this user by querying the userId field
+          try {
+            const userId = userData.userId || "";
+            if (!userId) {
+              console.log("User ID not found; navigating to BodyMeasurement");
+              const username = userData.username || userData.userName || userData.name || "";
+              navigation.navigate("BodyMeasurement", { userId: "", username, email: user.email });
+              return;
+            }
+
+            const measurementsQuery = query(
+              collection(db, "measurements"),
+              where("userId", "==", userId),
+              limit(1)
+            );
+            const measurementsSnapshot = await getDocs(measurementsQuery);
+
+            // If no measurements exist, navigate to BodyMeasurement to collect them
+            if (measurementsSnapshot.empty) {
+              console.log("No measurements found for userId:", userId, "; navigating to BodyMeasurement");
+              const username = userData.username || userData.userName || userData.name || "";
+              navigation.navigate("BodyMeasurement", { userId, username, email: user.email });
+              return;
+            }
+          } catch (measErr) {
+            console.log("Error checking measurements:", measErr);
+            // If the check fails, fall back to normal landing page
+          }
+
+          // If measurements exist, go to landing page
+          navigation.navigate("LandingPage");
+        } else {
+          console.log("No Firestore data found for this user.");
+          Alert.alert("Note", "Logged in, but user data not found.");
+          navigation.navigate("LandingPage");
+        }
     } catch (error) {
       console.log("Login error:", error);
 

@@ -59,7 +59,7 @@ const BodyTracking = () => {
       const data = JSON.parse(event.nativeEvent.data);
 
       if (data.action === "proceedHome") {
-        navigation.replace("LandingPage");
+        navigation.replace("Login");
         return;
       }
 
